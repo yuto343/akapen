@@ -2,7 +2,7 @@
 
 `DESIGN.md`（何を作るか）に対して、どう組むかを決める文書。E2E を「md の仕様からテストコードを生成する」運用（ashvally の `e2e/` と同じ考え方）で回す前提で、ディレクトリ構成・モジュール分割・テスト用の切り口を定める。
 
-2026-11-18 時点の設計。実装はまだ始めていない。末尾の「最初に確かめること」が通るまでは仮の設計として扱う。
+2026-11-18 時点。foundation の骨組みと公開契約を実装済み。末尾の「確かめた結果」と `docs/FOUNDATION.md` に実機検証と未実装部分を記録する。
 
 ## 方針
 
@@ -293,7 +293,7 @@ Playwright の MCP のように「実物を操作しながら書く」ことは�
 | --- | --- |
 | `make test` | `swift test`（単体テスト） |
 | `make e2e-lint` | `node e2e/check-specs.mjs` |
-| `make e2e` | `make gen` → `xcodebuild test`（`Generated/` と `Seed`。撮影は `fixture`） |
+| `make e2e` | `make gen` → `xcodebuild test`（`Live/` 以外（`Spike/` を含む）。撮影は `fixture`） |
 | `make e2e ONLY=DrawFrameTests` | 1 クラスだけ走らせる（generator / healer が使う） |
 | `make e2e-live` | `Live/` だけを、実際の画面収録で走らせる（手元だけ。画面収録の許可が要る） |
 
@@ -329,13 +329,23 @@ CI は当面置かない。置くときは `make test`・`make e2e-lint`・`make
 - グローバルホットキーの登録が実際にキー入力を拾うか
 - ドラッグ・クリック・キー入力が、実物のウィンドウを通ってイベントになるか
 
-## 最初に確かめること
+## 確かめた結果
 
-骨組み（3 ターゲットと空のパッケージ）を作った時点で、次を小さく試す。結果によってはこの設計を直す。
+2026-11-18、macOS 26.2 / Xcode 26.2 / XcodeGen 2.47.0、2 画面の実機で検証。スパイクは `e2e/tests/Spike/FoundationSpikeTests.swift`。正式な生成テストに置き換えるまでは `make e2e` に含める。
 
-1. XCUITest から送った `⌘;` を、Carbon で登録したホットキーが拾うか。拾わない場合は、E2E のときだけ受け付ける入口（URL スキームか分散通知）を `HotkeyRegistering` の E2E 用実装に足す。
-2. アクティブ化しないパネルの中の要素を、XCUITest が識別子で引けるか。`LSUIElement` のアプリでも変わらないか。
-3. 画面全体を覆うパネルの上で、XCUITest の座標指定のドラッグが届くか。
-4. XcodeGen で作った UI テストのターゲットが、ローカルパッケージの `AkapenAXID` をリンクできるか。
-5. generator の 1 周（書く → 1 クラスだけ走らせる → 結果を読む）にかかる時間。長すぎる場合は、ビルドを 1 回で済ませて実行だけを繰り返す形（`build-for-testing` / `test-without-building`）に変える。
-6. DESIGN.md の「実装の最初に確かめること」（GUI アプリにパス入りの文章を貼って画像が読まれるか）。読まれない場合は `PromptPasteboard` に画像ファイルも入れる。
+1. **Carbon ホットキー: 確認済み。** SampleTarget をアクティブにし、XCUITest の `typeKey(";", modifierFlags: .command)` を送ると `drawing` になった。E2E 専用の迂回入口は不要なので追加していない。`Seed` でも確認。
+2. **非アクティブパネルと LSUIElement: 確認済み。** Toolbar の 3 ボタンを AkapenAXID で取得できた。描画後に `toolbar.add` をクリックして `drawing` に戻ることも確認。
+3. **座標ドラッグ: 確認済み。** SampleTarget のボタンの位置を基準に 180×110 pt を描き、state.json の x/y/width/height がそれぞれ 4 pt 以内で一致。描画面を外した後の下のボタンへのクリックで回数が 1 に増えた。Esc で hidden に戻った。最初の試行は下のアプリを宛先にドラッグし、XCTest の割り込み処理がアプリを再アクティブ化して失敗した。座標を描画面の要素へ変換して入力するよう修正。完全透明な面のヒットテストも避けるため、背景に 1% の alpha を設定した。
+4. **AXID のリンク: 確認済み。** UI テストはパッケージ製品のうち AkapenAXID だけをリンクし、`import AkapenAXID` でビルド・実行できた。
+5. **反復時間: 確認済み。** 最終のテストコード 1 行編集後の `make e2e ONLY=FoundationSpikeTests` は 54.0 秒（テスト本体 24.8 秒）。その前の修正後の試行は 58.3 秒だった。60 秒を大きく超えないため build-for-testing / test-without-building の分離は現時点では追加しない。初回の全 2 件はコンパイルと失敗を含め 99.5 秒だった。
+6. **GUI アプリへパス入り文章を貼って画像を読めるか: 未確認。** 元の設計の検証課題として残す。読まれない場合は PromptPasteboard に画像ファイルも入れる。
+
+追加の検証: `make test` の `panelsFollowState` で NSApplication.shared を初期化し、AppKit の NSPanel を実際に生成して hidden / drawing / idle の表示・非表示と nonactivatingPanel を確認できた。テスト後はパネルを外す。画面のあるローカルセッションが必要で、ヘッドレス CI の保証はしていない。
+
+## Foundation の実装境界
+
+- 公開 API と JSON スキーマは `docs/FOUNDATION.md` と各型の日本語ドキュメントコメントを参照。
+- 現在のドラッグ終了は撮影をせず idle へ進む仮実装。コメント・一覧・コピー・設定変更などは `TODO(core)`。
+- 設定は現在 MemorySettingsStore、書き出しは追加の StateWriting → AtomicStateWriter。App が JSON を組み立て、Platform がファイルに原子的に保存する。
+- Apple Development 証明書で署名。チーム G5564YSC93。プロファイル要求・認証ダイアログはなく、アドホックへの切り替えなし。
+- E2E は Python 標準の fcntl.flock で同一リポジトリを排他制御し、Live 配下かどうかでクラスを選ぶ。全ログは build/logs、結果バンドルは build/e2e.xcresult。

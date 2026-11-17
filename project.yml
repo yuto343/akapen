@@ -1,0 +1,64 @@
+name: akapen
+options:
+  minimumXcodeGenVersion: 2.47.0
+  deploymentTarget:
+    macOS: "15.0"
+packages:
+  AkapenKit:
+    path: Packages/AkapenKit
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MACOSX_DEPLOYMENT_TARGET: "15.0"
+    DEVELOPMENT_TEAM: G5564YSC93
+    CODE_SIGN_IDENTITY: Apple Development
+    CODE_SIGN_STYLE: Manual
+    ENABLE_APP_SANDBOX: NO
+    LM_SKIP_METADATA_EXTRACTION: YES
+    GENERATE_INFOPLIST_FILE: YES
+targets:
+  akapen:
+    type: application
+    platform: macOS
+    sources: [App]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.yuto343.akapen
+        INFOPLIST_KEY_LSUIElement: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    dependencies:
+      - package: AkapenKit
+        product: AkapenApp
+  SampleTarget:
+    type: application
+    platform: macOS
+    sources: [e2e/sample-target]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.yuto343.akapen.SampleTarget
+    dependencies:
+      - package: AkapenKit
+        product: AkapenAXID
+  AkapenE2E:
+    type: bundle.ui-testing
+    platform: macOS
+    sources: [e2e/tests]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.yuto343.akapen.E2E
+        TEST_TARGET_NAME: akapen
+    dependencies:
+      - target: akapen
+      - target: SampleTarget
+      - package: AkapenKit
+        product: AkapenAXID
+schemes:
+  akapen:
+    build:
+      targets:
+        akapen: all
+        SampleTarget: all
+        AkapenE2E: [test]
+    test:
+      targets: [AkapenE2E]
+      gatherCoverageData: false
