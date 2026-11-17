@@ -155,17 +155,58 @@ func imageSaveFailureKeepsDrawing() async throws {
 
 @Test
 @MainActor
-func dragWithoutCaptureDependenciesFallsBackToIdle() async throws {
-    // TODO(app) の仮の挙動: 撮影と画像の置き場がないときは、撮影せずに idle へ進む。
+func dragWithoutCaptureDependenciesFails() async throws {
+    // 撮影に要る依存がないときは、撮影できなかったのと同じに扱い、`drawing` のまま。注釈も画像も作らない。
     let model = try SessionModel(settingsStore: FakeSettingsStore())
     model.send(.hotkeyPressed)
     #expect(model.phase == .drawing)
     let rect = ScreenRect(x: -30, y: 20, width: 50, height: 70)
-    model.send(.dragEnded(rect: rect, screen: ScreenDescriptor(id: 1, frame: rect)))
-    #expect(model.phase == .idle)
+    await model.send(.dragEnded(rect: rect, screen: ScreenDescriptor(id: 1, frame: rect))).value
+    #expect(model.phase == .drawing)
+    #expect(model.lastFailure == .captureFailed)
     #expect(model.lastDrawnRect == rect)
     #expect(model.draft == nil)
+    #expect(model.annotations.isEmpty)
     #expect(model.isToolbarVisible)
+}
+
+@Test
+@MainActor
+func settingsChangedClampsRetentionDays() async throws {
+    let harness = try Harness()
+    var settings = harness.model.settings
+    settings.imageRetentionDays = 0
+    await harness.send(.settingsChanged(settings))
+    #expect(harness.model.settings.imageRetentionDays == 1)
+    #expect(harness.settingsStore.saved.last?.imageRetentionDays == 1)
+    settings.imageRetentionDays = 366
+    await harness.send(.settingsChanged(settings))
+    #expect(harness.model.settings.imageRetentionDays == 365)
+    #expect(harness.settingsStore.saved.last?.imageRetentionDays == 365)
+    settings.imageRetentionDays = 30
+    await harness.send(.settingsChanged(settings))
+    #expect(harness.model.settings.imageRetentionDays == 30)
+}
+
+@Test
+@MainActor
+func loadedRetentionDaysAreClamped() throws {
+    var stored = Settings()
+    stored.imageRetentionDays = -4
+    let harness = try Harness(settings: stored)
+    #expect(harness.model.settings.imageRetentionDays == 1)
+    try harness.model.performStartupCleanup()
+    // 0 日以下で「いま」より前をすべて消すのではなく、1 日前より古い回だけを消す。
+    #expect(harness.images.removedBefore == [Harness.start.addingTimeInterval(-86_400)])
+}
+
+@Test
+@MainActor
+func currentSessionIDFollowsSession() async throws {
+    let harness = try Harness()
+    #expect(harness.model.currentSessionID == nil)
+    await harness.send(.hotkeyPressed)
+    #expect(harness.model.currentSessionID == Harness.sessionID)
 }
 
 @Test

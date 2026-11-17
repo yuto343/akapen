@@ -67,6 +67,30 @@ import AkapenAXID
         }
     }
 
+    /// ほかの所で変わった設定を映す。前に映していた値から変わった項目だけを入れ直す。
+    ///
+    /// 記録を待っている記録欄はそのままにする（記録の途中の操作を壊さない）。
+    func sync(_ latest: Settings) {
+        let previous = settings
+        guard latest != previous else {
+            return
+        }
+        settings = latest
+        if latest.imageRetentionDays != previous.imageRetentionDays {
+            retentionText = String(latest.imageRetentionDays)
+        }
+        if latest.hotkey != previous.hotkey, !hotkey.isRecording {
+            hotkey.load(latest.hotkey)
+        }
+        if latest.toolbarShortcut != previous.toolbarShortcut, !toolbarShortcut.isRecording {
+            toolbarShortcut.load(latest.toolbarShortcut)
+        }
+        let text = latest.boilerplate(for: latest.language)
+        if text != previous.boilerplate(for: previous.language), boilerplate.text != text {
+            boilerplate.setText(text)
+        }
+    }
+
     /// 言語を切り替える。画面の文言と、定型文の入力欄の中身（その言語の定型文）がすぐに切り替わる。
     func setLanguage(_ language: Language) {
         guard language != settings.language else {

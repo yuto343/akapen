@@ -108,9 +108,33 @@ import AkapenAXID
         host.show(center: true)
     }
 
+    /// 2 ページ目（画面収録の許可の案内）を開く。閉じていれば開いてから、開いていればそのまま 2 ページ目へ移る。
+    ///
+    /// 許可がないために撮影できなかったときに、組み立ての側が呼ぶ。
+    public func showPermission() {
+        show()
+        flow.goNext()
+    }
+
+    /// 2 ページ目（画面収録の許可の案内）を出しているか。
+    public var isShowingPermission: Bool {
+        host.isShown && flow.page == .permission
+    }
+
     /// 終えずに閉じる（閉じるボタンと同じ。`setupCompleted` は送らず、`onDismissed` を呼ぶ）。
     public func close() {
         window.close()
+    }
+
+    /// ほかの所（設定）で変わった設定を、開いている画面に映す（言語と、記録を待っていないときのホットキー）。
+    /// 閉じているときは何もしない（開くときに読み直す）。
+    public func refresh() {
+        guard host.isShown else {
+            return
+        }
+        let current = settings()
+        flow.sync(current)
+        window.title = UIStrings(language: current.language)[.appName]
     }
 
     /// 許可の状態を確かめ直して、表示に映す。

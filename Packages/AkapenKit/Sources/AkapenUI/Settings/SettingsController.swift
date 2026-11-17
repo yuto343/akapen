@@ -16,6 +16,8 @@ import AkapenAXID
     /// 記録を待っている間は、組み立ての側でグローバルなホットキーの登録を外しておく
     /// （外さないと、いまのホットキーを押したときに枠を描き始めてしまい、記録欄にキーが届かない）。
     public var onRecordingChanged: (@MainActor (Bool) -> Void)?
+    /// ウィンドウが閉じられたとき（閉じるボタン・`⌘W`・`close()` のどれでも）。
+    public var onClosed: (@MainActor () -> Void)?
 
     let form: SettingsForm
     private let host: ContentWindowHost<SettingsView>
@@ -77,6 +79,7 @@ import AkapenAXID
         window.setAccessibilityIdentifier(AXID.Settings.window)
         window.onClose = { [weak self] in
             self?.form.finishEditing()
+            self?.onClosed?()
         }
         window.onResignKey = { [weak self] in
             self?.form.cancelRecording()
@@ -108,6 +111,18 @@ import AkapenAXID
     /// ウィンドウを閉じる。入力の途中の日数は確定する。
     public func close() {
         window.close()
+    }
+
+    /// ほかの所（セットアップなど）で変わった設定を、開いている画面に映す。
+    ///
+    /// 変わった項目だけを入れ直す。記録を待っている記録欄と、書きかけの定型文・日数の入力欄は、その項目が変わっていなければ触らない。
+    /// 閉じているときは何もしない（開くときに読み直す）。
+    public func refresh() {
+        guard host.isShown else {
+            return
+        }
+        form.sync(settings())
+        updateTitle()
     }
 
     private func updateTitle() {

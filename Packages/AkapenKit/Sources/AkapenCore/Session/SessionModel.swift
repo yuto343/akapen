@@ -34,6 +34,9 @@ import Observation
     /// 撮影する枠の幅と高さの下限（pt）。これより小さい枠は無視する。
     public static let minimumFrameSize = 4.0
 
+    /// 画像を残す日数の範囲（`DECISIONS.md` 24・A10）。読み込んだ設定と `settingsChanged` の日数は、この範囲に丸める。
+    public static let imageRetentionDaysRange = 1...365
+
     /// コピー完了の表示を出しておく時間。過ぎたら、まだ `copied` なら `hidden` に戻す。
     public static let copiedDisplayDuration = Duration.milliseconds(2500)
 
@@ -59,7 +62,10 @@ import Observation
     /// コピー完了の表示を消すタイマー。テストから完了を待てるように internal にしている。
     @ObservationIgnored var copiedTimer: Task<Void, Never>?
 
-    /// 未接続の依存は nil。回の ID（フォルダ名）は、この Mac のタイムゾーンで決める。
+    /// 回の ID（フォルダ名）は、この Mac のタイムゾーンで決める。
+    ///
+    /// 依存を省けるのは、撮影まで進まないテストのため。撮影（`capturing`）・画像の置き場（`images`）・時計（`clock`）の
+    /// どれかがないときのドラッグ終了は `.captureFailed`、`pasteboard` がないときのコピーは `.pasteboardFailed` になる。
     public convenience init(
         settingsStore: any SettingsStore,
         capturing: (any WindowCapturing)? = nil,
@@ -77,8 +83,9 @@ import Observation
         )
     }
 
-    /// 未接続の依存は nil。`timeZone` は回の ID（フォルダ名）を決めるのに使う。
+    /// `timeZone` は回の ID（フォルダ名）を決めるのに使う。
     /// テストは固定のタイムゾーンを渡し、手元の設定に結果が左右されないようにする。
+    /// 読み込んだ設定の日数は `imageRetentionDaysRange` に丸める（範囲の外の値で、起動時の掃除がすべての回を消さないように）。
     public init(
         settingsStore: any SettingsStore,
         capturing: (any WindowCapturing)? = nil,
@@ -93,7 +100,12 @@ import Observation
         self.images = images
         self.clock = clock
         self.timeZone = timeZone
-        settings = try settingsStore.load()
+        settings = Self.clampingRetention(try settingsStore.load())
+    }
+
+    /// いまの回の ID（画像を置くフォルダの名前。`yyyyMMdd-HHmm`）。まだ回を始めていないか、時計がないときは nil。
+    public var currentSessionID: String? {
+        sessionID
     }
 
     /// 入力を送った順に 1 つずつ処理する。撮影のような非同期の処理の途中で、次の入力は割り込まない。
@@ -321,10 +333,8 @@ extension SessionModel {
             return .done(.ignored)
         }
         guard let capturing, let images, let clock else {
-            // TODO(app): 撮影と画像の置き場がまだ組み立てに差されていない間の仮の挙動。
-            // 撮影せずに idle へ進む。E2E の FoundationSpikeTests が依存している。組み立ての作業で消す。
-            phase = .idle
-            return .done(.succeeded)
+            // 撮影に要る依存がつながっていない。撮影できなかったのと同じに扱い、`drawing` のままにする。
+            return .done(.failed(.captureFailed))
         }
         let sessionID = currentSessionID(clock: clock)
         return .async { [self] in
@@ -493,7 +503,7 @@ extension SessionModel {
     }
 
     private func settingsChanged(_ newSettings: Settings) -> Outcome {
-        settings = newSettings
+        settings = Self.clampingRetention(newSettings)
         return saveSettings()
     }
 
@@ -554,6 +564,14 @@ extension SessionModel {
     /// 画像を消す。消せなくても遷移は止めない（古い回の掃除で、いずれ消える）。
     private func removeImage(atPath path: String) {
         try? images?.remove(at: URL(filePath: path))
+    }
+
+    /// 画像を残す日数を `imageRetentionDaysRange` に丸めた設定。
+    private static func clampingRetention(_ settings: Settings) -> Settings {
+        var clamped = settings
+        let range = imageRetentionDaysRange
+        clamped.imageRetentionDays = Swift.min(Swift.max(settings.imageRetentionDays, range.lowerBound), range.upperBound)
+        return clamped
     }
 
     private func saveSettings() -> Outcome {

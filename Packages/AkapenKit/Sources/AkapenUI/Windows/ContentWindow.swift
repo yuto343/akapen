@@ -117,6 +117,11 @@ struct ContentWindowRoot<Content: View>: View {
             NSApp.activate()
         }
         window.makeKeyAndOrderFront(nil)
+        if activatesApp {
+            // ほかのアプリが使われている最中（起動した直後など）は、アプリを前面に出す求めが断られることがある。
+            // そのときもウィンドウは手前に出す（初回のセットアップが、ほかのウィンドウの後ろに隠れないように）。
+            window.orderFrontRegardless()
+        }
     }
 
     /// 上端の位置を保ったまま、ウィンドウの大きさを中身に合わせる。

@@ -116,6 +116,30 @@ public enum StringKey: String, CaseIterable, Sendable {
     case setupOpenSystemSettings
     /// セットアップを終えるボタン `Done`。
     case setupDone
+    /// 枠の下にウィンドウがなかったときの案内（`DECISIONS.md` A9）。
+    case noticeNoWindow
+    /// ウィンドウを撮影できなかったときの案内。
+    case noticeCaptureFailed
+    /// 撮った画像を保存できなかったときの案内。
+    case noticeImageSaveFailed
+    /// プロンプトをクリップボードに入れられなかったときの案内。
+    case noticePasteboardFailed
+    /// 設定を保存できなかったときの案内。
+    case noticeSettingsSaveFailed
+    /// メインメニューの `Edit`（画面の上には出ない）。
+    case menuEdit
+    /// メインメニューの `Undo`。
+    case menuUndo
+    /// メインメニューの `Redo`。
+    case menuRedo
+    /// メインメニューの `Cut`。
+    case menuCut
+    /// メインメニューの `Copy`。
+    case menuCopy
+    /// メインメニューの `Paste`。
+    case menuPaste
+    /// メインメニューの `Select All`。
+    case menuSelectAll
 }
 
 /// 件数で単数・複数を出し分ける文言のキー（`DECISIONS.md` 21）。日本語は出し分けない。
@@ -205,6 +229,22 @@ public struct UIStrings: Sendable {
             self[.listEditHintEnter]
         case .commandEnter:
             self[.listEditHintCommandEnter]
+        }
+    }
+
+    /// 直前の操作の失敗を知らせる文言（案内の表示に出す）。
+    public func failureMessage(_ failure: SessionFailure) -> String {
+        switch failure {
+        case .noWindowUnderFrame:
+            self[.noticeNoWindow]
+        case .captureFailed:
+            self[.noticeCaptureFailed]
+        case .imageSaveFailed:
+            self[.noticeImageSaveFailed]
+        case .pasteboardFailed:
+            self[.noticePasteboardFailed]
+        case .settingsSaveFailed:
+            self[.noticeSettingsSaveFailed]
         }
     }
 

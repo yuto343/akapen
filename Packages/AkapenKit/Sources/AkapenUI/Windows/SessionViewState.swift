@@ -17,6 +17,8 @@ public struct SessionViewState: Equatable, Sendable {
     public var confirmKey: ConfirmKey
     /// 画像を残す日数（一覧のフッター）。
     public var imageRetentionDays: Int
+    /// 直前の操作の失敗（`SessionModel.lastFailure`）。案内の表示で知らせる。
+    public var failure: SessionFailure?
 
     /// 値をそのまま持つ。設定の値の既定は `Settings()` と同じ。
     public init(
@@ -27,7 +29,8 @@ public struct SessionViewState: Equatable, Sendable {
         lastCopiedCount: Int = 0,
         language: Language = Settings().language,
         confirmKey: ConfirmKey = Settings().confirmKey,
-        imageRetentionDays: Int = Settings().imageRetentionDays
+        imageRetentionDays: Int = Settings().imageRetentionDays,
+        failure: SessionFailure? = nil
     ) {
         self.phase = phase
         self.isToolbarVisible = isToolbarVisible
@@ -37,6 +40,7 @@ public struct SessionViewState: Equatable, Sendable {
         self.language = language
         self.confirmKey = confirmKey
         self.imageRetentionDays = imageRetentionDays
+        self.failure = failure
     }
 
     /// `SessionModel` のいまの状態から作る。赤枠は書きかけの注釈の枠（なければ最後に描いた枠）。
@@ -49,7 +53,8 @@ public struct SessionViewState: Equatable, Sendable {
             lastCopiedCount: model.lastCopiedCount,
             language: model.settings.language,
             confirmKey: model.settings.confirmKey,
-            imageRetentionDays: model.settings.imageRetentionDays
+            imageRetentionDays: model.settings.imageRetentionDays,
+            failure: model.lastFailure
         )
     }
 }
@@ -64,10 +69,12 @@ struct PanelPlan: Equatable {
     var comment: Bool
     var list: Bool
     var copied: Bool
+    /// 案内の表示で知らせる失敗。`drawing` では撮影の失敗、`idle` と `listOpen` ではコピーと設定の保存の失敗。
+    var notice: SessionFailure?
 
     /// 面（赤枠や案内を描く全画面のパネル）を出すか。
     var showsOverlay: Bool {
-        acceptsDrawing || pinnedFrame != nil
+        acceptsDrawing || pinnedFrame != nil || notice != nil
     }
 
     /// 何も出さない。
@@ -77,7 +84,8 @@ struct PanelPlan: Equatable {
         toolbar: false,
         comment: false,
         list: false,
-        copied: false
+        copied: false,
+        notice: nil
     )
 
     /// `phase` と `isToolbarVisible` から決める。次の状態は判断しない。
@@ -89,13 +97,15 @@ struct PanelPlan: Equatable {
             toolbar = false
         case .drawing:
             acceptsDrawing = true
+            notice = Self.drawingNotice(state.failure)
         case .commenting:
             pinnedFrame = state.draftRect
             comment = true
         case .idle:
-            break
+            notice = Self.toolbarNotice(state.failure)
         case .listOpen:
             list = true
+            notice = Self.toolbarNotice(state.failure)
         case .copied:
             copied = true
         }
@@ -107,7 +117,8 @@ struct PanelPlan: Equatable {
         toolbar: Bool,
         comment: Bool,
         list: Bool,
-        copied: Bool
+        copied: Bool,
+        notice: SessionFailure?
     ) {
         self.acceptsDrawing = acceptsDrawing
         self.pinnedFrame = pinnedFrame
@@ -115,5 +126,26 @@ struct PanelPlan: Equatable {
         self.comment = comment
         self.list = list
         self.copied = copied
+        self.notice = notice
+    }
+
+    /// 枠を描く状態で知らせる失敗（撮影まわり）。`DECISIONS.md` A9。
+    private static func drawingNotice(_ failure: SessionFailure?) -> SessionFailure? {
+        switch failure {
+        case .noWindowUnderFrame, .captureFailed, .imageSaveFailed:
+            failure
+        case .pasteboardFailed, .settingsSaveFailed, nil:
+            nil
+        }
+    }
+
+    /// ボタン類だけが出ている状態と一覧で知らせる失敗（コピーと設定の保存）。
+    private static func toolbarNotice(_ failure: SessionFailure?) -> SessionFailure? {
+        switch failure {
+        case .pasteboardFailed, .settingsSaveFailed:
+            failure
+        case .noWindowUnderFrame, .captureFailed, .imageSaveFailed, nil:
+            nil
+        }
     }
 }

@@ -116,6 +116,30 @@ struct JapaneseStrings: StringTable {
             "システム設定を開く"
         case .setupDone:
             "完了"
+        case .noticeNoWindow:
+            "枠の下にウィンドウがありません"
+        case .noticeCaptureFailed:
+            "ウィンドウを撮影できませんでした"
+        case .noticeImageSaveFailed:
+            "画像を保存できませんでした"
+        case .noticePasteboardFailed:
+            "クリップボードにコピーできませんでした"
+        case .noticeSettingsSaveFailed:
+            "設定を保存できませんでした"
+        case .menuEdit:
+            "編集"
+        case .menuUndo:
+            "取り消す"
+        case .menuRedo:
+            "やり直す"
+        case .menuCut:
+            "カット"
+        case .menuCopy:
+            "コピー"
+        case .menuPaste:
+            "ペースト"
+        case .menuSelectAll:
+            "すべてを選択"
         }
     }
 

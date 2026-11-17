@@ -71,6 +71,16 @@ import AkapenCore
         }
     }
 
+    /// ほかの所で変わった設定を映す。言語と、記録を待っていないときのホットキー。ページは変えない。
+    func sync(_ settings: Settings) {
+        if language != settings.language {
+            language = settings.language
+        }
+        if !hotkey.isRecording, hotkey.shortcut != settings.hotkey {
+            hotkey.load(settings.hotkey)
+        }
+    }
+
     /// `Continue`。2 ページ目へ進む。
     func goNext() {
         move(to: .permission)

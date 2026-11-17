@@ -116,6 +116,30 @@ struct EnglishStrings: StringTable {
             "Open System Settings"
         case .setupDone:
             "Done"
+        case .noticeNoWindow:
+            "No window under the frame"
+        case .noticeCaptureFailed:
+            "Couldn’t capture the window"
+        case .noticeImageSaveFailed:
+            "Couldn’t save the image"
+        case .noticePasteboardFailed:
+            "Couldn’t copy to the clipboard"
+        case .noticeSettingsSaveFailed:
+            "Couldn’t save the settings"
+        case .menuEdit:
+            "Edit"
+        case .menuUndo:
+            "Undo"
+        case .menuRedo:
+            "Redo"
+        case .menuCut:
+            "Cut"
+        case .menuCopy:
+            "Copy"
+        case .menuPaste:
+            "Paste"
+        case .menuSelectAll:
+            "Select All"
         }
     }
 

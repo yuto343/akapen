@@ -218,6 +218,8 @@ import AkapenCore
         guard state?.phase == .drawing, var overlay else {
             return
         }
+        // 描き始めたら、前の失敗の知らせは元の案内に戻す（`DECISIONS.md` A9）。
+        overlay.notice = nil
         overlay.frame = globalRect(from: start, to: current, on: overlay.screen)
         overlay.cursor = globalPoint(current, on: overlay.screen)
         self.overlay = overlay
@@ -279,9 +281,15 @@ import AkapenCore
                 overlay = OverlayState(screen: screen, showsHint: true)
             }
             overlay?.showsHint = true
+            overlay?.showsCancel = true
+            overlay?.notice = plan.notice
             showOverlay(on: screen, strings: strings, acceptsMouse: true, makeKey: entering)
         } else if let frame = plan.pinnedFrame {
             overlay = OverlayState(screen: screen, showsHint: false, frame: frame)
+            showOverlay(on: screen, strings: strings, acceptsMouse: false, makeKey: false)
+        } else if let notice = plan.notice {
+            // ボタン類だけが出ている状態での失敗は、マウスを受け取らない面の上端の案内で知らせる。
+            overlay = OverlayState(screen: screen, showsHint: true, notice: notice, showsCancel: false)
             showOverlay(on: screen, strings: strings, acceptsMouse: false, makeKey: false)
         } else {
             overlayPanel.ignoresMouseEvents = true

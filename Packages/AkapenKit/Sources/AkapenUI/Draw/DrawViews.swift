@@ -3,12 +3,20 @@ import AkapenCore
 import AkapenAXID
 
 /// 画面上端の案内の表示（`Drag to frame` と `esc to cancel`。App 01）。
+///
+/// 直前の操作が失敗したときは、1 つ目の文言を失敗の知らせ（`No window under the frame` など。`DECISIONS.md` A9）に替える。
 public struct DrawHintView: View {
     private let strings: UIStrings
+    private let notice: SessionFailure?
+    private let showsCancel: Bool
 
-    /// 文言の言語だけを受け取る。
-    public init(strings: UIStrings) {
+    /// - Parameters:
+    ///   - notice: 知らせる失敗。nil なら `Drag to frame`。
+    ///   - showsCancel: `esc to cancel` を出すか（`Esc` が効く、枠を描く状態のときだけ）。
+    public init(strings: UIStrings, notice: SessionFailure? = nil, showsCancel: Bool = true) {
         self.strings = strings
+        self.notice = notice
+        self.showsCancel = showsCancel
     }
 
     public var body: some View {
@@ -16,12 +24,14 @@ public struct DrawHintView: View {
             Circle()
                 .fill(Tokens.Hint.dot.color)
                 .frame(width: Tokens.Hint.dotSize, height: Tokens.Hint.dotSize)
-            Text(strings[.drawHint])
+            Text(notice.map(strings.failureMessage) ?? strings[.drawHint])
                 .textStyle(Tokens.Typography.control)
                 .foregroundStyle(Tokens.Hint.title.color)
-            Text(strings[.drawCancel])
-                .textStyle(Tokens.Typography.meta)
-                .foregroundStyle(Tokens.Hint.meta.color)
+            if showsCancel {
+                Text(strings[.drawCancel])
+                    .textStyle(Tokens.Typography.meta)
+                    .foregroundStyle(Tokens.Hint.meta.color)
+            }
         }
         .padding(.horizontal, Tokens.Hint.paddingX)
         .frame(height: Tokens.Hint.height)
@@ -44,7 +54,8 @@ public struct RedFrameView: View {
             .strokeBorder(Tokens.Frame.stroke.color, lineWidth: Tokens.Stroke.frame)
             .boxShadow([Tokens.Frame.glow], cornerRadius: Tokens.Radius.frame)
             .allowsHitTesting(false)
-            .accessibilityHidden(true)
+            .accessibilityElement()
+            .accessibilityIdentifier(AXID.Draw.frame)
     }
 }
 
@@ -81,13 +92,26 @@ public struct OverlayState: Equatable, Sendable {
     public var frame: ScreenRect?
     /// ドラッグ中のカーソルの位置。nil なら大きさの表示を出さない。
     public var cursor: CGPoint?
+    /// 案内の表示で知らせる失敗。nil なら `Drag to frame`。
+    public var notice: SessionFailure?
+    /// 案内の表示に `esc to cancel` を出すか。
+    public var showsCancel: Bool
 
     /// 画面だけを決めた、何も描いていない状態から作る。
-    public init(screen: ScreenInfo, showsHint: Bool, frame: ScreenRect? = nil, cursor: CGPoint? = nil) {
+    public init(
+        screen: ScreenInfo,
+        showsHint: Bool,
+        frame: ScreenRect? = nil,
+        cursor: CGPoint? = nil,
+        notice: SessionFailure? = nil,
+        showsCancel: Bool = true
+    ) {
         self.screen = screen
         self.showsHint = showsHint
         self.frame = frame
         self.cursor = cursor
+        self.notice = notice
+        self.showsCancel = showsCancel
     }
 }
 
@@ -118,7 +142,7 @@ public struct OverlayView: View {
                 }
             }
             if state.showsHint {
-                DrawHintView(strings: strings)
+                DrawHintView(strings: strings, notice: state.notice, showsCancel: state.showsCancel)
                     .transition(.opacity)
                     .layoutValue(key: OverlayRole.self, value: .hint)
             }

@@ -12,6 +12,8 @@ public enum AXID {
         public static let hint = "draw.hint"
         /// ドラッグ中の大きさの表示（`332 × 88`）。
         public static let sizeLabel = "draw.sizeLabel"
+        /// 画面上の赤枠（ドラッグ中の枠と、コメントを書いている間の枠）。
+        public static let frame = "draw.frame"
     }
     /// Comment の操作対象。
     public enum Comment {
@@ -102,10 +104,34 @@ public enum AXID {
             "list.field.\(index)"
         }
 
+        /// 行のコメントの文。
+        public static func comment(_ index: Int) -> String {
+            "list.comment.\(index)"
+        }
+
+        /// 行のサムネイル（撮影した画像の縮小）。
+        public static func thumbnail(_ index: Int) -> String {
+            "list.thumbnail.\(index)"
+        }
+
         /// 一覧のパネル。
         public static let panel = "list.panel"
 
         /// 注釈が 0 件のときの表示。
         public static let empty = "list.empty"
+
+        /// 一覧の下の、画像を残す期間の案内（`Images are kept for 7 days`）。
+        public static let retention = "list.retention"
+    }
+    /// アプリのメインメニュー（画面の上には出ない。`⌘Q`・`⌘,` と、入力欄の編集のキーを効かせるために置く）。
+    public enum MainMenu {
+        public static let settings = "mainMenu.settings"
+        public static let quit = "mainMenu.quit"
+        public static let undo = "mainMenu.undo"
+        public static let redo = "mainMenu.redo"
+        public static let cut = "mainMenu.cut"
+        public static let copy = "mainMenu.copy"
+        public static let paste = "mainMenu.paste"
+        public static let selectAll = "mainMenu.selectAll"
     }
 }

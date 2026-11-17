@@ -172,6 +172,8 @@ struct ListView: View {
             Text(strings.plural(.listRetention, count: retentionDays))
                 .textStyle(Tokens.Typography.listFooter)
                 .foregroundStyle(Tokens.List.footerText.color)
+                .accessibilityValue(String(retentionDays))
+                .accessibilityIdentifier(AXID.List.retention)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.vertical, Tokens.List.footerPaddingY)
                 .padding(.horizontal, Tokens.List.footerPaddingX)
@@ -233,7 +235,10 @@ struct ListRowView: View {
         }
         .frame(width: Tokens.List.thumbnailWidth, height: Tokens.List.thumbnailHeight)
         .clipShape(RoundedBox(cornerRadius: Tokens.Radius.field))
-        .accessibilityHidden(true)
+        .accessibilityElement()
+        .accessibilityAddTraits(.isImage)
+        .accessibilityValue(thumbnail == nil ? "" : annotation.imagePath)
+        .accessibilityIdentifier(AXID.List.thumbnail(index))
     }
 
     private var texts: some View {
@@ -242,6 +247,7 @@ struct ListRowView: View {
                 .textStyle(Tokens.Typography.listComment)
                 .foregroundStyle(Tokens.List.comment.color)
                 .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier(AXID.List.comment(index))
             Text(meta)
                 .textStyle(Tokens.Typography.meta)
                 .foregroundStyle(Tokens.List.meta.color)
