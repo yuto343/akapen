@@ -1,1 +1,70 @@
-{"sourceLanguage": "en", "strings": {"increment": {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "Increment"}}, "ja": {"stringUnit": {"state": "translated", "value": "\u5897\u3084\u3059"}}}}}, "version": "1.0"}
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "button.cancel" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キャンセル"
+          }
+        }
+      }
+    },
+    "button.submit" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Submit"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "送信"
+          }
+        }
+      }
+    },
+    "count.caption" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Submitted"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "送信した回数"
+          }
+        }
+      }
+    },
+    "window.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sample App"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sample App"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}
