@@ -1,0 +1,341 @@
+# akapen アーキテクチャ
+
+`DESIGN.md`（何を作るか）に対して、どう組むかを決める文書。E2E を「md の仕様からテストコードを生成する」運用（ashvally の `e2e/` と同じ考え方）で回す前提で、ディレクトリ構成・モジュール分割・テスト用の切り口を定める。
+
+2026-11-18 時点の設計。実装はまだ始めていない。末尾の「最初に確かめること」が通るまでは仮の設計として扱う。
+
+## 方針
+
+- **アプリ本体は薄くし、中身はローカルの Swift パッケージに置く。** ロジックは `swift test` で Xcode を通さず速く回す。
+- **OS に触る部分はすべてプロトコルの裏に置く。** 画面の撮影・クリップボード・ホットキー・ファイル置き場を差し替えられるようにし、E2E では決定的な実装に入れ替える。
+- **状態の遷移は 1 か所に集める。** 「ボタン類が出ているか」「枠を描いているか」などを 1 つの状態機械で持ち、ウィンドウはその状態を映すだけにする。
+- **E2E の仕様は md、テストコードは生成物。** 生成コードは直接編集しない。検証は決定的なコード（クリップボード・保存された画像・状態の書き出し）で行う。
+- **UI の要素は識別子で指す。** アプリとテストが同じ識別子の一覧を共有し、文言・言語・配置が変わってもテストが落ちないようにする。
+
+## ディレクトリ構成
+
+```
+akapen/
+├── DESIGN.md
+├── ARCHITECTURE.md
+├── project.yml                     # XcodeGen の定義（.xcodeproj は生成物。コミットしない）
+├── Makefile                        # gen / build / run / test / e2e / e2e-lint
+├── assets/                         # 元素材（ロゴ・アイコン・LP 用の動画）。既存
+│
+├── App/                            # アプリのターゲット（エントリだけ。ロジックを置かない）
+│   ├── main.swift                  # AkapenApp の AppDelegate を起こすだけ
+│   ├── Info.plist                  # LSUIElement = true（Dock に出さない）
+│   ├── akapen.entitlements
+│   └── Assets.xcassets             # AppIcon、メニューバー用アイコン
+│
+├── Packages/AkapenKit/             # ローカルの Swift パッケージ
+│   ├── Package.swift
+│   ├── Sources/
+│   │   ├── AkapenCore/             # 純粋なロジック。AppKit の UI に依存しない
+│   │   ├── AkapenPlatform/         # OS に触る実装（プロトコルは Core 側）
+│   │   ├── AkapenUI/               # SwiftUI の画面と AppKit のパネル
+│   │   ├── AkapenApp/              # 組み立て（依存の注入）、起動時の設定の読み取り、AppDelegate
+│   │   └── AkapenAXID/             # アクセシビリティ識別子の一覧（アプリと E2E が共有）
+│   └── Tests/                      # すべて Swift Testing。swift test で走る
+│       ├── AkapenCoreTests/        # 単体：ロジックと状態の遷移（依存は偽物）
+│       ├── AkapenPlatformTests/    # 結合：OS に触る実装を 1 つずつ、実物の相手に当てる
+│       ├── AkapenUITests/          # 結合：状態の変化に対するパネルの出し入れ、入力欄の確定キー
+│       └── AkapenAppTests/         # 結合：本物の組み立てで一連の流れを通す（画面は操作しない）
+│
+├── e2e/
+│   ├── README.md                   # 運用ルール（ファイルごとの扱い、md の書式、healer の制約）
+│   ├── check-specs.mjs             # md の書式と、生成物との対応を確かめる（make e2e-lint）
+│   ├── specs/                      # 人が読む仕様（ソース・オブ・トゥルース）
+│   │   ├── _template.md
+│   │   ├── draw/                   # 枠を描く（Paper: App 01）
+│   │   ├── comment/                # コメントを書いて確定する（App 02）
+│   │   ├── list/                   # 一覧で見返す・直す・消す（App 03）
+│   │   ├── copy-prompt/            # プロンプトをコピーする（App 04）
+│   │   ├── menu-bar/               # メニューバーと終了確認（App 05・09）
+│   │   ├── settings/               # 設定ページ（App 06）
+│   │   └── setup/                  # 初回のセットアップ（App 07・08）
+│   ├── tests/                      # UI テストのターゲット（XCTest / XCUITest）
+│   │   ├── Seed.swift              # 手で書く：generator / healer の起点
+│   │   ├── Support/                # 手で書く：起動・前提づくり・検証のヘルパー
+│   │   │   ├── AkapenUITestCase.swift
+│   │   │   ├── Launch.swift
+│   │   │   ├── Gestures.swift
+│   │   │   └── Verify.swift
+│   │   ├── Generated/              # generator / healer が書く：直接編集しない
+│   │   │   └── draw/DrawFrameTests.swift
+│   │   └── Live/                   # 手で書く：実際の画面収録を通す確認（手元だけ）
+│   └── sample-target/              # 撮影対象にする小さなアプリ「Sample App」のターゲット
+│       └── SampleTargetApp.swift
+│
+└── .claude/agents/
+    ├── e2e-planner.md
+    ├── e2e-generator.md
+    └── e2e-healer.md
+```
+
+### プロジェクトの定義
+
+- `.xcodeproj` は XcodeGen（`project.yml`）から生成し、コミットしない。ターゲットはディレクトリ単位でソースを拾うので、`Generated/` にファイルが増えても `make gen` を挟めばそのまま入る。`make e2e` は毎回 `make gen` を先に走らせる。
+- ターゲットは 3 つ。`akapen`（アプリ）、`SampleTarget`（撮影対象のアプリ）、`AkapenE2E`（UI テスト。`AkapenAXID` をリンクする）。
+- 単体テストは Xcode のターゲットにせず、パッケージの `swift test` で回す。
+- 署名は Apple Development 証明書で固定する（手元に有効な証明書が 2 つある）。アドホック署名だとビルドのたびに画面収録の許可が外れるため。
+- バンドル ID は仮に `com.yuto343.akapen`。
+- 対応 OS は仮に macOS 15 以降。
+
+## モジュール
+
+依存は上から下への一方向。`AkapenCore` は他のどれにも依存しない。
+
+```
+App ──▶ AkapenApp ──▶ AkapenUI ──▶ AkapenCore
+            │            └──────▶ AkapenAXID
+            └───▶ AkapenPlatform ──▶ AkapenCore
+e2e/tests ──▶ AkapenAXID（だけ）
+```
+
+### AkapenApp
+
+組み立てをアプリのターゲットではなくパッケージに置く。アプリのターゲットにあるコードは `swift test` から呼べず、結合テストが E2E でしか書けなくなるため。
+
+| ファイル | 役割 |
+| --- | --- |
+| `LaunchConfiguration.swift` | 起動引数・環境変数を読んで値にする。純粋な関数（`[String: String]` → 設定値） |
+| `AppEnvironment.swift` | `LaunchConfiguration` から依存一式（`SessionModel` と各プロトコルの実装）を組み立てる |
+| `AppDelegate.swift` | `AppEnvironment` を作り、ウィンドウとメニューバーを生成する |
+
+`AppEnvironment.make(_:)` は、アプリの起動・E2E・結合テストのどれからも同じものを呼ぶ。結合テストが通した組み立てが、そのまま実物のアプリの組み立てになる。
+
+### AkapenCore
+
+| ファイル | 役割 |
+| --- | --- |
+| `Session/SessionModel.swift` | 状態機械（下の「状態」）。`@MainActor @Observable` |
+| `Session/Annotation.swift` | 注釈 1 件（画像のパス、コメント、枠の位置） |
+| `Capture/WindowPicker.swift` | 枠と重なる面積が最も大きいウィンドウを選ぶ |
+| `Capture/FrameRenderer.swift` | 画像に赤枠を描き込み、長辺の上限に合わせて縮小する（CoreGraphics） |
+| `Prompt/PromptBuilder.swift` | 定型文 +「パス → コメント」の文章を組み立てる |
+| `Prompt/Boilerplate.swift` | 言語ごとの定型文の既定値 |
+| `Settings/Settings.swift` | 設定の型（言語・ホットキー・確定キー・定型文・保存日数） |
+| `Storage/CacheLayout.swift` | 回ごとのフォルダ名とファイル名の決め方、古いフォルダの選び出し |
+| `Input/ConfirmKeyPolicy.swift` | 押されたキー・修飾キー・変換中かどうかから「確定 / 改行 / 何もしない」を決める |
+| `Ports/*.swift` | OS に触る部分のプロトコル（下の表） |
+
+プロトコル（Ports）と実装の対応:
+
+| プロトコル | 本番（AkapenPlatform） | E2E 用（AkapenPlatform） |
+| --- | --- | --- |
+| `WindowCapturing`（ウィンドウ一覧と撮影） | `ScreenCaptureKitCapturer` | `FixtureCapturer`（固定のウィンドウ位置と固定の画像を返す） |
+| `PromptPasteboard` | `NSPasteboard.general` | 名前つきのクリップボード（手元のコピー内容を壊さない） |
+| `SettingsStore` | `UserDefaults.standard` | テストごとの一時ディレクトリ |
+| `ImageStore`（画像の保存と掃除） | `~/Library/Caches/akapen/` | テストごとの一時ディレクトリ |
+| `HotkeyRegistering` | Carbon の `RegisterEventHotKey` | 同じ実装 + テスト用の入口（下の「テスト用の切り口」） |
+| `ScreenRecordingPermission` | `CGPreflightScreenCaptureAccess` | 固定値（許可あり / なし）を返す |
+| `LoginItem` | `SMAppService` | 何もしない |
+| `Clock` | システムの時計 | 固定の時刻 |
+
+外部ライブラリは入れない。ホットキーの登録は Carbon の薄い包みで足り、記録用の入力欄は Paper のデザインに合わせて自前で作る。
+
+### AkapenUI
+
+Paper の画面と 1 対 1 で対応させる。色・文字サイズ・角丸は Paper のトークンを `Tokens.swift` に写す。
+
+| ディレクトリ | 中身 | Paper |
+| --- | --- | --- |
+| `Toolbar/` | 画面端のボタン類（「+」「一覧」「copy prompt」） | App 01〜04 |
+| `Draw/` | 枠を描く面、案内の表示、大きさの表示 | App 01 |
+| `Comment/` | 枠の横の入力欄 | App 02 |
+| `List/` | 注釈の一覧 | App 03 |
+| `Copied/` | コピー完了の表示 | App 04 |
+| `MenuBar/` | メニューバーのメニュー、終了確認 | App 05・09 |
+| `Settings/` | 設定ページ、ホットキーの記録欄 | App 06 |
+| `Setup/` | 初回のセットアップ | App 07・08 |
+| `Windows/` | AppKit のパネル（下の「ウィンドウ」） | — |
+| `Tokens.swift` / `Localizable.xcstrings` | デザイントークン、表示の文言（英語・日本語） | — |
+
+### AkapenAXID
+
+識別子の一覧だけを持つ。アプリは `.accessibilityIdentifier(AXID.Toolbar.copyPrompt)` のように付け、テストは同じ定数で要素を引く。
+
+```swift
+public enum AXID {
+    public enum Toolbar { public static let add = "toolbar.add", list = "toolbar.list", copyPrompt = "toolbar.copyPrompt" }
+    public enum Draw    { public static let surface = "draw.surface", hint = "draw.hint" }
+    public enum Comment { public static let field = "comment.field" }
+    public enum List    { public static func row(_ i: Int) -> String { "list.row.\(i)" } /* … */ }
+    // Settings / Setup / MenuBar / QuitConfirm
+}
+```
+
+generator はこの一覧にある識別子だけを使う。足りないときは、テスト側でラベルや位置を頼りに探さず、識別子の追加を求めて止まる。
+
+## 状態
+
+`SessionModel` が 1 つの `phase` を持つ。
+
+```
+        ホットキー                 ドラッグ終了（撮影）            確定
+hidden ───────────▶ drawing ───────────────────────▶ commenting ───────▶ idle
+                     ▲  │ Esc（注釈 0 件なら hidden、あれば idle）          │
+                     │  ▼                                                │
+                     └──────────────── 「+」/ ホットキー ─────────────────┤
+                                                                         │ 「一覧」
+                                       idle ◀──────────── listOpen ◀─────┤
+                                                                         │ 「copy prompt」
+                                     hidden ◀──（一定時間）── copied ◀────┘
+```
+
+- 入力は `send(_ event:)` の 1 本にまとめる（`hotkeyPressed` / `dragEnded(rect, screen)` / `commentConfirmed(text)` / `commentCancelled` / `escapePressed` / `addTapped` / `listToggled` / `annotationEdited` / `annotationDeleted` / `copyPromptTapped`）。
+- 撮影・保存・クリップボードへの書き込みは、注入されたプロトコル越しに `SessionModel` が呼ぶ。だから一連の流れは `swift test` で、偽の実装を差して最後まで確かめられる。
+- `commenting` で入力を取り消したときは、撮った画像を捨てて `idle`（注釈 0 件なら `hidden`）に戻す。DESIGN.md に定めがないので仮の挙動。
+
+## ウィンドウ
+
+`phase` を見て出し入れするだけで、判断は持たない。
+
+| ウィンドウ | 種類 | 出ている間 |
+| --- | --- | --- |
+| 枠を描く面 | 画面全体を覆う枠なしのパネル。マウスを受け取る | `drawing` のみ。それ以外は外すので、下のアプリを普段どおり操作できる |
+| ボタン類 | 手前に浮く、アクティブ化しないパネル | `hidden` 以外 |
+| コメント入力 | キー入力を受け取れる、アクティブ化しないパネル | `commenting` |
+| 一覧 | 手前に浮くパネル | `listOpen` |
+| 設定 / セットアップ | 通常のウィンドウ | 開いている間 |
+
+撮影は対象のウィンドウだけを指定して行うので、akapen 自身のパネルは写り込まない。
+
+## E2E の仕組み
+
+### 流れ
+
+```
+DESIGN.md / Paper ──(planner)──▶ e2e/specs/**/*.md ──(generator)──▶ e2e/tests/Generated/**
+                                   ▲ 人がレビュー                        │ make e2e
+                                   └──── 落ちたら (healer) ◀──────────────┘
+```
+
+### ファイルごとの扱い
+
+| パス | 変更方法 |
+| --- | --- |
+| `e2e/specs/**/*.md` | 直接編集（人・エージェントのどちらでも）。仕様変更は必ずここから。人がレビューして取り込む |
+| `e2e/tests/Seed.swift` / `Support/**` / `Live/**` | 直接編集 |
+| `e2e/tests/Generated/**` | **直接編集しない。** generator / healer 経由のみ |
+| `Packages/AkapenKit/Sources/AkapenAXID/**` | 直接編集。識別子の追加はアプリ側の変更と同時に行う |
+| `.claude/agents/e2e-*.md` | 直接編集 |
+
+### 対応の規則
+
+- md の書式は ashvally と同じ（`概要 / 前提 / 目的 / シナリオ`、`### 正常系` / `### 準正常系`、`####` 1 つがテスト 1 つ、`期待される結果:` と `してはいけないこと:`）。
+- `specs/<dir>/<name>.md` → `tests/Generated/<dir>/<Dir><Name>Tests.swift`（例: `specs/draw/frame.md` → `Generated/draw/DrawFrameTests.swift`、クラス名も `DrawFrameTests`）。ファイル名にディレクトリ名を含めるのは、同じターゲットに同名の Swift ファイルを置けないため。
+- 生成ファイルの先頭に、対応する spec のパスと、その md の内容のハッシュを入れる。各テスト関数の直前には、`####` のシナリオ名をそのままコメントで入れる。
+
+```swift
+// spec: e2e/specs/draw/frame.md
+// spec-sha256: 3f9a…
+// このファイルは生成物。直接編集しない。
+
+final class DrawFrameTests: AkapenUITestCase {
+    // scenario: 枠を描くと、その枠のあるウィンドウが画像として残る
+    func testFrameCapturesWindow() throws { … }
+}
+```
+
+- `check-specs.mjs` は次を確かめる。書式が揃っているか／各シナリオに UI に依存しない検証点があるか／各 md に生成ファイルがあるか／ハッシュが一致するか（md を直したのに再生成していない状態を落とす）／md のシナリオ名と生成ファイルの `// scenario:` が 1 対 1 か。
+
+### 検証点（UI に依存しないもの）
+
+ashvally の「保存されたデータ」に当たるものは 3 つ。各シナリオの `期待される結果:` に最低 1 つ入れる。
+
+| 検証点 | `Support/Verify.swift` のヘルパー |
+| --- | --- |
+| クリップボードに入った文章 | `copiedPrompt()` — 定型文と「パス → コメント」の並びに分解して返す |
+| 保存された画像 | `savedImage(at:)` — ファイルの有無、大きさ、赤枠の位置（赤い画素の外接矩形を、描いた枠と許容誤差つきで比べる） |
+| アプリが持っている状態 | `appState()` — 注釈の件数とコメント、`phase`、設定値 |
+
+`appState()` は、テスト起動のときだけアプリが一時ディレクトリに書き出す `state.json` を読む（状態が変わるたびに書き出す）。
+
+### テスト用の切り口
+
+すべて `AkapenApp/LaunchConfiguration.swift` の 1 か所で読み、依存の選び分けに使う。画面やロジックの中では「テスト中かどうか」を見ない。
+
+| 環境変数 | 効果 |
+| --- | --- |
+| `AKAPEN_E2E=1` | E2E 用の依存に切り替える。`state.json` の書き出しを有効にする |
+| `AKAPEN_STATE_DIR=<dir>` | 設定・画像・`state.json` の置き場。テストごとに新しい一時ディレクトリ |
+| `AKAPEN_PASTEBOARD=<name>` | 名前つきのクリップボードを使う |
+| `AKAPEN_CAPTURE=fixture \| live` | 撮影の実装。既定は `fixture` |
+| `AKAPEN_SEED=<json>` | 起動時の状態（セットアップ済みか、設定値、画面収録の許可の有無、言語） |
+| `AKAPEN_NOW=<ISO8601>` | 時計を固定する（フォルダ名と、古いフォルダの掃除の判定） |
+
+本番ビルドでもこの読み取りは残す（自分専用のあいだは問題にしない）。配布を始めるときに、デバッグビルド限定にするかを決める。
+
+### 起点と前提づくり
+
+- `Support/AkapenUITestCase.swift` — すべてのテストの親。`setUp` で一時ディレクトリを作り、`SampleTarget` を決まった位置と大きさで起動し、akapen を上の環境変数つきで起動する。`tearDown` で両方を終了して一時ディレクトリを消す。失敗したときは画面の画像と要素ツリー（`app.debugDescription`）を結果に添付する。
+- `Support/Launch.swift` — 前提の指定。`launch(.setupDone)`、`launch(.firstRun)`、`launch(.setupDone, settings: …)`、`launch(.withAnnotations(2))` など。注釈が既にある状態は UI を操作して作らず、`AKAPEN_SEED` で入れる。
+- `Support/Gestures.swift` — `startDrawing()`（ホットキーを押す）、`drawFrame(in: sample.element, inset:)`（`SampleTarget` の要素を基準にドラッグする）、`typeComment(_:)`。
+- `Seed.swift` — セットアップ済みで起動し、ボタン類が出たところで終わるテスト。generator が書き方の見本として読み、`make e2e` では起動のスモークテストを兼ねる。
+
+`SampleTarget` は Paper の「Sample App」に合わせた小さなウィンドウ（入力欄 3 つと Cancel / Submit）。Submit を押した回数を表示するので、「確定したあと下のアプリを操作できる」を確かめられる。
+
+### エージェント
+
+Playwright の MCP のように「実物を操作しながら書く」ことはできないので、generator と healer は「書く → 1 本だけ走らせる → 結果を読んで直す」を繰り返す。
+
+| エージェント | 入力 | 出力 | 制約 |
+| --- | --- | --- | --- |
+| `e2e-planner` | DESIGN.md、Paper の画面、既存の specs | `specs/**/*.md` の下書き・抜け漏れの指摘 | 操作手順・文言・配置を書かない。検証点を各シナリオに最低 1 つ |
+| `e2e-generator` | md 1 本、`Seed.swift`、`Support/**`、`AkapenAXID` | `Generated/**` の 1 ファイル | `Support` のヘルパーと `AXID` だけを使う。足りなければ止まって報告する。`make e2e ONLY=<クラス名>` が通るまで直す |
+| `e2e-healer` | 落ちたテストの名前、結果（失敗の内容・画像・要素ツリー） | 直した生成ファイル、または不具合の報告 | 直してよいのは要素の引き方と待ち方だけ。アサーションの緩和・削除は禁止。満たせなければ `XCTSkip` で止め、不具合として報告する |
+
+### 走らせ方
+
+| コマンド | 内容 |
+| --- | --- |
+| `make test` | `swift test`（単体テスト） |
+| `make e2e-lint` | `node e2e/check-specs.mjs` |
+| `make e2e` | `make gen` → `xcodebuild test`（`Generated/` と `Seed`。撮影は `fixture`） |
+| `make e2e ONLY=DrawFrameTests` | 1 クラスだけ走らせる（generator / healer が使う） |
+| `make e2e-live` | `Live/` だけを、実際の画面収録で走らせる（手元だけ。画面収録の許可が要る） |
+
+CI は当面置かない。置くときは `make test`・`make e2e-lint`・`make e2e` を流すだけで、AI は使わない。
+
+### 仕様の対象外
+
+`specs/` に書かないもの。
+
+- 画面収録の許可ダイアログそのもの。許可の有無による akapen 側の表示までを対象にし、有無は `AKAPEN_SEED` で作る
+- 実際の画面が正しく写るか。`Live/` の手書きテストで見る
+- 日本語変換中の `Enter`。`ConfirmKeyPolicy` の単体テストで見る
+- ホバーで出る一時的な表示が写るかどうか
+- ログイン時の自動起動
+- 見た目が Paper と一致するか。実装のときに画面を撮って Paper と見比べる
+
+## テストの分担
+
+| 層 | 道具 | 見るもの |
+| --- | --- | --- |
+| 単体 | `AkapenCoreTests` | 状態の遷移、プロンプトの組み立て、ウィンドウの選び方、赤枠の描き込みと縮小、フォルダの掃除、確定キーの判定。依存はすべて偽物 |
+| 結合（実装 1 つずつ） | `AkapenPlatformTests` | 画像の保存と掃除（一時ディレクトリの実ファイル）、設定の読み書き（専用の UserDefaults）、クリップボード（名前つき）、偽の撮影の実装 |
+| 結合（画面と状態） | `AkapenUITests` | `phase` を変えたときにどのパネルが出て、どれが外れるか。入力欄でのキー入力が正しいイベントになるか |
+| 結合（一連の流れ） | `AkapenAppTests` | `AppEnvironment.make` で組んだ本物の依存に、イベントを順に送る。最後にクリップボードの文章と、ディスク上の画像と赤枠の位置を確かめる。環境変数ごとの依存の選び分けもここで見る |
+| E2E（生成） | XCUITest + 偽の撮影 | 実物のアプリで、操作が状態・画像・クリップボードまで正しくつながっているか |
+| E2E（手書き・手元だけ） | XCUITest + 実際の撮影 | ScreenCaptureKit で `SampleTarget` が写り、赤枠が正しい位置に入るか |
+
+結合テストは md から生成せず、手で書く。E2E と同じ検証（クリップボード・画像・状態）を、画面の操作なしで数秒のうちに確かめられるので、流れの分岐（取り消し、0 件での `Esc`、削除後のコピーなど）の網羅はこちらで行い、E2E は代表的な流れに絞る。
+
+`swift test` から確かめられないもの（E2E か `Live/` に任せる）:
+
+- 実際の画面収録（`ScreenCaptureKitCapturer`）。テストを走らせる側のプロセスに画面収録の許可が要るため
+- グローバルホットキーの登録が実際にキー入力を拾うか
+- ドラッグ・クリック・キー入力が、実物のウィンドウを通ってイベントになるか
+
+## 最初に確かめること
+
+骨組み（3 ターゲットと空のパッケージ）を作った時点で、次を小さく試す。結果によってはこの設計を直す。
+
+1. XCUITest から送った `⌘;` を、Carbon で登録したホットキーが拾うか。拾わない場合は、E2E のときだけ受け付ける入口（URL スキームか分散通知）を `HotkeyRegistering` の E2E 用実装に足す。
+2. アクティブ化しないパネルの中の要素を、XCUITest が識別子で引けるか。`LSUIElement` のアプリでも変わらないか。
+3. 画面全体を覆うパネルの上で、XCUITest の座標指定のドラッグが届くか。
+4. XcodeGen で作った UI テストのターゲットが、ローカルパッケージの `AkapenAXID` をリンクできるか。
+5. generator の 1 周（書く → 1 クラスだけ走らせる → 結果を読む）にかかる時間。長すぎる場合は、ビルドを 1 回で済ませて実行だけを繰り返す形（`build-for-testing` / `test-without-building`）に変える。
+6. DESIGN.md の「実装の最初に確かめること」（GUI アプリにパス入りの文章を貼って画像が読まれるか）。読まれない場合は `PromptPasteboard` に画像ファイルも入れる。

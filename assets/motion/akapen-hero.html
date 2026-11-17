@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>akapen — hero motion</title>
+<style>
+  :root { --bg: #FFFFFF; }
+  html, body { margin: 0; height: 100%; background: var(--bg); }
+  body { display: flex; align-items: center; justify-content: center; }
+  .akapen-hero { width: min(960px, 92vw); padding-top: 14%; cursor: pointer; }
+  .akapen-hero svg { display: block; width: 100%; height: auto; overflow: visible; }
+</style>
+</head>
+<body>
+<div class="akapen-hero" title="クリックでもう一度再生">
+<svg viewBox="80 100 1850 530" role="img" aria-label="akapen">
+  <defs>
+    <mask id="akapen-write" maskUnits="userSpaceOnUse" x="-200" y="-400" width="2400" height="1400">
+      <path id="akapen-stroke" transform="translate(100 60)" d="M232 268 C225.0 267.0 205.3 261.3 190 262 C174.7 262.7 155.8 265.7 140 272 C124.2 278.3 108.0 288.7 95 300 C82.0 311.3 70.3 325.8 62 340 C53.7 354.2 46.7 371.3 45 385 C43.3 398.7 45.3 414.8 52 422 C58.7 429.2 72.3 430.8 85 428 C97.7 425.2 114.2 416.3 128 405 C141.8 393.7 155.2 376.7 168 360 C180.8 343.3 194.3 320.3 205 305 C215.7 289.7 230.3 266.3 232 268 C233.7 269.7 221.2 298.8 215 315 C208.8 331.2 200.5 350.0 195 365 C189.5 380.0 181.2 396.2 182 405 C182.8 413.8 190.3 418.0 200 418 C209.7 418.0 225.8 410.0 240 405 C254.2 400.0 274.2 394.7 285 388 C295.8 381.3 299.5 379.7 305 365 C310.5 350.3 313.0 322.5 318 300 C323.0 277.5 328.3 253.3 335 230 C341.7 206.7 349.7 180.0 358 160 C366.3 140.0 376.3 120.8 385 110 C393.7 99.2 402.2 95.0 410 95 C417.8 95.0 428.2 100.8 432 110 C435.8 119.2 435.8 135.0 433 150 C430.2 165.0 423.0 184.2 415 200 C407.0 215.8 395.8 230.8 385 245 C374.2 259.2 360.5 272.2 350 285 C339.5 297.8 329.5 308.7 322 322 C314.5 335.3 309.5 351.2 305 365 C300.5 378.8 297.5 395.0 295 405 C292.5 415.0 289.5 427.5 290 425 C290.5 422.5 291.3 402.5 298 390 C304.7 377.5 316.3 363.3 330 350 C343.7 336.7 363.3 320.8 380 310 C396.7 299.2 417.0 287.0 430 285 C443.0 283.0 455.0 290.5 458 298 C461.0 305.5 456.8 321.3 448 330 C439.2 338.7 419.3 345.3 405 350 C390.7 354.7 365.3 352.7 362 358 C358.7 363.3 375.3 374.7 385 382 C394.7 389.3 407.2 397.3 420 402 C432.8 406.7 448.7 410.3 462 410 C475.3 409.7 492.8 407.5 500 400 C507.2 392.5 500.0 379.7 505 365 C510.0 350.3 519.2 326.7 530 312 C540.8 297.3 555.0 284.8 570 277 C585.0 269.2 605.8 265.8 620 265 C634.2 264.2 653.0 264.2 655 272 C657.0 279.8 641.2 297.7 632 312 C622.8 326.3 612.0 345.0 600 358 C588.0 371.0 573.7 383.7 560 390 C546.3 396.3 518.0 394.3 518 396 C518.0 397.7 546.3 398.0 560 400 C573.7 402.0 589.2 405.5 600 408 C610.8 410.5 614.2 416.3 625 415 C635.8 413.7 650.8 405.0 665 400 C679.2 395.0 697.5 398.3 710 385 C722.5 371.7 731.3 340.5 740 320 C748.7 299.5 760.7 263.7 762 262 C763.3 260.3 753.3 290.3 748 310 C742.7 329.7 736.0 356.7 730 380 C724.0 403.3 717.3 430.0 712 450 C706.7 470.0 701.7 487.5 698 500 C694.3 512.5 688.8 530.0 690 525 C691.2 520.0 698.3 494.2 705 470 C711.7 445.8 722.2 405.0 730 380 C737.8 355.0 742.0 335.8 752 320 C762.0 304.2 775.3 293.3 790 285 C804.7 276.7 825.0 270.8 840 270 C855.0 269.2 871.7 271.7 880 280 C888.3 288.3 891.7 306.7 890 320 C888.3 333.3 880.0 350.0 870 360 C860.0 370.0 842.5 375.3 830 380 C817.5 384.7 800.8 383.0 795 388 C789.2 393.0 787.5 407.2 795 410 C802.5 412.8 825.8 407.5 840 405 C854.2 402.5 868.3 399.2 880 395 C891.7 390.8 896.7 385.8 910 380 C923.3 374.2 944.2 367.5 960 360 C975.8 352.5 992.5 344.2 1005 335 C1017.5 325.8 1030.8 314.2 1035 305 C1039.2 295.8 1035.8 285.0 1030 280 C1024.2 275.0 1010.8 273.3 1000 275 C989.2 276.7 975.0 282.5 965 290 C955.0 297.5 946.7 307.5 940 320 C933.3 332.5 926.7 350.0 925 365 C923.3 380.0 924.2 399.2 930 410 C935.8 420.8 946.7 426.7 960 430 C973.3 433.3 993.3 433.3 1010 430 C1026.7 426.7 1045.0 417.5 1060 410 C1075.0 402.5 1088.3 398.3 1100 385 C1111.7 371.7 1120.0 350.5 1130 330 C1140.0 309.5 1158.0 263.7 1160 262 C1162.0 260.3 1147.8 301.2 1142 320 C1136.2 338.8 1130.0 357.5 1125 375 C1120.0 392.5 1112.0 423.3 1112 425 C1112.0 426.7 1117.0 400.8 1125 385 C1133.0 369.2 1147.5 343.8 1160 330 C1172.5 316.2 1185.8 307.8 1200 302 C1214.2 296.2 1233.7 291.2 1245 295 C1256.3 298.8 1263.8 310.0 1268 325 C1272.2 340.0 1267.2 368.3 1270 385 C1272.8 401.7 1276.7 415.8 1285 425 C1293.3 434.2 1306.7 437.2 1320 440 C1333.3 442.8 1351.2 442.5 1365 442 C1378.8 441.5 1396.7 437.8 1403 437"
+        fill="none" stroke="#fff" stroke-width="84" stroke-linecap="round" stroke-linejoin="round"/>
+    </mask>
+  </defs>
+  <image href="../logo/akapen-wordmark.png" x="106" y="125" width="1397" height="480" mask="url(#akapen-write)"/>
+  <g id="akapen-hand"><image href="../logo/akapen-hand.png" x="0" y="-422" width="413" height="459"/></g>
+</svg>
+</div>
+<script>
+(() => {
+  const INTRO = 0.55, WRITE = 3.4, SETTLE = 0.45;            // 秒
+  const TOTAL = INTRO + WRITE + SETTLE;
+  const stroke = document.getElementById('akapen-stroke');
+  const hand = document.getElementById('akapen-hand');
+  const L = stroke.getTotalLength();
+  stroke.style.strokeDasharray = L;
+  const ease = t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2;  // easeInOutCubic
+  const easeOut = t => 1 - Math.pow(1 - t, 3);
+  const at = len => { const p = stroke.getPointAtLength(len); return { x: p.x + 100, y: p.y + 60 }; };
+  const start = at(0), end = at(L);
+
+  function render(t) {
+    let x, y, rot = 0, op = 1, drawn = 0;
+    if (t < INTRO) {                       // 左から手が入ってくる
+      const k = easeOut(t / INTRO);
+      x = start.x - 140 * (1 - k); y = start.y + 30 * (1 - k); op = k; rot = -8 * (1 - k);
+    } else if (t < INTRO + WRITE) {        // 書く
+      const k = ease((t - INTRO) / WRITE);
+      drawn = L * k; ({ x, y } = at(drawn));
+      rot = Math.sin((t - INTRO) * 16) * 2.2;  // 筆圧っぽい小さな揺れ
+    } else {                               // 書き終わりで少し浮いて戻る
+      const k = Math.min(1, (t - INTRO - WRITE) / SETTLE);
+      drawn = L; x = end.x; y = end.y - Math.sin(k * Math.PI) * 10;
+    }
+    stroke.style.strokeDashoffset = L - drawn;
+    hand.setAttribute('transform', `translate(${x} ${y}) rotate(${rot})`);
+    hand.style.opacity = op;
+  }
+
+  const params = new URLSearchParams(location.search);
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (params.has('t')) { render(parseFloat(params.get('t'))); return; }   // 静止フレーム書き出し用
+  if (reduce) { render(TOTAL); return; }
+
+  let t0 = null, raf = 0;
+  const loop = now => {
+    if (t0 === null) t0 = now;
+    const t = (now - t0) / 1000;
+    render(Math.min(t, TOTAL));
+    if (t < TOTAL) raf = requestAnimationFrame(loop);
+  };
+  const play = () => { cancelAnimationFrame(raf); t0 = null; render(0); raf = requestAnimationFrame(loop); };
+  document.querySelector('.akapen-hero').addEventListener('click', play);
+  setTimeout(play, 300);
+})();
+</script>
+</body>
+</html>
