@@ -10,6 +10,8 @@ public enum AXID {
     public enum Draw {
         public static let surface = "draw.surface"
         public static let hint = "draw.hint"
+        /// ドラッグ中の大きさの表示（`332 × 88`）。
+        public static let sizeLabel = "draw.sizeLabel"
     }
     /// Comment の操作対象。
     public enum Comment {
@@ -66,5 +68,16 @@ public enum AXID {
         public static func delete(_ index: Int) -> String {
             "list.delete.\(index)"
         }
+
+        /// 編集中の行の入力欄。
+        public static func field(_ index: Int) -> String {
+            "list.field.\(index)"
+        }
+
+        /// 一覧のパネル。
+        public static let panel = "list.panel"
+
+        /// 注釈が 0 件のときの表示。
+        public static let empty = "list.empty"
     }
 }

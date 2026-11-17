@@ -15,7 +15,7 @@ let package = Package(
         .target(
             name: "AkapenUI",
             dependencies: ["AkapenCore", "AkapenAXID"],
-            resources: [.process("Localizable.xcstrings")]
+            resources: [.process("Resources")]
         ),
         .target(name: "AkapenApp", dependencies: ["AkapenCore", "AkapenUI", "AkapenPlatform"]),
         .testTarget(name: "AkapenCoreTests", dependencies: ["AkapenCore"]),
