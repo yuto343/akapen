@@ -4,10 +4,9 @@ public struct Settings: Codable, Equatable, Sendable {
     public var hotkey = KeyboardShortcut()
     public var toolbarShortcut: KeyboardShortcut?
     public var confirmKey: ConfirmKey = .enter
-    public var boilerplates: [String: String] = [
-        "en": "I annotated the screen. Please address the comments below.\nOpen every image and check the area marked with the red frame before you start.",
-        "ja": "画面に注釈を付けました。以下のコメントに対応してください。\n作業前にすべての画像を開き、赤枠の箇所を確認してください。",
-    ]
+    /// 言語ごとの定型文。キーは `Language.rawValue`。
+    /// 読むときは `boilerplate(for:)` を使う（キーがない言語は既定文を返す）。
+    public var boilerplates: [String: String] = Boilerplate.defaults
     public var imageRetentionDays: Int = 7
     /// 初回のセットアップを終えたか。
     public var setupCompleted: Bool = false
@@ -36,5 +35,15 @@ public struct Settings: Codable, Equatable, Sendable {
         boilerplates = try container.decodeIfPresent([String: String].self, forKey: .boilerplates) ?? defaults.boilerplates
         imageRetentionDays = try container.decodeIfPresent(Int.self, forKey: .imageRetentionDays) ?? defaults.imageRetentionDays
         setupCompleted = try container.decodeIfPresent(Bool.self, forKey: .setupCompleted) ?? defaults.setupCompleted
+    }
+
+    /// 指定した言語の定型文。書き換えていない（保存内容にキーがない）言語は既定文を返す。
+    public func boilerplate(for language: Language) -> String {
+        boilerplates[language.rawValue] ?? Boilerplate.defaultText(for: language)
+    }
+
+    /// 指定した言語の定型文を書き換える。ほかの言語の定型文には触らない。
+    public mutating func setBoilerplate(_ text: String, for language: Language) {
+        boilerplates[language.rawValue] = text
     }
 }

@@ -10,10 +10,12 @@
 | `AkapenCore/Session/Annotation.swift` | `Annotation(id:imagePath:comment:rect:sourceAppName:createdAt:windowFrame:)`。`windowFrame` は撮影した時点のウィンドウ矩形 |
 | `AkapenCore/Session/SessionEvent.swift` | `SessionEvent` |
 | `AkapenCore/Session/SessionFailure.swift` | `SessionFailure`（`noWindowUnderFrame / captureFailed / imageSaveFailed / pasteboardFailed / settingsSaveFailed`） |
-| `AkapenCore/Session/SessionModel.swift` | `@MainActor @Observable SessionModel`。`init(settingsStore:capturing:pasteboard:images:clock:) throws`、`@discardableResult send(_:) -> Task<Void, Never>`（送った順に 1 つずつ処理。`await model.send(...).value` で完了を待てる）、読み取り専用 `phase / annotations / draft / settings / lastDrawnRect / isToolbarVisible / lastCopiedCount / lastFailure`、更新後通知 `onChange` |
-| `AkapenCore/Capture/` | `ScreenRect(x:y:width:height:)`、`ScreenDescriptor(id:frame:)`、`CaptureWindow(id:frame:appName:title:)` |
-| `AkapenCore/Settings/` | `Settings()`（`setupCompleted` を含む。古い保存内容にキーがなくても読める）、`Language`、`ConfirmKey` |
-| `AkapenCore/Input/` | `KeyboardShortcut(keyCode:modifiers:)`、`KeyModifiers`、`ConfirmKeyDecision`、`ConfirmKeyPolicy.decide(modifiers:isComposing:confirmKey:)`（仮実装） |
+| `AkapenCore/Session/SessionModel.swift` | `@MainActor @Observable SessionModel`。`init(settingsStore:capturing:pasteboard:images:clock:) throws`（回の ID はこの Mac のタイムゾーン）と、タイムゾーンを固定する `init(settingsStore:capturing:pasteboard:images:clock:timeZone:) throws`、`@discardableResult send(_:) -> Task<Void, Never>`（送った順に 1 つずつ処理。撮影の途中に送った入力は撮影のあとに処理する。待ちがなく同期で済む入力は呼び出しの中で処理を終える。`await model.send(...).value` で完了を待てる）、読み取り専用 `phase / annotations / draft / settings / lastDrawnRect / isToolbarVisible / lastCopiedCount / lastFailure`、状態が変わったときだけ呼ぶ `onChange`、起動時の掃除 `performStartupCleanup() throws`、定数 `minimumFrameSize`（4pt）・`copiedDisplayDuration`（2.5 秒） |
+| `AkapenCore/Capture/` | `ScreenRect(x:y:width:height:)`、`ScreenDescriptor(id:frame:)`、`CaptureWindow(id:frame:appName:title:)`、`WindowPicker.pick(frame:from:)`（重なりの面積が最大のウィンドウ。同じ面積なら手前）、`FrameRenderer.render(png:windowFrame:frame:maxLongEdge:) throws -> Data`（赤枠 `#FF3E3E` を枠の外側に描き込み、長辺の上限を超えるときだけ縮小。既定の上限は `FrameRenderer.defaultMaxLongEdge` = 1568px） |
+| `AkapenCore/Prompt/` | `PromptBuilder.build(settings:annotations:)` / `build(boilerplate:annotations:)`（DESIGN.md の例と同じ形。末尾に改行なし）、`Boilerplate.english / japanese / defaultText(for:) / defaults` |
+| `AkapenCore/Storage/CacheLayout.swift` | `sessionID(for:timeZone:)`（`yyyyMMdd-HHmm`）、`fileName(index:)`（`01.png`…）、`date(fromSessionID:timeZone:)`、`sessionIDs(_:olderThan:timeZone:)`。Platform の `ImageStore` はこれで置き場を決める |
+| `AkapenCore/Settings/` | `Settings()`（`setupCompleted` を含む。古い保存内容にキーがなくても読める）、`Settings.boilerplate(for:)`（書き換えていない言語は既定文。定型文を読むときはこれを使う）、`Settings.setBoilerplate(_:for:)`、`Language`、`ConfirmKey` |
+| `AkapenCore/Input/` | `KeyboardShortcut(keyCode:modifiers:)`、`KeyModifiers`、`ConfirmKeyDecision`、`ConfirmKeyPolicy.decide(modifiers:isComposing:confirmKey:)`（`Enter` 確定: 修飾なしで確定・`Shift` で改行。`⌘Enter` 確定: `⌘` で確定・修飾なしで改行。変換中とそれ以外は passThrough） |
 | `AkapenCore/Ports/WindowCapturing.swift` | `windows() async throws`（手前のウィンドウから順に返す） / `capture(window:) async throws -> Data`（PNG） |
 | `AkapenCore/Ports/PromptPasteboard.swift` | `write(text:imageURLs:) throws` |
 | `AkapenCore/Ports/SettingsStore.swift` | `load() throws -> Settings` / `save(_:) throws` |
@@ -36,7 +38,7 @@
 
 Core の座標は主画面左上を (0,0) とする全画面共通のポイント。左や上の画面は負座標。画面ごとのピクセル倍率とは別物。AppKit の変換は UI/Windows の境界だけで行う。
 
-骨組みでは `hidden → drawing → idle` と drawing 中の Esc だけ実装した。撮影、draft の生成、コメント以降の入力、設定変更は `TODO(core)` で未実装。未接続の Ports は nil を許す。後続担当はこれらを AppEnvironment で注入する。起動設定のうち E2E と保存先のみ有効で、残りは読み取りまで。seed は未確定スキーマを勝手に固定しないため JSON 文字列として保持する。
+状態の遷移は `.director/core/brief.md` の決まりどおりに実装済み（撮影 → draft → コメント → 一覧 → コピー → 2.5 秒後に hidden、ボタン類の表示切り替え、設定の保存、失敗の記録）。未接続の Ports は nil を許す。`capturing` か `images` か `clock` が nil の間は、ドラッグ終了で撮影せずに idle へ進む仮の挙動を残している（`TODO(app)`。FoundationSpikeTests が依存。組み立ての作業で本物を差したら消す）。`pasteboard` が nil のコピーは `.pasteboardFailed`、`clock` が nil のコピー完了は `copiedExpired` を待つ。起動設定のうち E2E と保存先のみ有効で、残りは読み取りまで。seed は未確定スキーマを勝手に固定しないため JSON 文字列として保持する。
 
 ## state.json v1
 

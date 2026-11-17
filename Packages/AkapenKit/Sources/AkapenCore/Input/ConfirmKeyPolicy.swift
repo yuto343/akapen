@@ -8,12 +8,15 @@ public enum ConfirmKeyDecision: Sendable {
 /// 押されたキーと設定から、コメント欄での Return の扱いを決める。
 public enum ConfirmKeyPolicy {
     /// Return キーが押されたときに呼ぶ。変換中（isComposing）は常に passThrough。
+    ///
+    /// - `Enter` で確定: 修飾なしは確定、`Shift` だけは改行。
+    /// - `⌘Enter` で確定: `⌘` だけは確定、修飾なしは改行。
+    /// - それ以外の組み合わせは passThrough（入力欄に任せる）。
     public static func decide(
         modifiers: KeyModifiers,
         isComposing: Bool,
         confirmKey: ConfirmKey
     ) -> ConfirmKeyDecision {
-        // TODO(core): 仮実装。網羅テストと細部の見直しは次の担当が行う。
         if isComposing {
             return .passThrough
         }
