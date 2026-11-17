@@ -39,7 +39,7 @@ akapen/
 │   └── Tests/                      # すべて Swift Testing。swift test で走る
 │       ├── AkapenCoreTests/        # 単体：ロジックと状態の遷移（依存は偽物）
 │       ├── AkapenPlatformTests/    # 結合：OS に触る実装を 1 つずつ、実物の相手に当てる
-│       ├── AkapenUITests/          # 結合：状態の変化に対するパネルの出し入れ、入力欄の確定キー
+│       ├── AkapenUITests/          # 結合：パネルの出し入れ、入力欄の確定キー、設定・セットアップ・終了確認・メニューの操作
 │       └── AkapenAppTests/         # 結合：本物の組み立てで一連の流れを通す（画面は操作しない）
 │
 ├── e2e/
@@ -137,20 +137,43 @@ e2e/tests ──▶ AkapenAXID（だけ）
 
 ### AkapenUI
 
-Paper の画面と 1 対 1 で対応させる。色・文字サイズ・角丸は Paper のトークンを `Tokens.swift` に写す。
+Paper の画面と 1 対 1 で対応させる。色・文字サイズ・角丸・余白は Paper の値を `Tokens.swift` に写し、画面のコードには数値や色を直接書かない。
 
-| ディレクトリ | 中身 | Paper |
+| ディレクトリ・ファイル | 中身 | Paper |
 | --- | --- | --- |
-| `Toolbar/` | 画面端のボタン類（「+」「一覧」「copy prompt」） | App 01〜04 |
-| `Draw/` | 枠を描く面、案内の表示、大きさの表示 | App 01 |
-| `Comment/` | 枠の横の入力欄 | App 02 |
-| `List/` | 注釈の一覧 | App 03 |
-| `Copied/` | コピー完了の表示 | App 04 |
-| `MenuBar/` | メニューバーのメニュー、終了確認 | App 05・09 |
-| `Settings/` | 設定ページ、ホットキーの記録欄 | App 06 |
-| `Setup/` | 初回のセットアップ | App 07・08 |
-| `Windows/` | AppKit のパネル（下の「ウィンドウ」） | — |
-| `Tokens.swift` / `Localizable.xcstrings` | デザイントークン、表示の文言（英語・日本語） | — |
+| `Toolbar/` | 画面端のボタン類（「+」「一覧」「copy prompt」）。`ToolbarView` | App 01〜04 |
+| `Draw/` | 案内の表示、赤枠、大きさの表示。`DrawHintView`・`RedFrameView`・`SizeLabelView`・`OverlayView` | App 01 |
+| `Comment/` | 枠の横の入力欄。`CommentView`、複数行の入力欄 `GrowingTextController`（一覧と設定の定型文でも使う） | App 02 |
+| `List/` | 注釈の一覧。`ListView`、サムネイルの切り抜き | App 03 |
+| `Copied/` | コピー完了の表示。`CopiedView` | App 04 |
+| `MenuBar/` | メニューバーのアイコンとメニュー。制御役 `MenuBarController`、見出し `MenuHeaderView` | App 05 |
+| `QuitConfirm/` | 終了の確認。制御役 `QuitConfirmController`、確認の箱 `QuitConfirmView` | App 09 |
+| `Settings/` | 設定のウィンドウ。制御役 `SettingsController`、状態 `SettingsForm`、画面 `SettingsView` | App 06 |
+| `Setup/` | 初回のセットアップ。制御役 `SetupController`、状態 `SetupFlow`、画面 `SetupView` | App 07・08 |
+| `Common/` | 共通の部品。ボタンの見た目、アイコン、文字のスタイルと影、キーの記録欄（`KeyRecorderModel` と、キー入力を受け取る `KeyCaptureView`。設定とセットアップで共通）、キーの表示（`ShortcutText`。キーボードの配列に従う） | — |
+| `Windows/` | AppKit のパネルと通常のウィンドウ（下の「ウィンドウ」）。`SessionWindows`、`ContentWindow`、置き場所の計算 `PanelPlacement`、座標の変換 `ScreenCoordinates` | — |
+| `Strings/` | 表示の文言の表（`EnglishStrings` / `JapaneseStrings`）と、引き方の `UIStrings`。言語はシステムではなく `Settings.language` で選ぶ。単数・複数は `PluralKey` で出し分ける | — |
+| `Tokens.swift` | デザイントークン | — |
+| `Resources/` | アプリのアイコン（タイル）とメニューバーのアイコン | — |
+| `MenuBar.swift` | 組み立てが `MenuBarController` に移るまでの互換用 `MenuBar()`（`TODO(app)`） | — |
+
+文言は文字列カタログ（`Localizable.xcstrings`）ではなく、Swift の表に置く。カタログは `swift test` ではコンパイルされず、`swift test` と `xcodebuild` で結果が変わるため。
+
+#### 画面と制御役
+
+メニューバー以外の画面（App 05〜09）は、次の 2 つに分ける。
+
+- **SwiftUI の部品と状態**（`SettingsView` と `SettingsForm` など）。表示に要る値と、操作を受けるコールバックだけを持ち、`SessionModel` には触らない。
+- **制御役**（`@MainActor` のクラス）。部品をウィンドウやパネルに載せ、`SessionModel` につなぐ。`AkapenApp` の組み立てはこの制御役を呼ぶ。
+
+| 制御役 | 作り方 | 主な API |
+| --- | --- | --- |
+| `MenuBarController` | `init(model:)` | `onOpenSettings`・`onQuitRequested`（コールバック。自分では設定を開かず、終了もしない）。件数と言語はメニューを開くたびに `model` から読み直す |
+| `QuitConfirmController` | `init(model:)`（言語だけを読む） | `show(annotationCount:)`、`hide()`、`isShown`、`onResult`（`.quit` / `.cancel`） |
+| `SettingsController` | `init(model:canUseHotkey:canUseToolbarShortcut:)` | `show()`、`close()`、`isShown`、`onRecordingChanged`。変更はその場で `model.send(.settingsChanged(_:))` |
+| `SetupController` | `init(model:permission:canUseHotkey:)` | `show()`、`close()`、`isShown`、`onCompleted`、`onDismissed`、`onRecordingChanged`。`Done` で `model.send(.setupCompleted)` |
+
+`canUseHotkey` などの判定は、記録したキーを受け入れるかを組み立ての側が返す（実際に登録できるか）。false なら記録欄は元の値に戻り、`This shortcut is unavailable` を出す。`onRecordingChanged` が true の間は、組み立ての側でグローバルなホットキーの登録を外す（外さないと、いまのホットキーが記録欄に届かない）。
 
 ### AkapenAXID
 
@@ -198,7 +221,9 @@ hidden ───────────▶ drawing ─────────�
 | ボタン類 | 手前に浮く、アクティブ化しないパネル | `hidden` 以外 |
 | コメント入力 | キー入力を受け取れる、アクティブ化しないパネル | `commenting` |
 | 一覧 | 手前に浮くパネル | `listOpen` |
-| 設定 / セットアップ | 通常のウィンドウ | 開いている間 |
+| 設定 / セットアップ | 通常のウィンドウ（`ContentWindow`。タイトルバーは透明で、信号ボタンだけシステムが描く）。開くとアプリを前面に出してキー入力を受け取る | 開いている間 |
+| 終了確認 | メニューバーより下の画面全体を暗くする、キー入力を受け取れるアクティブ化しないパネル（`.modalPanel`） | `QuitConfirmController.show` から答えが出るまで |
+| メニュー | 標準の `NSStatusItem` と `NSMenu`（見出しだけカスタムビュー） | アイコンは常に。メニューは開いている間 |
 
 撮影は対象のウィンドウだけを指定して行うので、akapen 自身のパネルは写り込まない。
 
@@ -316,7 +341,7 @@ CI は当面置かない。置くときは `make test`・`make e2e-lint`・`make
 | --- | --- | --- |
 | 単体 | `AkapenCoreTests` | 状態の遷移、プロンプトの組み立て、ウィンドウの選び方、赤枠の描き込みと縮小、フォルダの掃除、確定キーの判定。依存はすべて偽物 |
 | 結合（実装 1 つずつ） | `AkapenPlatformTests` | 画像の保存と掃除（一時ディレクトリの実ファイル）、設定の読み書き（専用の UserDefaults）、クリップボード（名前つき）、偽の撮影の実装 |
-| 結合（画面と状態） | `AkapenUITests` | `phase` を変えたときにどのパネルが出て、どれが外れるか。入力欄でのキー入力が正しいイベントになるか |
+| 結合（画面と状態） | `AkapenUITests` | `phase` を変えたときにどのパネルが出て、どれが外れるか。入力欄でのキー入力が正しいイベントになるか。設定・セットアップ・終了確認・メニューの操作が、正しい `SessionEvent` とコールバックになるか。キーの記録欄。文言の表。見比べ用の PNG の書き出し（`build/ui-snapshots/`。画素の一致は確かめない） |
 | 結合（一連の流れ） | `AkapenAppTests` | `AppEnvironment.make` で組んだ本物の依存に、イベントを順に送る。最後にクリップボードの文章と、ディスク上の画像と赤枠の位置を確かめる。環境変数ごとの依存の選び分けもここで見る |
 | E2E（生成） | XCUITest + 偽の撮影 | 実物のアプリで、操作が状態・画像・クリップボードまで正しくつながっているか |
 | E2E（手書き・手元だけ） | XCUITest + 実際の撮影 | ScreenCaptureKit で `SampleTarget` が写り、赤枠が正しい位置に入るか |

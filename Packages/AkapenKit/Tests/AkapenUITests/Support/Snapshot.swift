@@ -48,6 +48,29 @@ import AkapenCore
         return rep
     }
 
+    /// 実際のウィンドウを、タイトルバー（信号ボタン）ごと描く。ウィンドウは画面の外へ動かしてから描く。
+    ///
+    /// 信号ボタンはシステムが描くので、アプリが前面にないテストの中では灰色（使えない見た目）になる。
+    /// ウィンドウの角丸と影はウィンドウサーバーが描くので、ここには入らない（並べるときに `WindowSnapshot` で付ける）。
+    static func renderWindow(_ window: NSWindow) async throws -> NSBitmapImageRep {
+        _ = NSApplication.shared
+        window.setFrameOrigin(NSPoint(x: -20_000, y: -20_000))
+        window.orderFrontRegardless()
+        for _ in 0..<4 {
+            window.contentView?.layoutSubtreeIfNeeded()
+            try await Task.sleep(for: .milliseconds(80))
+        }
+        guard let frameView = window.contentView?.superview else {
+            throw SnapshotError.renderFailed
+        }
+        frameView.display()
+        guard let rep = frameView.bitmapImageRepForCachingDisplay(in: frameView.bounds) else {
+            throw SnapshotError.renderFailed
+        }
+        frameView.cacheDisplay(in: frameView.bounds, to: rep)
+        return rep
+    }
+
     /// 書き出す。戻り値は書き出したファイル。
     @discardableResult
     static func write(_ rep: NSBitmapImageRep, to name: String) throws -> URL {
@@ -164,6 +187,8 @@ enum ScenePlacement: LayoutValueKey {
     case bottomCenter
     case list(toolbar: ScreenRect)
     case comment(frame: ScreenRect)
+    /// 左上を決まった位置に置く（Paper の座標）。
+    case at(x: Double, y: Double)
 
     static let defaultValue = ScenePlacement.fill
 }
@@ -189,6 +214,8 @@ struct SceneLayout: Layout {
                 rect = PanelPlacement.list(size: size, toolbar: toolbar, visibleFrame: screen.visibleFrame)
             case let .comment(frame):
                 rect = PanelPlacement.comment(size: size, frame: frame, visibleFrame: screen.visibleFrame)
+            case let .at(x, y):
+                rect = ScreenRect(x: x, y: y, width: size.width, height: size.height)
             }
             subview.place(
                 at: CGPoint(x: bounds.minX + rect.x - screen.frame.x, y: bounds.minY + rect.y - screen.frame.y),
@@ -218,5 +245,25 @@ struct SceneBackdrop: View {
                 .offset(x: 140, y: 64)
         }
         .frame(width: 1280, height: 800)
+    }
+}
+
+/// 描いたウィンドウの画像に、ウィンドウの角丸（12）と影（`Tokens.Window.shadows`）を付けて並べる。
+struct WindowSnapshot: View {
+    let rep: NSBitmapImageRep
+
+    var body: some View {
+        Image(nsImage: image)
+            .resizable()
+            .frame(width: rep.size.width, height: rep.size.height)
+            .clipShape(RoundedBox(cornerRadius: Tokens.Radius.media))
+            .boxShadow(Tokens.Window.shadows, cornerRadius: Tokens.Radius.media)
+            .fixedSize()
+    }
+
+    private var image: NSImage {
+        let image = NSImage(size: rep.size)
+        image.addRepresentation(rep)
+        return image
     }
 }

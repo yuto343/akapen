@@ -1,21 +1,24 @@
 import AppKit
-import AkapenAXID
 
-/// 常駐アイコンと終了操作。所有中はメニューバーに残る。
+/// 組み立て（`AkapenApp`）が `MenuBarController` に移るまでの互換用。新しいコードでは使わない。
+///
+/// いまの `AppDelegate` は `MenuBar()` を呼んでいるので、その呼び出しのまま、メニューバーのアイコンと
+/// 新しいメニューが出るようにしている。`SessionModel` につながっていないので、件数は 0 件、言語は英語のまま。
+/// `Settings…` は使えない状態で出す。`Quit akapen` は確認なしで終了する。
+/// TODO(app): 組み立ての作業で `MenuBarController(model:)` に置き換え、この型を消す。
 @MainActor public final class MenuBar {
-    private let item: NSStatusItem
+    private let controller: MenuBarController
 
+    /// メニューバーにアイコンを置く。
     public init() {
-        item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        item.button?.image = NSImage(systemSymbolName: "pencil.tip", accessibilityDescription: "akapen")
-        let menu = NSMenu()
-        let quit = NSMenuItem(
-            title: UIStrings.text("quit"),
-            action: #selector(NSApplication.terminate(_:)),
-            keyEquivalent: "q"
+        controller = MenuBarController(
+            status: {
+                MenuBarStatus(annotationCount: 0, language: .en)
+            },
+            installsStatusItem: true
         )
-        quit.setAccessibilityIdentifier(AXID.MenuBar.quit)
-        menu.addItem(quit)
-        item.menu = menu
+        controller.onQuitRequested = {
+            NSApp.terminate(nil)
+        }
     }
 }

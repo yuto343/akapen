@@ -59,21 +59,7 @@ struct CommentKeyRouter {
 
     /// AppKit の修飾キーを、`AkapenCore` の修飾キーに直す。Caps Lock やテンキーの印は数えない。
     static func modifiers(_ flags: NSEvent.ModifierFlags) -> KeyModifiers {
-        let relevant = flags.intersection(.deviceIndependentFlagsMask)
-        var result: KeyModifiers = []
-        if relevant.contains(.command) {
-            result.insert(.command)
-        }
-        if relevant.contains(.shift) {
-            result.insert(.shift)
-        }
-        if relevant.contains(.option) {
-            result.insert(.option)
-        }
-        if relevant.contains(.control) {
-            result.insert(.control)
-        }
-        return result
+        KeyModifiers(eventFlags: flags)
     }
 }
 
@@ -164,6 +150,8 @@ final class CommentTextView: NSTextView {
     private(set) var height: CGFloat
     /// 入力欄の幅（文字が並ぶ幅）。
     @ObservationIgnored let width: CGFloat
+    /// 人が文字を書き換えたとき（日本語の変換中は呼ばない）。`setText(_:)` で入れたときは呼ばない。
+    @ObservationIgnored var onEdit: ((String) -> Void)?
 
     init(
         style: TextStyle,
@@ -190,7 +178,7 @@ final class CommentTextView: NSTextView {
         scrollView = NSScrollView(frame: NSRect(x: 0, y: 0, width: width, height: style.lineHeight))
         configure(caretColor: caretColor)
         textView.onTextChange = { [weak self] in
-            self?.recalculateHeight()
+            self?.textChanged()
         }
     }
 
@@ -271,6 +259,13 @@ final class CommentTextView: NSTextView {
             return
         }
         textView.focusWhenAttached = true
+    }
+
+    private func textChanged() {
+        recalculateHeight()
+        if !textView.hasMarkedText() {
+            onEdit?(textView.string)
+        }
     }
 
     /// 入力欄の高さを、文字の行数（1 行〜上限）から決め直す。

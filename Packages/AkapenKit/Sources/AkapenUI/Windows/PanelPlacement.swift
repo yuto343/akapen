@@ -83,6 +83,29 @@ enum PanelPlacement {
         return ScreenRect(x: x, y: y, width: size.width, height: size.height)
     }
 
+    /// 終了確認で暗くする範囲。メニューバーより下の、画面全体（`app-09-quit-confirm.md` の部品 1）。
+    static func dimmedArea(screen: ScreenInfo) -> ScreenRect {
+        ScreenRect(
+            x: screen.frame.x,
+            y: screen.visibleFrame.y,
+            width: screen.frame.width,
+            height: screen.frame.edgeBottom - screen.visibleFrame.y
+        )
+    }
+
+    /// 終了確認の箱。左右は画面の中央、上下は画面の中央よりやや上（`Tokens.Placement.alertTopRatio`）。
+    /// メニューバーに掛かるときは、`visibleFrame` の上端に寄せる。
+    static func alert(size: CGSize, screen: ScreenInfo) -> ScreenRect {
+        let frame = screen.frame
+        let y = frame.y + (frame.height - size.height) * Tokens.Placement.alertTopRatio
+        return ScreenRect(
+            x: frame.centerX - size.width / 2,
+            y: max(screen.visibleFrame.y, y),
+            width: size.width,
+            height: size.height
+        )
+    }
+
     /// 下限を優先して範囲に収める（範囲が逆転しているときは下限）。
     private static func clamp(_ value: Double, lower: Double, upper: Double) -> Double {
         max(lower, min(value, upper))

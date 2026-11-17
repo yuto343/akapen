@@ -21,18 +21,31 @@
 | `AkapenCore/Ports/SettingsStore.swift` | `load() throws -> Settings` / `save(_:) throws` |
 | `AkapenCore/Ports/ImageStore.swift` | `save(png:sessionID:index:) throws -> URL` / `remove(at:) throws` / `removeSessions(before:) throws` |
 | `AkapenCore/Ports/HotkeyRegistering.swift` | `register(_:handler:) throws` / `unregister()` |
-| `AkapenCore/Ports/ScreenRecordingPermission.swift` | `isGranted` / `request() -> Bool` |
+| `AkapenCore/Ports/ScreenRecordingPermission.swift` | `isGranted` / `request() -> Bool` / `openSystemSettings()`（システム設定の「画面収録とシステムオーディオ録音」を開く） |
 | `AkapenCore/Ports/LoginItem.swift` | `isEnabled` / `setEnabled(_:) throws` |
 | `AkapenCore/Ports/Clock.swift` | `now` / `sleep(for:) async throws` |
 | `AkapenCore/Ports/StateWriting.swift` | `write(_:) throws`（App から OS のファイル操作を分離） |
-| `AkapenPlatform/CarbonHotkey.swift` | `CarbonHotkey`、`RegistrationError.status`。登録エラーは呼び出し元に返す |
+| `AkapenPlatform/CarbonHotkey.swift` | `CarbonHotkey`、`RegistrationError.status`。登録エラーは呼び出し元に返す。インスタンスごとに別のホットキー ID を持ち、自分の ID のイベントだけに反応する（「枠を描き始める」と「ボタン類の表示切り替え」を別インスタンスで同時に登録できる） |
 | `AkapenPlatform/MemorySettingsStore.swift`、`AtomicStateWriter.swift` | `MemorySettingsStore`、`AtomicStateWriter(url:)` |
-| `AkapenUI/Windows/` | `SessionWindows(model:)` / `render()` / `hide()`、`ScreenCoordinates.rect(_:primaryTop:)` |
-| `AkapenUI/MenuBar.swift`、`Tokens.swift`、`UIStrings.swift` | `MenuBar()`、`Tokens`、`UIStrings.text(_:)` |
+| `AkapenPlatform/Capture/ScreenCaptureKitCapturer.swift` | 本番の `WindowCapturing`。`init()`。`windows()` はレイヤー 0・画面上・akapen 以外・幅と高さ 40pt 以上（`minimumWindowSize`）を、`CGWindowListCopyWindowInfo` の並びで手前から返す。`capture(window:)` はそのウィンドウだけを実解像度（`pointPixelScale` 倍）で、カーソルと影なしで撮って PNG を返す。エラーは `CaptureError`（`permissionDenied / windowNotFound(id) / encodingFailed`） |
+| `AkapenPlatform/Capture/FixtureCapturer.swift` | E2E・結合テスト用の `WindowCapturing`。`init(windows:scale:)`（`scale` 既定 2）。`windows()` は渡した配列をそのまま返す。`capture(window:)` は「ウィンドウの大きさ × scale」の決定的な PNG（明るい地・薄い格子・四隅の目印。赤い画素なし。R が G・B を超える画素を含まない）。大きさが 0 なら `FixtureError.emptyWindow` |
+| `AkapenPlatform/Permission/` | `SystemScreenRecordingPermission()`（`CGPreflightScreenCaptureAccess` / `CGRequestScreenCaptureAccess`、システム設定を開く）、`FixedScreenRecordingPermission(isGranted:)`（`isGranted` は書き換え可。`request()` は今の値を返すだけ、`openSystemSettings()` は何もしない） |
+| `AkapenPlatform/Pasteboard/SystemPromptPasteboard.swift` | `SystemPromptPasteboard(name:)`。`nil` で一般のクリップボード、名前ありでその名前のクリップボード。`write` は中身を置き換え、1 つ目の項目に文章、続く項目に画像ファイルの URL を入れる。失敗は `WriteError.rejected` |
+| `AkapenPlatform/Settings/` | `UserDefaultsSettingsStore(defaults:)`（設定全体の JSON をキー `UserDefaultsSettingsStore.key` = `"settings"` にデータで保存）、`FileSettingsStore(url:)`（JSON ファイル。保存は原子的、親フォルダは自動で作る）。どちらも未保存なら `Settings()`、読めない内容は `SettingsStoreError.corrupted` |
+| `AkapenPlatform/Storage/FileImageStore.swift` | `FileImageStore(root:timeZone:)`、`FileImageStore.defaultRoot()`（`~/Library/Caches/akapen/`）。`save` は `<root>/<回の ID>/<CacheLayout.fileName>` に原子的に書き、既存ファイルは上書きせず次の空き番号で保存して実際の URL を返す。`remove(at:)` は `root` の下のファイルだけ（`..`・シンボリックリンクで外に出るもの、フォルダは拒否）。`removeSessions(before:)` は `CacheLayout` で古いと判定された回のフォルダだけを消す（回の ID でない名前、ファイル、シンボリックリンクには触らない）。エラーは `StoreError` |
+| `AkapenPlatform/Clock/` | `SystemClock()`、`FixedClock(now:)`（`now` は固定、`sleep` は実時間で待つ） |
+| `AkapenPlatform/LoginItem/` | `SystemLoginItem()`（`SMAppService.mainApp`。`isEnabled` は `.enabled` のときだけ true）、`NoopLoginItem(isEnabled:)`（OS に触らず、値をメモリにだけ持つ） |
+| `AkapenUI/Windows/` | `SessionWindows(model:)` / `render()` / `hide()`、`SessionViewState`、`ScreenCoordinates.rect(_:primaryTop:)` |
+| `AkapenUI/MenuBar/` | `MenuBarController(model:)`（`NSStatusItem` と `NSMenu`）。`onOpenSettings` / `onQuitRequested`（自分では設定を開かず、終了もしない。コールバックがない項目は使えない状態）。件数（確定済みの注釈）と言語はメニューを開くたびに読み直す。`MenuBarStatus`、`MenuHeaderView` |
+| `AkapenUI/QuitConfirm/` | `QuitConfirmController(model:)`。`show(annotationCount:)`（出ている間にもう一度呼んでも 1 つのまま、件数だけ新しくする）、`hide()`、`isShown`、`onResult`（`QuitConfirmResult.quit` / `.cancel`。`Return` で quit、`Esc` で cancel）。`QuitConfirmView` |
+| `AkapenUI/Settings/` | `SettingsController(model:canUseHotkey:canUseToolbarShortcut:)`。`show()`（開いていれば前面に出すだけ）、`close()`、`isShown`、`onRecordingChanged`。変更はその場で `settingsChanged`。日数は 1〜365 に丸める |
+| `AkapenUI/Setup/` | `SetupController(model:permission:canUseHotkey:)`。`show()`、`close()`、`isShown`、`onCompleted`、`onDismissed`、`onRecordingChanged`、`SetupController.defaultPollInterval`（1 秒）。2 ページ目の間だけ `isGranted` を確かめる。`Done` で `setupCompleted`、閉じただけでは送らない |
+| `AkapenUI/MenuBar.swift` | `MenuBar()`。組み立てが `MenuBarController` に移るまでの互換用（件数 0・英語のまま、`Quit akapen` は確認なしで終了）。`TODO(app)` で消す |
+| `AkapenUI/Tokens.swift`、`Strings/` | `Tokens`、`UIStrings(language:)`（`subscript(StringKey)`、`plural(_:count:)`、`menuStatus(count:)`、`setupStep(current:total:)` など）、`UIStrings.text(_:language:)`。文言は `EnglishStrings` / `JapaneseStrings` の Swift の表にある（文字列カタログは使わない） |
 | `AkapenApp/LaunchConfiguration.swift` | `LaunchConfiguration(environment:)`、`isE2E / stateDirectory / pasteboardName / capture / seedJSON / now` |
 | `AkapenApp/AppEnvironment.swift`、`SessionSnapshot.swift` | `AppEnvironment.make(_:) throws`、`model / hotkey / stateWriteError`、`writeState()`、`SessionSnapshot(model:)` |
 | `AkapenApp/AppDelegate.swift` | `AppDelegate()`。エントリから起動する組み立て役 |
-| `AkapenAXID/AXID.swift` | Toolbar、Draw、Comment、List（row/edit/delete）、Copied、MenuBar、QuitConfirm、Settings、Setup、Sample の操作識別子 |
+| `AkapenAXID/AXID.swift` | Toolbar、Draw、Comment、List（row/edit/delete/field）、Copied、MenuBar（icon/status/settings/quit）、QuitConfirm（panel/message/confirm/cancel）、Settings（window と各項目・選択肢・知らせ）、Setup（window/hotkey/hotkeyMessage/next/back/permission/requestPermission/done）、Sample の操作識別子 |
 
 `SessionEvent` の入力は `hotkeyPressed / addTapped / escapePressed / dragEnded(rect:screen:) / commentConfirmed(text:) / commentCancelled / listToggled / annotationEdited(id:text:) / annotationDeleted(id:) / copyPromptTapped / copiedExpired / toolbarToggled / settingsChanged(_:) / setupCompleted`。
 

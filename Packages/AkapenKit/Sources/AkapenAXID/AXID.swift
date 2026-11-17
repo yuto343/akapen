@@ -27,11 +27,19 @@ public enum AXID {
     public enum MenuBar {
         public static let settings = "menuBar.settings"
         public static let quit = "menuBar.quit"
+        /// メニューバーのアイコン（`NSStatusItem` のボタン）。
+        public static let icon = "menuBar.icon"
+        /// メニューの見出しの 2 行目（`2 annotations waiting`）。
+        public static let status = "menuBar.status"
     }
     /// QuitConfirm の操作対象。
     public enum QuitConfirm {
         public static let confirm = "quitConfirm.confirm"
         public static let cancel = "quitConfirm.cancel"
+        /// 終了確認のパネル（画面の暗転を含む）。
+        public static let panel = "quitConfirm.panel"
+        /// 件数入りの説明文。
+        public static let message = "quitConfirm.message"
     }
     /// Settings の操作対象。
     public enum Settings {
@@ -41,6 +49,20 @@ public enum AXID {
         public static let confirmKey = "settings.confirmKey"
         public static let boilerplate = "settings.boilerplate"
         public static let imageRetentionDays = "settings.imageRetentionDays"
+        /// 設定のウィンドウ。
+        public static let window = "settings.window"
+        /// 言語の選択肢の `English`。
+        public static let languageEnglish = "settings.language.en"
+        /// 言語の選択肢の `日本語`。
+        public static let languageJapanese = "settings.language.ja"
+        /// 確定キーの選択肢の `↵ Enter`。
+        public static let confirmKeyEnter = "settings.confirmKey.enter"
+        /// 確定キーの選択肢の `⌘ ↵ Enter`。
+        public static let confirmKeyCommandEnter = "settings.confirmKey.commandEnter"
+        /// ホットキーの記録欄の下に出す知らせ（`This shortcut is unavailable` など）。
+        public static let hotkeyMessage = "settings.hotkey.message"
+        /// ボタン類の表示切り替えの記録欄の下に出す知らせ。
+        public static let toolbarShortcutMessage = "settings.toolbarShortcut.message"
     }
     /// Setup の操作対象。
     public enum Setup {
@@ -49,6 +71,12 @@ public enum AXID {
         public static let requestPermission = "setup.requestPermission"
         public static let next = "setup.next"
         public static let done = "setup.done"
+        /// セットアップのウィンドウ。
+        public static let window = "setup.window"
+        /// 2 ページ目の `Back`。
+        public static let back = "setup.back"
+        /// ホットキーの記録欄の中に出す知らせ（`This shortcut is unavailable` など）。
+        public static let hotkeyMessage = "setup.hotkey.message"
     }
     /// Sample の操作対象。
     public enum Sample {

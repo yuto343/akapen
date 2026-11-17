@@ -8,7 +8,7 @@ public enum StringKey: String, CaseIterable, Sendable {
     case list
     /// 「Copy prompt」ボタン。
     case copyPrompt
-    /// メニューバーの終了。
+    /// 終了確認の終了のボタン `Quit`。
     case quit
     /// 案内の表示の `Drag to frame`。
     case drawHint
@@ -38,6 +38,84 @@ public enum StringKey: String, CaseIterable, Sendable {
     case copiedTitle
     /// コピー完了の表示のキー表示。
     case copiedShortcut
+    /// アプリの名前（メニューの見出しの 1 行目）。言語によらず `akapen`。
+    case appName
+    /// メニューの `Settings…`。
+    case menuSettings
+    /// メニューの `Quit akapen`。
+    case menuQuit
+    /// メニューの見出しの 2 行目（注釈が 0 件のとき。`DECISIONS.md` 20）。
+    case menuNoAnnotations
+    /// 終了確認の見出し `Quit akapen?`。
+    case quitTitle
+    /// 終了確認の `Cancel`。終了のボタンは `quit`。
+    case quitCancel
+    /// 設定のウィンドウのタイトル `akapen Settings`。
+    case settingsTitle
+    /// 設定の行 `Language`。
+    case settingsLanguage
+    /// 言語の選択肢 `English`。どの言語でもその言語の名前で出す。
+    case languageEnglish
+    /// 言語の選択肢 `日本語`。どの言語でもその言語の名前で出す。
+    case languageJapanese
+    /// 設定の行 `Hotkey`。
+    case settingsHotkey
+    /// 設定の行 `Show / hide buttons`。
+    case settingsToolbarShortcut
+    /// 設定の行の補足 `Optional shortcut`。
+    case settingsToolbarShortcutCaption
+    /// 設定の行 `Confirm comment with`。
+    case settingsConfirmKey
+    /// 確定キーの選択肢 `↵ Enter`。
+    case confirmKeyEnter
+    /// 確定キーの選択肢 `⌘ ↵ Enter`。
+    case confirmKeyCommandEnter
+    /// 設定の見出し `Prompt header`。
+    case settingsPromptHeader
+    /// 定型文の見出しの右の補足（いま選んでいる言語の定型文を編集していること。`DECISIONS.md` 24）。
+    case settingsPromptNote
+    /// 定型文の入力欄の下の補足。
+    case settingsPromptCaption
+    /// 設定の行 `Keep images for`。
+    case settingsRetention
+    /// キーの記録欄の未割り当ての表示 `Record shortcut`。
+    case recorderPlaceholder
+    /// キーの記録欄で記録を待っている表示 `Type shortcut…`（`DECISIONS.md` 24）。
+    case recorderRecording
+    /// 記録したキーが登録できなかったときの知らせ（`DECISIONS.md` A8）。
+    case recorderUnavailable
+    /// 記録したキーが、もう 1 つの欄で使われているときの知らせ。
+    case recorderInUse
+    /// セットアップ 1 ページ目の見出し `Choose your hotkey`。
+    case setupHotkeyTitle
+    /// セットアップ 1 ページ目の説明文。
+    case setupHotkeyBody
+    /// セットアップのキーの記録欄の案内。
+    case setupRecorderHint
+    /// セットアップの重複の注意書き（文言は固定。`DECISIONS.md` 25）。
+    case setupConflictNote
+    /// セットアップの `Continue`。
+    case setupContinue
+    /// セットアップ 2 ページ目の見出し `Allow Screen Recording`。
+    case setupPermissionTitle
+    /// セットアップ 2 ページ目の説明文。
+    case setupPermissionBody
+    /// 許可の手順 1。
+    case setupStepOpenSettings
+    /// 許可の手順 2。
+    case setupStepTurnOn
+    /// 許可の手順 3。
+    case setupStepComeBack
+    /// 許可を待っている表示 `Waiting…`。
+    case setupWaiting
+    /// 許可が取れた表示 `Granted`（`DECISIONS.md` 25）。
+    case setupGranted
+    /// セットアップの `Back`。
+    case setupBack
+    /// セットアップの `Open System Settings`。
+    case setupOpenSystemSettings
+    /// セットアップを終えるボタン `Done`。
+    case setupDone
 }
 
 /// 件数で単数・複数を出し分ける文言のキー（`DECISIONS.md` 21）。日本語は出し分けない。
@@ -48,6 +126,12 @@ public enum PluralKey: String, CaseIterable, Sendable {
     case listRetention
     /// コピー完了の表示の 2 行目（`2 annotations · paste it into your AI agent`）。
     case copiedSummary
+    /// メニューの見出しの 2 行目（`2 annotations waiting`）。0 件のときは `UIStrings.menuStatus(count:)` が `menuNoAnnotations` を返す。
+    case menuWaiting
+    /// 終了確認の説明文（`2 annotations haven’t been copied yet.` と `They will be discarded.` の 2 行。資料の絵の改行の位置）。
+    case quitMessage
+    /// 画像を残す日数の単位（`days`）。数は設定の日数。
+    case retentionUnit
 }
 
 /// 1 つの言語の文言の表。
@@ -59,6 +143,8 @@ protocol StringTable: Sendable {
     func sizeLabel(width: Int, height: Int) -> String
 
     func annotationMeta(appName: String, time: String) -> String
+
+    func setupStep(current: Int, total: Int) -> String
 }
 
 /// 表示の文言。言語はシステムの言語ではなく、アプリの設定（`Settings.language`）で選ぶ。
@@ -120,6 +206,16 @@ public struct UIStrings: Sendable {
         case .commandEnter:
             self[.listEditHintCommandEnter]
         }
+    }
+
+    /// メニューの見出しの 2 行目。0 件のときは `No annotations`（`DECISIONS.md` 20）。
+    public func menuStatus(count: Int) -> String {
+        count == 0 ? self[.menuNoAnnotations] : plural(.menuWaiting, count: count)
+    }
+
+    /// セットアップのページの位置（`STEP 1 OF 2`）。
+    public func setupStep(current: Int, total: Int) -> String {
+        table.setupStep(current: current, total: total)
     }
 
     /// キーを文字列で指定して引く。キーが表にないときは、キーをそのまま返す。

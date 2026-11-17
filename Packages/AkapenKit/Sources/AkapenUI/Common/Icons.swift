@@ -10,6 +10,8 @@ enum IconGlyph {
     case arrowUpRight
     /// 右向きの矢印（Continue）。
     case arrowRight
+    /// チェックの印（セットアップを終える `Done`。資料にないので、矢印と同じ線の太さで描く）。
+    case check
     /// 鉛筆（一覧の編集）。
     case pencil
     /// ゴミ箱（一覧の削除）。
@@ -44,6 +46,10 @@ enum IconGlyph {
             path.move(to: CGPoint(x: 7.5, y: 3.5))
             path.addLine(to: CGPoint(x: 11, y: 7))
             path.addLine(to: CGPoint(x: 7.5, y: 10.5))
+        case .check:
+            path.move(to: CGPoint(x: 3, y: 7.5))
+            path.addLine(to: CGPoint(x: 6, y: 10.5))
+            path.addLine(to: CGPoint(x: 11, y: 4))
         case .pencil:
             path.move(to: CGPoint(x: 9.5, y: 2.5))
             path.addLine(to: CGPoint(x: 11.5, y: 4.5))
@@ -85,7 +91,7 @@ enum IconGlyph {
         switch self {
         case .plus, .list:
             .miter
-        case .arrowUpRight, .arrowRight, .pencil, .trash:
+        case .arrowUpRight, .arrowRight, .check, .pencil, .trash:
             .round
         }
     }
@@ -114,4 +120,22 @@ struct IconView: View {
 /// アプリのアイコン（タイル付き）。`assets/logo/akapen-logo-short-tile.png` を縮めてリソースに入れたもの。
 @MainActor enum AppIconImage {
     static let image: NSImage? = Bundle.module.image(forResource: "AppIcon")
+}
+
+/// アプリのアイコンを指定の大きさで描く。画像が読めないときは、同じ大きさの空きにする。
+struct AppIconView: View {
+    let size: CGFloat
+
+    var body: some View {
+        if let image = AppIconImage.image {
+            Image(nsImage: image)
+                .resizable()
+                .interpolation(.high)
+                .frame(width: size, height: size)
+                .accessibilityHidden(true)
+        } else {
+            Color.clear
+                .frame(width: size, height: size)
+        }
+    }
 }

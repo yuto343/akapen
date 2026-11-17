@@ -456,6 +456,10 @@ extension Tokens {
         public static let alertCancel = [
             ShadowToken(color: ExtraColor.black8, x: 0, y: 0.5, blur: 1, spread: 0),
         ]
+        /// セットアップのキー（キーキャップ）の外側の 1pt の輪郭。
+        public static let setupKeyOutline = [
+            ShadowToken(color: Palette.line, x: 0, y: 0, blur: 0, spread: Stroke.hairline),
+        ]
     }
 }
 
@@ -478,6 +482,9 @@ extension Tokens {
         public static let sizeLabelOffsetY: CGFloat = 10
         /// 大きさの表示の右端の、カーソルからの距離。
         public static let sizeLabelOffsetX: CGFloat = 15
+        /// 終了確認の箱の上下の置き場所。画面の高さから箱の高さを引いた残りのうち、箱の上に置く割合。
+        /// Paper の App 09（画面 800、箱 245、上端 250）に合わせた値で、画面の中央よりやや上になる。
+        public static let alertTopRatio: CGFloat = 0.45
     }
 }
 
@@ -627,7 +634,7 @@ extension Tokens {
     }
 }
 
-// MARK: - 部品ごとの寸法と色（App 05〜09。あとの作業で使う）
+// MARK: - 部品ごとの寸法と色（App 05〜09）
 
 extension Tokens {
     /// メニューバーのメニュー（App 05）。
@@ -657,6 +664,8 @@ extension Tokens {
         public static let statusPressedWidth: CGFloat = 28
         public static let statusPressedHeight: CGFloat = 24
         public static let statusPressed = ExtraColor.ink15
+        /// 見出しの幅（メニューの幅から左右の余白を引いたもの）。
+        public static let headerWidth: CGFloat = width - padding * 2
     }
 
     /// ウィンドウ（設定・セットアップ）の共通部分（`components.md`「ウィンドウのタイトルバー」）。
@@ -712,6 +721,20 @@ extension Tokens {
         public static let retentionGap: CGFloat = 8
         public static let retentionText = Palette.ink
         public static let retentionUnit = Palette.ink2
+        /// 定型文の入力欄が伸びる行数の上限。超えたら中でスクロールする。
+        public static let boilerplateMaxLines = 8
+        /// 定型文の入力欄のキャレット（コメント入力と同じ赤）。
+        public static let boilerplateCaret = Palette.accent
+        /// キーの記録欄で記録を待っているときの輪郭（資料にない状態。一覧の編集中の入力欄と同じ赤）。
+        public static let recorderRecordingOutline = Palette.accent
+        /// キーの記録欄の下に出す知らせ（`This shortcut is unavailable`）の色（資料にない状態）。
+        public static let recorderMessage = Palette.accentDeep
+        /// 記録欄と、その下の知らせの間隔。
+        public static let recorderMessageGap: CGFloat = 4
+        /// 知らせを出している行の上下の余白（行の高さは中身なりに伸びる）。
+        public static let rowMessagePaddingY: CGFloat = 10
+        /// 日数の入力欄で、数字の幅に足す分（入力欄の中の文字の左右の余白。数字が欠けないように）。
+        public static let retentionFieldSlack: CGFloat = 0
     }
 
     /// 初回のセットアップ（App 07・08）。
@@ -764,6 +787,9 @@ extension Tokens {
         public static let buttonShadows = Shadows.primaryGlow
         public static let buttonCircleSize: CGFloat = 30
         public static let buttonCircle = Palette.accent
+        /// 赤い丸の中のアイコン（12×12、白）。
+        public static let buttonIconSize: CGFloat = 12
+        public static let buttonIcon = Palette.cleanBackground
         public static let secondaryButtonOutline = Palette.line
         public static let secondaryButtonText = Palette.ink
         public static let stepsBackground = Palette.cleanSurface
@@ -781,6 +807,14 @@ extension Tokens {
         public static let switchOff = ExtraColor.ink18
         public static let switchKnobSize: CGFloat = 16
         public static let switchKnob = Palette.cleanBackground
+        /// 許可が取れたときの表示（`Granted`）。`Waiting…` と同じ色。
+        public static let granted = Palette.steel
+        /// キーの名前が長いとき（`Space` など）の、キーの左右の余白。1 文字のキーは幅 56 に収まる。
+        public static let keyPaddingX: CGFloat = 12
+        /// キーの記録欄で記録を待っているときの輪郭（資料にない状態）。
+        public static let recorderRecordingOutline = Palette.accent
+        /// 記録欄の中に出す知らせ（`This shortcut is unavailable`）の色（資料にない状態）。
+        public static let recorderMessage = Palette.accentDeep
     }
 
     /// 終了確認（App 09）。

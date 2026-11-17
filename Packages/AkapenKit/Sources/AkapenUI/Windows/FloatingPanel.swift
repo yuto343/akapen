@@ -11,6 +11,8 @@ final class FloatingPanel: NSPanel {
     var allowsKey = false
     /// `Esc` が押されたとき（入力欄が受け取らなかった分）。
     var onCancel: (() -> Void)?
+    /// `Return` が押されたとき（入力欄が受け取らなかった分）。nil なら下へ流す。
+    var onReturn: (() -> Void)?
     /// フェードの世代。古いフェードの終わりで隠さないように、出し入れのたびに進める。
     private var fadeGeneration = 0
     /// 隠すフェードの途中か。
@@ -45,6 +47,10 @@ final class FloatingPanel: NSPanel {
     override func keyDown(with event: NSEvent) {
         if event.keyCode == KeyCode.escape, let onCancel {
             onCancel()
+            return
+        }
+        if event.keyCode == KeyCode.returnKey || event.keyCode == KeyCode.keypadEnter, let onReturn {
+            onReturn()
             return
         }
         super.keyDown(with: event)
