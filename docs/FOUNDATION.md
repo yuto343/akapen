@@ -6,27 +6,33 @@
 
 | ファイル | 契約 |
 | --- | --- |
-| `AkapenCore/Models.swift` | `Phase`、`ScreenRect(x:y:width:height:)`、`ScreenDescriptor(id:frame:)`、`Annotation(id:imagePath:comment:rect:)`、`Settings()`、`Language`、`ConfirmKey`、`KeyboardShortcut(keyCode:modifiers:)`、`KeyModifiers`、`SessionEvent` |
-| `AkapenCore/SessionModel.swift` | `@MainActor @Observable SessionModel`。`init(settingsStore:capturing:pasteboard:images:clock:) throws`、`send(_:)`、読み取り専用 `phase / annotations / draft / settings / lastDrawnRect`、更新後通知 `onChange` |
-| `AkapenCore/Ports/Ports.swift` | `WindowCapturing.windows() async throws` / `capture(window:) async throws -> Data`（PNG）、`CaptureWindow(id:frame:)` |
-| 同上 | `PromptPasteboard.write(text:imageURLs:) throws` |
-| 同上 | `SettingsStore.load() throws -> Settings` / `save(_:) throws` |
-| 同上 | `ImageStore.save(png:sessionID:index:) throws -> URL` / `remove(at:) throws` / `removeSessions(before:) throws` |
-| 同上 | `HotkeyRegistering.register(_:handler:) throws` / `unregister()` |
-| 同上 | `ScreenRecordingPermission.isGranted` / `request() -> Bool` |
-| 同上 | `LoginItem.isEnabled` / `setEnabled(_:) throws` |
-| 同上 | `Clock.now` / `sleep(for:) async throws` |
-| 同上 | `StateWriting.write(_:) throws`（追加。App から OS のファイル操作を分離） |
+| `AkapenCore/Session/Phase.swift` | `Phase`（`hidden / drawing / commenting / idle / listOpen / copied`） |
+| `AkapenCore/Session/Annotation.swift` | `Annotation(id:imagePath:comment:rect:sourceAppName:createdAt:windowFrame:)`。`windowFrame` は撮影した時点のウィンドウ矩形 |
+| `AkapenCore/Session/SessionEvent.swift` | `SessionEvent` |
+| `AkapenCore/Session/SessionFailure.swift` | `SessionFailure`（`noWindowUnderFrame / captureFailed / imageSaveFailed / pasteboardFailed / settingsSaveFailed`） |
+| `AkapenCore/Session/SessionModel.swift` | `@MainActor @Observable SessionModel`。`init(settingsStore:capturing:pasteboard:images:clock:) throws`、`@discardableResult send(_:) -> Task<Void, Never>`（送った順に 1 つずつ処理。`await model.send(...).value` で完了を待てる）、読み取り専用 `phase / annotations / draft / settings / lastDrawnRect / isToolbarVisible / lastCopiedCount / lastFailure`、更新後通知 `onChange` |
+| `AkapenCore/Capture/` | `ScreenRect(x:y:width:height:)`、`ScreenDescriptor(id:frame:)`、`CaptureWindow(id:frame:appName:title:)` |
+| `AkapenCore/Settings/` | `Settings()`（`setupCompleted` を含む。古い保存内容にキーがなくても読める）、`Language`、`ConfirmKey` |
+| `AkapenCore/Input/` | `KeyboardShortcut(keyCode:modifiers:)`、`KeyModifiers`、`ConfirmKeyDecision`、`ConfirmKeyPolicy.decide(modifiers:isComposing:confirmKey:)`（仮実装） |
+| `AkapenCore/Ports/WindowCapturing.swift` | `windows() async throws`（手前のウィンドウから順に返す） / `capture(window:) async throws -> Data`（PNG） |
+| `AkapenCore/Ports/PromptPasteboard.swift` | `write(text:imageURLs:) throws` |
+| `AkapenCore/Ports/SettingsStore.swift` | `load() throws -> Settings` / `save(_:) throws` |
+| `AkapenCore/Ports/ImageStore.swift` | `save(png:sessionID:index:) throws -> URL` / `remove(at:) throws` / `removeSessions(before:) throws` |
+| `AkapenCore/Ports/HotkeyRegistering.swift` | `register(_:handler:) throws` / `unregister()` |
+| `AkapenCore/Ports/ScreenRecordingPermission.swift` | `isGranted` / `request() -> Bool` |
+| `AkapenCore/Ports/LoginItem.swift` | `isEnabled` / `setEnabled(_:) throws` |
+| `AkapenCore/Ports/Clock.swift` | `now` / `sleep(for:) async throws` |
+| `AkapenCore/Ports/StateWriting.swift` | `write(_:) throws`（App から OS のファイル操作を分離） |
 | `AkapenPlatform/CarbonHotkey.swift` | `CarbonHotkey`、`RegistrationError.status`。登録エラーは呼び出し元に返す |
-| `AkapenPlatform/Storage.swift` | `MemorySettingsStore`、`AtomicStateWriter(url:)` |
-| `AkapenUI/Windows/SessionWindows.swift` | `SessionWindows(model:)` / `render()` / `hide()`、`ScreenCoordinates.rect(_:primaryTop:)` |
-| `AkapenUI/MenuBar.swift`、`Tokens.swift` | `MenuBar()`、`Tokens`、`UIStrings.text(_:)` |
+| `AkapenPlatform/MemorySettingsStore.swift`、`AtomicStateWriter.swift` | `MemorySettingsStore`、`AtomicStateWriter(url:)` |
+| `AkapenUI/Windows/` | `SessionWindows(model:)` / `render()` / `hide()`、`ScreenCoordinates.rect(_:primaryTop:)` |
+| `AkapenUI/MenuBar.swift`、`Tokens.swift`、`UIStrings.swift` | `MenuBar()`、`Tokens`、`UIStrings.text(_:)` |
 | `AkapenApp/LaunchConfiguration.swift` | `LaunchConfiguration(environment:)`、`isE2E / stateDirectory / pasteboardName / capture / seedJSON / now` |
-| `AkapenApp/AppEnvironment.swift` | `AppEnvironment.make(_:) throws`、`model / hotkey / stateWriteError`、`writeState()`、`SessionSnapshot(model:)` |
+| `AkapenApp/AppEnvironment.swift`、`SessionSnapshot.swift` | `AppEnvironment.make(_:) throws`、`model / hotkey / stateWriteError`、`writeState()`、`SessionSnapshot(model:)` |
 | `AkapenApp/AppDelegate.swift` | `AppDelegate()`。エントリから起動する組み立て役 |
 | `AkapenAXID/AXID.swift` | Toolbar、Draw、Comment、List（row/edit/delete）、Copied、MenuBar、QuitConfirm、Settings、Setup、Sample の操作識別子 |
 
-`SessionEvent` の入力は `hotkeyPressed / addTapped / escapePressed / dragEnded(rect:screen:) / commentConfirmed(text:) / commentCancelled / listToggled / annotationEdited(id:text:) / annotationDeleted(id:) / copyPromptTapped / copiedExpired / toolbarToggled / settingsChanged(_:)`。
+`SessionEvent` の入力は `hotkeyPressed / addTapped / escapePressed / dragEnded(rect:screen:) / commentConfirmed(text:) / commentCancelled / listToggled / annotationEdited(id:text:) / annotationDeleted(id:) / copyPromptTapped / copiedExpired / toolbarToggled / settingsChanged(_:) / setupCompleted`。
 
 Core の座標は主画面左上を (0,0) とする全画面共通のポイント。左や上の画面は負座標。画面ごとのピクセル倍率とは別物。AppKit の変換は UI/Windows の境界だけで行う。
 
@@ -44,13 +50,16 @@ Core の座標は主画面左上を (0,0) とする全画面共通のポイン�
     "hotkey": {"keyCode": 41, "modifiers": 1},
     "confirmKey": "enter",
     "boilerplates": {"en": "…", "ja": "…"},
-    "imageRetentionDays": 7
+    "imageRetentionDays": 7,
+    "setupCompleted": false
   },
-  "lastDrawnRect": {"x": 100, "y": 200, "width": 180, "height": 110}
+  "lastDrawnRect": {"x": 100, "y": 200, "width": 180, "height": 110},
+  "isToolbarVisible": true,
+  "lastCopiedCount": 0
 }
 ```
 
-`toolbarShortcut` は未割り当てなら省略、割り当て済みなら hotkey と同型。`lastDrawnRect` は未描画なら明示的な null。注釈は `{id: UUID文字列, imagePath: 絶対パス, comment: 文字列, rect: 矩形}`。未実装の撮影・確定が入るまで annotations は空。
+`toolbarShortcut` は未割り当てなら省略、割り当て済みなら hotkey と同型。`lastDrawnRect` は未描画なら明示的な null。注釈は `{id: UUID文字列, imagePath: 絶対パス, comment: 文字列, rect: 矩形, sourceAppName: 文字列, createdAt: ISO 8601 の文字列, windowFrame: 矩形}`。`isToolbarVisible` はボタン類を出すか（`phase` が `hidden` なら常に false）、`lastCopiedCount` は直前にコピーした注釈の件数。未実装の撮影・確定が入るまで annotations は空。
 
 E2E だけ初期状態と各 send 後に atomic 書き出し。E2E で保存先がなければ起動エラー。ファイル I/O は Platform の StateWriting 実装に任せる。エラーは `stateWriteError` に残す。
 

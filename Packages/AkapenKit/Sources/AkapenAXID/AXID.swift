@@ -55,8 +55,16 @@ public enum AXID {
     }
     /// 注釈の一覧。引数は表示順のゼロ始まりの番号。
     public enum List {
-        public static func row(_ index: Int) -> String { "list.row.\(index)" }
-        public static func edit(_ index: Int) -> String { "list.edit.\(index)" }
-        public static func delete(_ index: Int) -> String { "list.delete.\(index)" }
+        public static func row(_ index: Int) -> String {
+            "list.row.\(index)"
+        }
+
+        public static func edit(_ index: Int) -> String {
+            "list.edit.\(index)"
+        }
+
+        public static func delete(_ index: Int) -> String {
+            "list.delete.\(index)"
+        }
     }
 }
