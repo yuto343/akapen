@@ -4,4 +4,7 @@
 
     /// OS の許可要求を行い、現時点の許可状態を返す。
     func request() -> Bool
+
+    /// システム設定の「画面収録とシステムオーディオ録音」を開く。
+    func openSystemSettings()
 }

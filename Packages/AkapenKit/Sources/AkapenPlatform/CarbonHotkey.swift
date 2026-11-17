@@ -2,12 +2,27 @@ import Carbon
 import AkapenCore
 
 /// Carbon の登録を所有する。終了時は unregister を呼んで解放する。
+///
+/// インスタンスごとに別のホットキー ID を持ち、自分の ID のイベントだけに反応する。
+/// 複数のインスタンス（「枠を描き始める」と「ボタン類の表示切り替え」）を同時に登録できる。
 @MainActor public final class CarbonHotkey: HotkeyRegistering {
+    /// ホットキー ID の署名（'AKPN'）。
+    static let signature: OSType = 0x414b504e
+
+    /// 次に払い出すホットキー ID。
+    private static var nextIdentifier: UInt32 = 1
+
+    /// このインスタンスのホットキー ID。インスタンスごとに一意。
+    let identifier: UInt32
+
     private var reference: EventHotKeyRef?
     private var eventHandler: EventHandlerRef?
     private var callback: (@MainActor () -> Void)?
 
-    public init() {}
+    public init() {
+        identifier = Self.nextIdentifier
+        Self.nextIdentifier += 1
+    }
 
     /// RegisterEventHotKey の失敗を OSStatus として返す。
     public struct RegistrationError: Error {
@@ -24,14 +39,30 @@ import AkapenCore
         let context = Unmanaged.passUnretained(self).toOpaque()
         let install = InstallEventHandler(
             GetApplicationEventTarget(),
-            { _, _, context in
-                guard let context else {
+            { _, event, context in
+                guard let event, let context else {
                     return OSStatus(eventNotHandledErr)
                 }
-                MainActor.assumeIsolated {
-                    Unmanaged<CarbonHotkey>.fromOpaque(context).takeUnretainedValue().callback?()
+                var hotKeyID = EventHotKeyID()
+                let status = GetEventParameter(
+                    event,
+                    EventParamName(kEventParamDirectObject),
+                    EventParamType(typeEventHotKeyID),
+                    nil,
+                    MemoryLayout<EventHotKeyID>.size,
+                    nil,
+                    &hotKeyID
+                )
+                guard status == noErr else {
+                    return OSStatus(eventNotHandledErr)
                 }
-                return noErr
+                let signature = hotKeyID.signature
+                let identifier = hotKeyID.id
+                return MainActor.assumeIsolated {
+                    Unmanaged<CarbonHotkey>.fromOpaque(context)
+                        .takeUnretainedValue()
+                        .handle(signature: signature, identifier: identifier)
+                }
             },
             1,
             &spec,
@@ -42,23 +73,10 @@ import AkapenCore
             unregister()
             throw RegistrationError(status: install)
         }
-        var modifiers: UInt32 = 0
-        if shortcut.modifiers.contains(.command) {
-            modifiers |= UInt32(cmdKey)
-        }
-        if shortcut.modifiers.contains(.shift) {
-            modifiers |= UInt32(shiftKey)
-        }
-        if shortcut.modifiers.contains(.option) {
-            modifiers |= UInt32(optionKey)
-        }
-        if shortcut.modifiers.contains(.control) {
-            modifiers |= UInt32(controlKey)
-        }
         let status = RegisterEventHotKey(
             shortcut.keyCode,
-            modifiers,
-            EventHotKeyID(signature: 0x414b504e, id: 1),
+            Self.carbonModifiers(shortcut.modifiers),
+            EventHotKeyID(signature: Self.signature, id: identifier),
             GetApplicationEventTarget(),
             0,
             &reference
@@ -79,5 +97,31 @@ import AkapenCore
         reference = nil
         eventHandler = nil
         callback = nil
+    }
+
+    /// 自分の ID のイベントならハンドラーを呼んで `noErr`。ほかのホットキーのイベントは、次のハンドラーへ回す。
+    func handle(signature: OSType, identifier: UInt32) -> OSStatus {
+        guard signature == Self.signature, identifier == self.identifier, let callback else {
+            return OSStatus(eventNotHandledErr)
+        }
+        callback()
+        return noErr
+    }
+
+    private static func carbonModifiers(_ modifiers: KeyModifiers) -> UInt32 {
+        var result: UInt32 = 0
+        if modifiers.contains(.command) {
+            result |= UInt32(cmdKey)
+        }
+        if modifiers.contains(.shift) {
+            result |= UInt32(shiftKey)
+        }
+        if modifiers.contains(.option) {
+            result |= UInt32(optionKey)
+        }
+        if modifiers.contains(.control) {
+            result |= UInt32(controlKey)
+        }
+        return result
     }
 }
