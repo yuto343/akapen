@@ -16,7 +16,7 @@ final class Seed: AkapenUITestCase {
         XCTAssertEqual(appState().phase, .hidden)
         XCTAssertFalse(isShown(AXID.Toolbar.list))
 
-        // 操作: ホットキー（⌘;）を押す。
+        // 操作: ホットキー（⌘⇧6）を押す。
         pressHotkey()
 
         // 期待される結果: ボタン類が出て、枠を描く状態になる。

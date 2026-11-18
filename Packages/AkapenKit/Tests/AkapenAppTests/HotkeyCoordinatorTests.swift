@@ -6,7 +6,7 @@ import AkapenCore
 @MainActor
 @Suite
 struct HotkeyCoordinatorTests {
-    private let commandSemicolon = KeyboardShortcut()
+    private let defaultHotkey = KeyboardShortcut()
     private let controlOptionK = KeyboardShortcut(keyCode: 40, modifiers: [.control, .option])
     private let commandShiftB = KeyboardShortcut(keyCode: 11, modifiers: [.command, .shift])
 
@@ -22,8 +22,8 @@ struct HotkeyCoordinatorTests {
     func registersHotkey() {
         let harness = Harness()
         harness.coordinator.apply(settings())
-        #expect(harness.draw.current == commandSemicolon)
-        #expect(harness.coordinator.status.draw == commandSemicolon)
+        #expect(harness.draw.current == defaultHotkey)
+        #expect(harness.coordinator.status.draw == defaultHotkey)
         harness.draw.fire()
         #expect(harness.events == ["draw"])
     }
@@ -81,11 +81,11 @@ struct HotkeyCoordinatorTests {
         harness.coordinator.apply(settings())
         harness.draw.failing = [controlOptionK]
         harness.coordinator.apply(settings(hotkey: controlOptionK))
-        #expect(harness.draw.current == commandSemicolon)
+        #expect(harness.draw.current == defaultHotkey)
         #expect(failures.count == 1)
         #expect(failures.first?.0 == .draw)
         #expect(failures.first?.1 == controlOptionK)
-        #expect(failures.first?.2 == commandSemicolon)
+        #expect(failures.first?.2 == defaultHotkey)
         #expect(harness.coordinator.status.failed == [.draw])
         // 同じ値では登録をやり直さない。
         harness.coordinator.apply(settings(hotkey: controlOptionK))
@@ -93,7 +93,7 @@ struct HotkeyCoordinatorTests {
         // 設定が戻れば、失敗の印も消える。
         harness.coordinator.apply(settings())
         #expect(harness.coordinator.status.failed.isEmpty)
-        #expect(harness.draw.current == commandSemicolon)
+        #expect(harness.draw.current == defaultHotkey)
     }
 
     @Test

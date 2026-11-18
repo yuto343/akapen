@@ -1,5 +1,5 @@
 // spec: e2e/specs/settings/hotkey.md
-// spec-sha256: 037ae4206731c878f64d7caabfddc237b65dcafa9c66fc73388ce0be9e54453d
+// spec-sha256: 070bbddcb2e37fec0c4a95e978e3766b8ca5e71740547187c181ad5582d33331
 // このファイルは生成物。直接編集しない。md を直して e2e-generator で作り直す。
 
 import XCTest
@@ -11,10 +11,10 @@ final class SettingsHotkeyTests: AkapenUITestCase {
 
     // scenario: ホットキーを変えると、新しい組み合わせで枠を描き始められる
     func testNewHotkeyStartsDrawing() throws {
-        // 前提: セットアップ済み、ホットキーは既定の ⌘;。撮影対象のアプリ（Sample App）が出ている。注釈は 0 件で、何も出ていない。
+        // 前提: セットアップ済み、ホットキーは既定の ⌘⇧6。撮影対象のアプリ（Sample App）が出ている。注釈は 0 件で、何も出ていない。
         launch(.setupDone)
         let start = waitForPhase(.hidden)
-        XCTAssertEqual(start.settings.hotkey, .commandSemicolon)
+        XCTAssertEqual(start.settings.hotkey, .defaultHotkey)
         XCTAssertTrue(start.annotations.isEmpty)
         let before = recorderTextAfterOpeningSettings()
 
@@ -46,10 +46,10 @@ final class SettingsHotkeyTests: AkapenUITestCase {
 
     // scenario: ホットキーを変えたあとは、元の組み合わせでは描き始めない
     func testOldHotkeyNoLongerStartsDrawing() throws {
-        // 前提: セットアップ済み、ホットキーは既定の ⌘;。撮影対象のアプリ（Sample App）が出ている。注釈は 0 件で、何も出ていない。
+        // 前提: セットアップ済み、ホットキーは既定の ⌘⇧6。撮影対象のアプリ（Sample App）が出ている。注釈は 0 件で、何も出ていない。
         launch(.setupDone)
         let start = waitForPhase(.hidden)
-        XCTAssertEqual(start.settings.hotkey, .commandSemicolon)
+        XCTAssertEqual(start.settings.hotkey, .defaultHotkey)
 
         // 操作: 設定でホットキーを ⌃⌥K に変えて、設定のウィンドウを閉じる。
         openSettingsFromMenuBar()
@@ -58,14 +58,14 @@ final class SettingsHotkeyTests: AkapenUITestCase {
         closeSettings()
         bringSampleToFront()
 
-        // 操作: 元の ⌘; を押す。
-        pressHotkey(.commandSemicolon)
+        // 操作: 元の ⌘⇧6 を押す。
+        pressHotkey(.defaultHotkey)
 
-        // 期待される結果: アプリの状態で、元の ⌘; を押しても、何も出ていない状態のまま。
+        // 期待される結果: アプリの状態で、元の ⌘⇧6 を押しても、何も出ていない状態のまま。
         // してはいけないこと: 元の組み合わせと新しい組み合わせの両方で、枠を描き始められる。
-        let stayed = assertStateStays("元の ⌘; では何も出ていない状態のまま", for: 2) { $0.phase == .hidden && !$0.isToolbarVisible }
+        let stayed = assertStateStays("元の ⌘⇧6 では何も出ていない状態のまま", for: 2) { $0.phase == .hidden && !$0.isToolbarVisible }
         XCTAssertEqual(stayed.phase, .hidden)
-        XCTAssertNotEqual(stayed.hotkeys.draw, .commandSemicolon)
+        XCTAssertNotEqual(stayed.hotkeys.draw, .defaultHotkey)
         XCTAssertFalse(isShown(AXID.Draw.surface))
     }
 

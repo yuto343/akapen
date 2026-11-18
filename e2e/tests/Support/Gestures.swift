@@ -10,7 +10,7 @@ import AkapenAXID
 extension AkapenUITestCase {
     // MARK: - ホットキー
 
-    /// グローバルなホットキーを押す（既定は `⌘;`）。押したあとの状態の変化は待たない（`waitForPhase(_:)` などで待つ）。
+    /// グローバルなホットキーを押す（既定は `⌘⇧6`）。押したあとの状態の変化は待たない（`waitForPhase(_:)` などで待つ）。
     ///
     /// XCTest の `typeKey` は、送り先のアプリがキーを受け取るまで待つ（受け取らなければ約 10 秒）。
     /// グローバルなホットキーとして登録されているキーは OS が横取りして akapen に届けるので、
@@ -18,7 +18,7 @@ extension AkapenUITestCase {
     ///   XCTest は送る前に akapen を前面にするが、ホットキーの働きは変わらない。
     /// - 登録していないときは、ふつうのキーとして前面のアプリに届くはずなので、SampleTarget を送り先にする。
     /// 登録しているはずなのに効かない（akapen にふつうのキーとして届く）場合は、状態が変わらないのでテストが落ちる。
-    func pressHotkey(_ shortcut: Shortcut = .commandSemicolon) {
+    func pressHotkey(_ shortcut: Shortcut = .defaultHotkey) {
         let hotkeys = appState().hotkeys
         let isRegistered = !hotkeys.suspended && hotkeys.draw == shortcut
         if isRegistered {
@@ -29,7 +29,7 @@ extension AkapenUITestCase {
     }
 
     /// ホットキーで枠を描き始め、枠を描く状態になるまで待つ。
-    func startDrawing(with shortcut: Shortcut = .commandSemicolon) {
+    func startDrawing(with shortcut: Shortcut = .defaultHotkey) {
         pressHotkey(shortcut)
         waitForPhase(.drawing)
         waitForElement(AXID.Draw.surface)

@@ -95,7 +95,7 @@ struct JapaneseStrings: StringTable {
         case .setupRecorderHint:
             "クリックして、新しい組み合わせを押すと変わります"
         case .setupConflictNote:
-            "⌘; は macOS のテキスト入力欄（スペルミスの箇所へ移動）、VS Code、Photoshop でも使われています。ここか、あとで設定から変えられます。"
+            "⌘⇧6 は、Touch Bar のある Mac では macOS の Touch Bar のスクリーンショットにも使われています。ここか、あとで設定から変えられます。"
         case .setupContinue:
             "続ける"
         case .setupPermissionTitle:

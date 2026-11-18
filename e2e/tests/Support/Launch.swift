@@ -70,8 +70,8 @@ struct Shortcut: Codable, Equatable, CustomStringConvertible {
     var keyCode: UInt32
     var modifiers: Modifiers
 
-    /// 既定のホットキー `⌘;`。
-    static let commandSemicolon = Shortcut(key: ";", modifiers: .command)
+    /// 既定のホットキー `⌘⇧6`。
+    static let defaultHotkey = Shortcut(key: "6", modifiers: [.command, .shift])
 
     /// キーコードと修飾キーから作る。
     init(keyCode: UInt32, modifiers: Modifiers) {

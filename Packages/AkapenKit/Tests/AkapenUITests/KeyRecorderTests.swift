@@ -279,10 +279,10 @@ struct KeyCaptureViewTests {
 @MainActor
 struct ShortcutTextTests {
     @Test
-    func defaultHotkeyIsCommandSemicolon() {
+    func defaultHotkeyIsCommandShift6() {
         let text = ShortcutText.ansi
-        #expect(text.parts(KeyboardShortcut()) == ["⌘", ";"])
-        #expect(text.string(KeyboardShortcut()) == "⌘ ;")
+        #expect(text.parts(KeyboardShortcut()) == ["⇧", "⌘", "6"])
+        #expect(text.string(KeyboardShortcut()) == "⇧ ⌘ 6")
     }
 
     @Test

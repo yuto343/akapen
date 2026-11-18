@@ -1,5 +1,5 @@
 // spec: e2e/specs/draw/toggle.md
-// spec-sha256: 39b82a5fd171ff9d512cc26b7b4371e633c9ca70829455ab1995759a76749456
+// spec-sha256: 905bd571f07fa2ed806a9be06740cf99a9fa7dc38ca3cc7d18bc808e2f970cb3
 // このファイルは生成物。直接編集しない。md を直して e2e-generator で作り直す。
 
 import XCTest

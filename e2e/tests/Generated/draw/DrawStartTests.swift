@@ -1,5 +1,5 @@
 // spec: e2e/specs/draw/start.md
-// spec-sha256: 603d1b20bf3d59a0c93af78ebe11998e8eba30056d88aa300ce93f5c170ea4de
+// spec-sha256: 1cd0d5890a4b9a3f87750029fe7b448b9fbd066460326f7947dee156e6e21e8b
 // このファイルは生成物。直接編集しない。md を直して e2e-generator で作り直す。
 
 import XCTest
@@ -8,12 +8,12 @@ import AkapenAXID
 final class DrawStartTests: AkapenUITestCase {
     // scenario: 何も出ていないときにホットキーを押すと、ボタン類が出て枠を描き始められる
     func testHotkeyFromHiddenStartsDrawing() throws {
-        // 前提: セットアップ済み（ホットキーは既定の ⌘;）。注釈は 0 件で、akapen は何も出していない。
+        // 前提: セットアップ済み（ホットキーは既定の ⌘⇧6）。注釈は 0 件で、akapen は何も出していない。
         launch(.setupDone)
         let before = appState()
         XCTAssertEqual(before.phase, .hidden)
         XCTAssertFalse(before.isToolbarVisible)
-        XCTAssertEqual(before.hotkeys.draw, .commandSemicolon)
+        XCTAssertEqual(before.hotkeys.draw, .defaultHotkey)
 
         // 操作: ホットキーを押す。
         pressHotkey()

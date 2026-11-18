@@ -8,7 +8,7 @@ import AkapenAXID
 @Suite(.serialized)
 @MainActor
 struct SettingsTests {
-    private let commandSemicolon = KeyboardShortcut()
+    private let defaultHotkey = KeyboardShortcut()
     private let optionCommandK = KeyboardShortcut(keyCode: UInt32(TestKey.k), modifiers: [.option, .command])
 
     private func makeController(
@@ -187,7 +187,7 @@ struct SettingsTests {
         controller.form.hotkey.beginRecording()
         controller.form.hotkey.handle(keyCode: TestKey.k, flags: [.command, .option])
         #expect(sink.sentSettings.isEmpty)
-        #expect(controller.form.hotkey.shortcut == commandSemicolon)
+        #expect(controller.form.hotkey.shortcut == defaultHotkey)
         #expect(controller.form.hotkey.problem == .unavailable)
         #expect(UIStrings(language: .en).recorderMessage(.unavailable) == "This shortcut is unavailable")
         #expect(UIStrings(language: .ja).recorderMessage(.unavailable) == "このショートカットは使えません")

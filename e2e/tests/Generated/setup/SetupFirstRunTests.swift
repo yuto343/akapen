@@ -1,5 +1,5 @@
 // spec: e2e/specs/setup/first-run.md
-// spec-sha256: 5b310f3ef899731dd4d0cf26cbfbdc66c047ba0cc604872e2b56f717360c0b9b
+// spec-sha256: 4e482992e357c9f02a39e5940058e721f53d507ff61a4a984fb753b64094d8d3
 // このファイルは生成物。直接編集しない。md を直して e2e-generator で作り直す。
 
 import XCTest
@@ -54,36 +54,36 @@ final class SetupFirstRunTests: AkapenUITestCase {
         XCTAssertFalse(isShown(AXID.Setup.window), "起動し直したら、セットアップのウィンドウが出た")
     }
 
-    // scenario: 既定の ⌘; のままセットアップを終えると、⌘; で枠を描き始められる
+    // scenario: 既定の ⌘⇧6 のままセットアップを終えると、⌘⇧6 で枠を描き始められる
     func testDefaultHotkeyWorksAfterSetup() throws {
         // 前提: まだセットアップを終えていない（初回の起動）。画面収録の許可はあり。撮影対象のアプリ（Sample App）が出ている。
         launch(.firstRun)
         waitForElement(AXID.Setup.window)
 
-        // 期待される結果: セットアップに、既定のホットキーとして ⌘; が示されている。
+        // 期待される結果: セットアップに、既定のホットキーとして ⌘⇧6 が示されている。
         // （キーの文字はキーボードの配列で変わるので、修飾キーの記号と、キーが 1 つであることを見る。キーそのものはアプリの状態で見る）
         let shown = recorderText(AXID.Setup.hotkey)
         let parts = shown.split(separator: " ").map(String.init)
-        XCTAssertEqual(parts.count, 2, "既定のホットキーの表示が ⌘; の形でない: \(shown)")
-        XCTAssertEqual(parts.first, "⌘", "既定のホットキーの表示が ⌘; の形でない: \(shown)")
-        XCTAssertEqual(appState().settings.hotkey, .commandSemicolon)
+        XCTAssertEqual(parts.count, 3, "既定のホットキーの表示が ⌘⇧6 の形でない: \(shown)")
+        XCTAssertEqual(Array(parts.prefix(2)), ["⇧", "⌘"], "既定のホットキーの表示が ⌘⇧6 の形でない: \(shown)")
+        XCTAssertEqual(appState().settings.hotkey, .defaultHotkey)
 
         // 操作: ホットキーを変えずに、セットアップを終える。
         continueSetup()
         finishSetup()
 
-        // 期待される結果: アプリの状態で、セットアップを終えたあと、設定のホットキーが ⌘; になっている。
-        // してはいけないこと: 何も変えていないのに、ホットキーが ⌘; 以外になっている。
+        // 期待される結果: アプリの状態で、セットアップを終えたあと、設定のホットキーが ⌘⇧6 になっている。
+        // してはいけないこと: 何も変えていないのに、ホットキーが ⌘⇧6 以外になっている。
         let finished = waitForState("セットアップ済みになる") { $0.settings.setupCompleted }
-        XCTAssertEqual(finished.settings.hotkey, .commandSemicolon)
-        XCTAssertEqual(finished.hotkeys.draw, .commandSemicolon)
+        XCTAssertEqual(finished.settings.hotkey, .defaultHotkey)
+        XCTAssertEqual(finished.hotkeys.draw, .defaultHotkey)
 
-        // 操作: ⌘; を押す。
+        // 操作: ⌘⇧6 を押す。
         bringSampleToFront()
-        pressHotkey(.commandSemicolon)
+        pressHotkey(.defaultHotkey)
 
-        // 期待される結果: アプリの状態で、⌘; を押すと枠を描く状態になる。
-        // してはいけないこと: セットアップを終えても、⌘; で描き始められない。
+        // 期待される結果: アプリの状態で、⌘⇧6 を押すと枠を描く状態になる。
+        // してはいけないこと: セットアップを終えても、⌘⇧6 で描き始められない。
         waitForPhase(.drawing)
         waitForElement(AXID.Draw.surface)
     }
@@ -100,18 +100,18 @@ final class SetupFirstRunTests: AkapenUITestCase {
         finishSetup()
 
         // 期待される結果: アプリの状態で、セットアップを終えたあと、設定のホットキーが変えた組み合わせになっている。
-        // してはいけないこと: セットアップでの表示だけが変わり、アプリの状態のホットキーは ⌘; のまま。
+        // してはいけないこと: セットアップでの表示だけが変わり、アプリの状態のホットキーは ⌘⇧6 のまま。
         let finished = waitForState("セットアップ済みになる") { $0.settings.setupCompleted }
         XCTAssertEqual(finished.settings.hotkey, changedHotkey)
         XCTAssertEqual(finished.hotkeys.draw, changedHotkey)
 
-        // 操作: ⌘; を押す。
+        // 操作: ⌘⇧6 を押す。
         bringSampleToFront()
-        pressHotkey(.commandSemicolon)
+        pressHotkey(.defaultHotkey)
 
-        // 期待される結果: アプリの状態で、⌘; を押しても何も出ていない状態のまま。
-        // してはいけないこと: 変えた組み合わせと ⌘; の両方で、枠を描き始められる。
-        let stayed = assertStateStays("⌘; では何も出ていない状態のまま", for: 2) { $0.phase == .hidden && !$0.isToolbarVisible }
+        // 期待される結果: アプリの状態で、⌘⇧6 を押しても何も出ていない状態のまま。
+        // してはいけないこと: 変えた組み合わせと ⌘⇧6 の両方で、枠を描き始められる。
+        let stayed = assertStateStays("⌘⇧6 では何も出ていない状態のまま", for: 2) { $0.phase == .hidden && !$0.isToolbarVisible }
         XCTAssertEqual(stayed.phase, .hidden)
 
         // 操作: 変えた組み合わせを押す。

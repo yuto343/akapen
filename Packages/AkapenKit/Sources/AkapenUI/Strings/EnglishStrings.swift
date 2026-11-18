@@ -95,7 +95,7 @@ struct EnglishStrings: StringTable {
         case .setupRecorderHint:
             "Click and press a new combination to change"
         case .setupConflictNote:
-            "⌘; is also used by macOS text fields (jump to misspelling), VS Code and Photoshop. You can change it here or later in Settings."
+            "⌘⇧6 is also used by macOS to save a screenshot of the Touch Bar (on Macs with a Touch Bar). You can change it here or later in Settings."
         case .setupContinue:
             "Continue"
         case .setupPermissionTitle:
