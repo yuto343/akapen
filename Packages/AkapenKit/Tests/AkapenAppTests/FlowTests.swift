@@ -16,12 +16,12 @@ struct FlowTests {
         app.putOnPasteboard("前から入っていた文章")
         await app.send(.hotkeyPressed)
         #expect(app.model.phase == .drawing)
-        await app.send(.dragEnded(rect: TestApp.firstRect, screen: ScreenDescriptor(id: 1, frame: TestApp.window)))
+        await app.send(.dragEnded(rect: TestApp.firstRect, screen: TestApp.screen))
         #expect(app.model.phase == .commenting)
         await app.send(.commentConfirmed(text: "ボタンの余白が左右で違う"))
         // 確定するとすぐ次の枠を描ける。
         #expect(app.model.phase == .drawing)
-        await app.send(.dragEnded(rect: TestApp.secondRect, screen: ScreenDescriptor(id: 1, frame: TestApp.window)))
+        await app.send(.dragEnded(rect: TestApp.secondRect, screen: TestApp.screen))
         await app.send(.commentConfirmed(text: "ここの文言を「保存する」に\n2 行目も直す"))
         #expect(app.model.annotations.count == 2)
         let session = try #require(app.sessionDirectory)
@@ -61,14 +61,14 @@ struct FlowTests {
         let app = try await TestApp.make(seed: TestApp.setupDone())
         defer { app.cleanUp() }
         await app.send(.hotkeyPressed)
-        await app.send(.dragEnded(rect: TestApp.firstRect, screen: ScreenDescriptor(id: 1, frame: TestApp.window)))
-        let draft = try #require(app.model.draft)
-        #expect(FileManager.default.fileExists(atPath: draft.imagePath))
+        await app.send(.dragEnded(rect: TestApp.firstRect, screen: TestApp.screen))
+        let draftPath = try #require(app.model.draft?.imagePath)
+        #expect(FileManager.default.fileExists(atPath: draftPath))
         await app.send(.commentCancelled)
         #expect(app.model.phase == .drawing)
         #expect(app.model.draft == nil)
         #expect(app.model.annotations.isEmpty)
-        #expect(!FileManager.default.fileExists(atPath: draft.imagePath))
+        #expect(!FileManager.default.fileExists(atPath: draftPath))
         #expect(app.imageFiles().isEmpty)
     }
 
@@ -77,13 +77,13 @@ struct FlowTests {
         let app = try await TestApp.make(seed: TestApp.setupDone())
         defer { app.cleanUp() }
         await app.annotate("残す", rect: TestApp.firstRect)
-        await app.send(.dragEnded(rect: TestApp.secondRect, screen: ScreenDescriptor(id: 1, frame: TestApp.window)))
-        let draft = try #require(app.model.draft)
+        await app.send(.dragEnded(rect: TestApp.secondRect, screen: TestApp.screen))
+        let draftPath = try #require(app.model.draft?.imagePath)
         await app.send(.commentCancelled)
         #expect(app.model.phase == .drawing)
         #expect(app.model.isToolbarVisible)
         #expect(app.model.annotations.map(\.comment) == ["残す"])
-        #expect(!FileManager.default.fileExists(atPath: draft.imagePath))
+        #expect(!FileManager.default.fileExists(atPath: draftPath))
         #expect(app.imageFiles().map(\.path) == app.model.annotations.map { URL(filePath: $0.imagePath).standardizedFileURL.path })
     }
 
@@ -148,7 +148,7 @@ struct FlowTests {
         await app.send(.hotkeyPressed)
         #expect(app.model.phase == .drawing)
         #expect(app.model.annotations.isEmpty)
-        await app.send(.dragEnded(rect: TestApp.secondRect, screen: ScreenDescriptor(id: 1, frame: TestApp.window)))
+        await app.send(.dragEnded(rect: TestApp.secondRect, screen: TestApp.screen))
         await app.send(.commentConfirmed(text: "新しい回"))
         let current = app.model.annotations[0]
         // 時刻を固定しているので回のフォルダは同じ。番号を続けて、前の回の画像を上書きしない（DECISIONS.md A2）。
@@ -193,12 +193,12 @@ struct FlowTests {
         let app = try await TestApp.make(seed: TestApp.setupDone())
         defer { app.cleanUp() }
         await app.annotate("一つ目", rect: TestApp.firstRect)
-        await app.send(.dragEnded(rect: TestApp.secondRect, screen: ScreenDescriptor(id: 1, frame: TestApp.window)))
-        let draft = try #require(app.model.draft)
+        await app.send(.dragEnded(rect: TestApp.secondRect, screen: TestApp.screen))
+        let draftPath = try #require(app.model.draft?.imagePath)
         await app.send(.dismissRequested)
         #expect(app.model.phase == .hidden)
         #expect(app.model.annotations.map(\.comment) == ["一つ目"])
-        #expect(!FileManager.default.fileExists(atPath: draft.imagePath))
+        #expect(!FileManager.default.fileExists(atPath: draftPath))
     }
 
     @Test
@@ -213,7 +213,7 @@ struct FlowTests {
         await app.send(.copyPromptTapped)
         #expect(app.pasteboardText() == Boilerplate.japanese + "\n\n" + path + "\nコメント")
         await app.send(.hotkeyPressed)
-        await app.send(.dragEnded(rect: TestApp.firstRect, screen: ScreenDescriptor(id: 1, frame: TestApp.window)))
+        await app.send(.dragEnded(rect: TestApp.firstRect, screen: TestApp.screen))
         await app.send(.commentConfirmed(text: "二回目"))
         let secondPath = app.model.annotations[0].imagePath
         settings = app.model.settings
@@ -285,13 +285,25 @@ struct FlowTests {
     }
 
     @Test
-    func frameWithoutWindowStaysDrawing() async throws {
+    func frameWithoutWindowCapturesAroundFrame() async throws {
+        // ウィンドウがなくても、枠の上下左右に 200pt 足した範囲（画面の中）を撮って入力欄を出す。
         let app = try await TestApp.make(seed: LaunchSeed(settings: TestApp.setupDone().settings, windows: []))
         defer { app.cleanUp() }
         await app.send(.hotkeyPressed)
-        await app.send(.dragEnded(rect: TestApp.firstRect, screen: ScreenDescriptor(id: 1, frame: TestApp.window)))
-        #expect(app.model.phase == .drawing)
-        #expect(app.model.lastFailure == .noWindowUnderFrame)
-        #expect(app.imageFiles().isEmpty)
+        await app.send(.dragEnded(rect: TestApp.firstRect, screen: TestApp.screen))
+        #expect(app.model.phase == .commenting)
+        #expect(app.model.lastFailure == nil)
+        let draft = try #require(app.model.draft)
+        let region = ScreenRect(x: 808, y: 229, width: 508, height: 446)
+        #expect(draft.windowFrame == region)
+        #expect(draft.sourceAppName == "")
+        let path = try #require(draft.imagePath)
+        let image = try #require(SavedImage(url: URL(filePath: path)))
+        // 偽の撮影は範囲の 2 倍の画素。長辺の上限より小さいので縮めない。
+        #expect(image.pixelWidth == 1016)
+        #expect(image.pixelHeight == 892)
+        let expectedFrame = image.expectedRedFrame(drawn: TestApp.firstRect, window: region)
+        #expect(rectsMatch(image.redFrameInWindow(region), expectedFrame, tolerance: 1.5))
+        #expect(app.imageFiles().count == 1)
     }
 }

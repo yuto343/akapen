@@ -6,7 +6,7 @@ import XCTest
 //
 // - クリップボードに入った文章: `copiedPrompt()`（定型文と「パス・コメント」の組に分ける）、`putOnPasteboard(_:)`
 // - 保存された画像: `savedImage(at:)`（有無・画素の大きさ・赤い画素の外接矩形）、`imageFiles()`、`assertImage(at:showsFrame:)`
-// - アプリの状態: `appState()`（`state.json` を型のある値で）、`waitForPhase(_:)`、`waitForState(_:_:)`、`waitForAppToQuit()`
+// - アプリの状態: `appState()`（`state.json` を型のある値で）、`waitForPhase(_:)`、`waitForCapturedDraft()`、`waitForState(_:_:)`、`waitForAppToQuit()`
 
 /// akapen が書き出す `state.json`（v3）。形は `docs/FOUNDATION.md`「state.json v3」。
 struct AppState: Decodable {
@@ -36,20 +36,65 @@ struct AppState: Decodable {
         }
     }
 
-    /// 注釈（確定済みのものと、書きかけのもの）。
+    /// 確定済みの注釈。
     struct Annotation: Decodable, Equatable {
         var id: String
         /// 画像ファイルの絶対パス。
         var imagePath: String
-        /// コメント（書きかけの注釈では空）。
+        /// コメント。
         var comment: String
         /// 描いた枠。
         var rect: Rect
-        /// 撮影したウィンドウのアプリ名。
+        /// 枠内に見えていたウィンドウのアプリ名（見えている面積の大きい順に `, ` でつなぐ。なければ空文字）。
         var sourceAppName: String
         /// 撮影した時刻（ISO 8601）。
         var createdAt: String
-        /// 撮影したウィンドウの矩形。
+        /// 撮った範囲（画像全体に当たる矩形。名前はウィンドウ 1 つを撮っていたころのまま）。
+        var windowFrame: Rect
+    }
+
+    /// 書きかけの注釈。枠を描き終えた時点でできる。画像のパス・アプリ名・撮った範囲は、撮影と保存が終わるまで nil。
+    struct Draft: Decodable, Equatable {
+        var id: String
+        /// 描いた枠。
+        var rect: Rect
+        /// 枠を描き終えた時刻（ISO 8601）。
+        var createdAt: String
+        /// 画像ファイルの絶対パス。撮影と保存が終わるまで nil。
+        var imagePath: String?
+        /// 枠内に見えていたウィンドウのアプリ名。撮影と保存が終わるまで nil。
+        var sourceAppName: String?
+        /// 撮った範囲。撮影と保存が終わるまで nil。
+        var windowFrame: Rect?
+
+        /// 撮影と保存が終わっていれば、その書きかけ。
+        var captured: CapturedDraft? {
+            guard let imagePath, let sourceAppName, let windowFrame else {
+                return nil
+            }
+            return CapturedDraft(
+                id: id,
+                rect: rect,
+                createdAt: createdAt,
+                imagePath: imagePath,
+                sourceAppName: sourceAppName,
+                windowFrame: windowFrame
+            )
+        }
+    }
+
+    /// 撮影と保存が終わった書きかけの注釈（画像のパス・アプリ名・撮った範囲がある）。
+    struct CapturedDraft: Equatable {
+        var id: String
+        /// 描いた枠。
+        var rect: Rect
+        /// 枠を描き終えた時刻（ISO 8601）。
+        var createdAt: String
+        /// 画像ファイルの絶対パス。
+        var imagePath: String
+        /// 枠内に見えていたウィンドウのアプリ名。
+        var sourceAppName: String
+        /// 撮った範囲。
         var windowFrame: Rect
     }
 
@@ -109,18 +154,23 @@ struct AppState: Decodable {
     var isToolbarVisible: Bool
     /// 確定済みの注釈（確定した順）。書きかけは含まない。
     var annotations: [Annotation]
-    /// 書きかけの注釈（撮影済みで、コメントが未確定）。
-    var draft: Annotation?
+    /// 書きかけの注釈（コメントが未確定）。撮影と保存が終わるまでは、画像のパスがない。
+    var draft: Draft?
     /// 最後に描いた枠。
     var lastDrawnRect: Rect?
     /// 直前にコピーした件数。
     var lastCopiedCount: Int
-    /// 直前の操作の失敗（`noWindowUnderFrame` / `captureFailed` / `imageSaveFailed` / `pasteboardFailed` / `settingsSaveFailed`）。
+    /// 直前の操作の失敗（`captureFailed` / `imageSaveFailed` / `pasteboardFailed` / `settingsSaveFailed`）。
     var lastFailure: String?
     var settings: Settings
     var storage: Storage
     var windows: Windows
     var hotkeys: Hotkeys
+
+    /// 撮影と保存が終わった書きかけの注釈。書きかけがないか、撮影がまだ終わっていなければ nil。
+    var capturedDraft: CapturedDraft? {
+        draft?.captured
+    }
 
     /// 確定済みの注釈のコメント（確定した順）。
     var comments: [String] {
@@ -242,7 +292,7 @@ struct SavedImage {
         CGFloat(pixelWidth) / CGFloat(max(1, pixelHeight))
     }
 
-    /// 赤い画素の外接矩形を、撮影したウィンドウに対する pt の矩形にする（`windowSize` はウィンドウの大きさ。pt）。
+    /// 赤い画素の外接矩形を、撮った範囲に対する pt の矩形にする（`windowSize` は撮った範囲の大きさ。pt）。
     func redFrame(inWindowOfSize windowSize: CGSize) -> CGRect? {
         guard let redBounds, windowSize.width > 0 else {
             return nil
@@ -256,7 +306,7 @@ struct SavedImage {
         )
     }
 
-    /// 描いた枠 `drawn`（画面全体の座標）から見込む、赤い画素の外接矩形（ウィンドウに対する pt）。
+    /// 描いた枠 `drawn`（画面全体の座標）から見込む、赤い画素の外接矩形（撮った範囲 `window` に対する pt）。
     /// 赤枠は枠の外側に描かれるので、線の太さの分だけ広い。
     func expectedRedFrame(drawn: CGRect, window: CGRect) -> CGRect {
         let pixelsPerPoint = CGFloat(pixelWidth) / max(1, window.width)
@@ -319,6 +369,16 @@ extension AkapenUITestCase {
         line: UInt = #line
     ) -> AppState {
         waitForState("phase が \(phase.rawValue) になる", timeout: timeout, file: file, line: line) { $0.phase == phase }
+    }
+
+    /// コメントを書いている状態で、書きかけの注釈の撮影と保存が終わる（`capturedDraft` が入る）まで待ち、その状態を返す。
+    ///
+    /// 入力欄は撮影の完了を待たずに出るので、書きかけの画像のパスや保存された画像を見るときは、これで待つ。
+    @discardableResult
+    func waitForCapturedDraft(timeout: TimeInterval = 5, file: StaticString = #filePath, line: UInt = #line) -> AppState {
+        waitForState("書きかけの注釈の撮影と保存が終わる", timeout: timeout, file: file, line: line) { state in
+            state.phase == .commenting && state.capturedDraft != nil
+        }
     }
 
     /// コピーを終えた状態（コピー完了の表示が出ているか、それが消えたあと）になるまで待つ。
@@ -454,10 +514,10 @@ extension AkapenUITestCase {
         return names.filter { !$0.hasPrefix(".") }.sorted()
     }
 
-    /// 画像が `drawn`（描いた枠。画面全体の座標）に当たる位置に赤枠が入った、撮影したウィンドウ全体の画像であることを確かめる。
+    /// 画像が `drawn`（描いた枠。画面全体の座標）に当たる位置に赤枠が入った、撮った範囲全体の画像であることを確かめる。
     ///
     /// - ファイルがあり、画像として読める。
-    /// - 縦横の比が、撮影したウィンドウ（`window`。既定は SampleTarget）と同じ（誤差 1%）。
+    /// - 縦横の比が、撮った範囲（`window`。既定は SampleTarget のウィンドウ。枠がその内側だけにあるときの範囲）と同じ（誤差 1%）。
     /// - 赤い画素の外接矩形が、描いた枠を線の太さの分だけ広げた矩形と、辺ごとに `tolerance` pt 以内で一致する。
     func assertImage(
         at path: String,

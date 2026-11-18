@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import Observation
 
@@ -8,7 +9,8 @@ import Observation
 @MainActor @Observable public final class SessionModel {
     public private(set) var phase: Phase = .hidden
     public private(set) var annotations: [Annotation] = []
-    public private(set) var draft: Annotation?
+    /// 書きかけの注釈。枠を描き終えた時点で作り、撮影と保存が終わると画像のパスなどが入る（`commenting` のあいだだけある）。
+    public private(set) var draft: DraftAnnotation?
     public private(set) var settings: Settings
     public private(set) var lastDrawnRect: ScreenRect?
     /// 直前にコピーした注釈の件数。
@@ -54,6 +56,14 @@ import Observation
     @ObservationIgnored private var copiedTimerGeneration = 0
     /// コピー完了の表示を消すタイマー。テストから完了を待てるように internal にしている。
     @ObservationIgnored var copiedTimer: Task<Void, Never>?
+    /// 先読みしているウィンドウの一覧。`drawing` に入るたびに取り直す。テストから完了を待てるように internal にしている。
+    @ObservationIgnored var windowListing: Task<WindowListing, Never>?
+    /// 撮影中の書きかけの、撮影・描き込みの処理。撮影が終わって書きかけに反映したら（または書きかけを捨てたら）nil。
+    @ObservationIgnored private var pendingCapture: PendingCapture?
+    /// 撮影の世代。古い撮影の完了が、新しい書きかけを書き換えないように、撮影を始めるたびに進める。
+    @ObservationIgnored private var captureGeneration = 0
+    /// 撮影の完了を待ち行列に入れるまでの処理。テストから完了を待てるように internal にしている。
+    @ObservationIgnored var captureCompletion: Task<Void, Never>?
 
     /// 回の ID（フォルダ名）は、この Mac のタイムゾーンで決める。
     ///
@@ -125,6 +135,24 @@ import Observation
     }
 }
 
+// MARK: - 撮影の下ごしらえ
+
+extension SessionModel {
+    /// 先読みしたウィンドウの一覧（取れなかったときはそのエラー）。
+    typealias WindowListing = Result<[CaptureWindow], any Error>
+
+    /// 撮影中の書きかけの、撮影・描き込みの処理。
+    fileprivate struct PendingCapture {
+        let generation: Int
+        /// 撮る範囲と、その範囲を決めたウィンドウ。
+        let region: CaptureRegion
+        /// 保存する回の ID。撮影を始めた時点で決める。
+        let sessionID: String
+        /// 撮影して赤枠を描き込んだ PNG。失敗したら nil。
+        let work: Task<Data?, Never>
+    }
+}
+
 // MARK: - 入力の待ち行列
 
 extension SessionModel {
@@ -134,7 +162,7 @@ extension SessionModel {
         case ignored
         /// 成功した。`lastFailure` を nil に戻す。
         case succeeded
-        /// 失敗した。状態は変えずに `lastFailure` を立てる。
+        /// 失敗した。`lastFailure` を立てる（状態は、ふつうは変えない。撮影の失敗は書きかけを捨てて `drawing` に戻す）。
         case failed(SessionFailure)
     }
 
@@ -148,7 +176,7 @@ extension SessionModel {
     private struct Observed: Equatable {
         var phase: Phase
         var annotations: [Annotation]
-        var draft: Annotation?
+        var draft: DraftAnnotation?
         var settings: Settings
         var lastDrawnRect: ScreenRect?
         var lastCopiedCount: Int
@@ -191,14 +219,17 @@ extension SessionModel {
         switch start(self) {
         case let .done(outcome):
             apply(outcome)
+            phaseDidChange(from: before.phase)
             notifyIfChanged(since: before)
             return nil
         case let .async(work):
+            phaseDidChange(from: before.phase)
             notifyIfChanged(since: before)
             return { [self] in
                 let before = observed
                 let outcome = await work()
                 apply(outcome)
+                phaseDidChange(from: before.phase)
                 notifyIfChanged(since: before)
             }
         }
@@ -245,10 +276,10 @@ extension SessionModel {
             .done(hotkeyPressed())
         case .escapePressed:
             .done(escapePressed())
-        case let .dragEnded(rect, _):
-            dragEnded(rect)
+        case let .dragEnded(rect, screen):
+            dragEnded(rect, screen: screen)
         case let .commentConfirmed(text):
-            .done(commentConfirmed(text))
+            commentConfirmed(text)
         case .commentCancelled:
             .done(commentCancelled())
         case .listToggled:
@@ -278,7 +309,7 @@ extension SessionModel {
                 startNewSession()
             } else {
                 // 回は `copy prompt` で終わるまで続く。回の ID と画像の番号を引き継ぐ。
-                draft = nil
+                discardDraft()
             }
             phase = .drawing
             return .succeeded
@@ -311,7 +342,10 @@ extension SessionModel {
         }
     }
 
-    private func dragEnded(_ rect: ScreenRect) -> Step {
+    /// 枠を描き終えた。先読みしておいた一覧（まだ取れていなければ、取れるまで待つ）から、撮る範囲を決める。
+    ///
+    /// 撮影の完了を待たずに `commenting` へ移る。撮影・描き込み・保存は裏で続ける。
+    private func dragEnded(_ rect: ScreenRect, screen: ScreenDescriptor) -> Step {
         guard phase == .drawing else {
             return .done(.ignored)
         }
@@ -319,80 +353,147 @@ extension SessionModel {
         guard rect.width >= Self.minimumFrameSize, rect.height >= Self.minimumFrameSize else {
             return .done(.ignored)
         }
-        guard let capturing, let images, let clock else {
+        guard let capturing, images != nil, let clock else {
             // 撮影に要る依存がつながっていない。撮影できなかったのと同じに扱い、`drawing` のままにする。
             return .done(.failed(.captureFailed))
         }
-        let sessionID = currentSessionID(clock: clock)
+        let listing = windowListing ?? startWindowListing(capturing)
         return .async { [self] in
-            await capture(
-                rect,
-                capturing: capturing,
-                images: images,
-                clock: clock,
-                sessionID: sessionID
-            )
+            let windows = await listing.value
+            return startCapture(rect, screen: screen, windows: windows, capturing: capturing, clock: clock)
         }
     }
 
-    private func capture(
+    /// 撮る範囲を決め、書きかけを作って撮影を始める。
+    private func startCapture(
         _ rect: ScreenRect,
+        screen: ScreenDescriptor,
+        windows listing: WindowListing,
         capturing: any WindowCapturing,
-        images: any ImageStore,
-        clock: any Clock,
-        sessionID: String
-    ) async -> Outcome {
+        clock: any Clock
+    ) -> Outcome {
+        guard phase == .drawing else {
+            return .ignored
+        }
         let windows: [CaptureWindow]
-        do {
-            windows = try await capturing.windows()
-        } catch {
+        switch listing {
+        case let .success(list):
+            windows = list
+        case .failure:
+            // 一覧を取れなかった。次のドラッグで取り直す。
+            windowListing = nil
             return .failed(.captureFailed)
         }
-        guard let window = WindowPicker.pick(frame: rect, from: windows) else {
-            return .failed(.noWindowUnderFrame)
+        let region = CaptureRegion.resolve(frame: rect, screen: screen, windows: windows)
+        let sessionID = currentSessionID(clock: clock)
+        captureGeneration += 1
+        let generation = captureGeneration
+        // 撮影は、指を離した時点で始める（入力中に下の画面が変わっても、写るのは離した時点の内容）。
+        let work = Task { @MainActor in
+            await Self.captureAndRender(region: region, screen: screen, frame: rect, capturing: capturing)
         }
-        let rendered: Data
-        do {
-            let png = try await capturing.capture(window: window)
-            rendered = try await Self.renderInBackground(png: png, windowFrame: window.frame, frame: rect)
-        } catch {
-            return .failed(.captureFailed)
+        pendingCapture = PendingCapture(generation: generation, region: region, sessionID: sessionID, work: work)
+        captureCompletion = Task { [weak self] in
+            let rendered = await work.value
+            guard let self else {
+                return
+            }
+            await enqueue { model in
+                .done(model.captureFinished(generation: generation, rendered: rendered))
+            }.value
         }
-        let url: URL
-        do {
-            url = try images.save(png: rendered, sessionID: sessionID, index: nextImageIndex)
-        } catch {
-            return .failed(.imageSaveFailed)
-        }
-        nextImageIndex += 1
-        draft = Annotation(
-            imagePath: url.path(percentEncoded: false),
-            comment: "",
-            rect: rect,
-            sourceAppName: window.appName,
-            createdAt: clock.now,
-            windowFrame: window.frame
-        )
+        draft = DraftAnnotation(rect: rect, createdAt: clock.now)
         phase = .commenting
         return .succeeded
     }
 
-    /// 赤枠の描き込みと縮小は重いので、メインアクターの外で行う。
-    private static func renderInBackground(png: Data, windowFrame: ScreenRect, frame: ScreenRect) async throws -> Data {
+    /// 撮影して、赤枠を描き込んだ PNG を返す。失敗したら nil。状態には触らない。
+    private static func captureAndRender(
+        region: CaptureRegion,
+        screen: ScreenDescriptor,
+        frame: ScreenRect,
+        capturing: any WindowCapturing
+    ) async -> Data? {
+        do {
+            let image = try await capturing.capture(region: region.rect, on: screen)
+            return try await renderInBackground(image: image, region: region.rect, frame: frame)
+        } catch {
+            return nil
+        }
+    }
+
+    /// 赤枠の描き込みと縮小、PNG への書き出しは重いので、メインアクターの外で行う。
+    private static func renderInBackground(image: CGImage, region: ScreenRect, frame: ScreenRect) async throws -> Data {
         try await Task.detached(priority: .userInitiated) {
-            try FrameRenderer.render(png: png, windowFrame: windowFrame, frame: frame)
+            try FrameRenderer.render(image: image, region: region, frame: frame)
         }.value
     }
 
-    private func commentConfirmed(_ text: String) -> Outcome {
-        guard phase == .commenting, var confirmed = draft else {
+    /// 撮影の完了（内部の入力）。もう捨てた書きかけの撮影なら何もしない。
+    private func captureFinished(generation: Int, rendered: Data?) -> Outcome {
+        guard let pending = pendingCapture, pending.generation == generation, phase == .commenting, draft != nil else {
             return .ignored
+        }
+        return completeCapture(pending, rendered: rendered)
+    }
+
+    /// 撮った画像を保存し、書きかけに画像のパス・アプリ名・撮った範囲を入れる。
+    /// 撮影か保存に失敗したら、書きかけを捨てて `drawing` に戻る。
+    private func completeCapture(_ pending: PendingCapture, rendered: Data?) -> Outcome {
+        pendingCapture = nil
+        guard let rendered, let images else {
+            draft = nil
+            phase = .drawing
+            return .failed(.captureFailed)
+        }
+        let url: URL
+        do {
+            url = try images.save(png: rendered, sessionID: pending.sessionID, index: nextImageIndex)
+        } catch {
+            draft = nil
+            phase = .drawing
+            return .failed(.imageSaveFailed)
+        }
+        nextImageIndex += 1
+        draft?.imagePath = url.path(percentEncoded: false)
+        draft?.sourceAppName = pending.region.sourceAppName
+        draft?.windowFrame = pending.region.rect
+        return .succeeded
+    }
+
+    /// コメントの確定。撮影が終わる前なら、終わるのを待ってから一覧に入れる（待つあいだ、次の入力は処理しない）。
+    private func commentConfirmed(_ text: String) -> Step {
+        guard phase == .commenting, let current = draft else {
+            return .done(.ignored)
         }
         let comment = text.trimmingWhitespaceAndNewlines()
         guard !comment.isEmpty else {
+            return .done(.ignored)
+        }
+        if current.isCaptured {
+            return .done(confirmDraft(comment: comment))
+        }
+        guard let pending = pendingCapture else {
+            return .done(.ignored)
+        }
+        return .async { [self] in
+            let rendered = await pending.work.value
+            guard pendingCapture?.generation == pending.generation else {
+                return .ignored
+            }
+            let outcome = completeCapture(pending, rendered: rendered)
+            guard case .succeeded = outcome else {
+                return outcome
+            }
+            return confirmDraft(comment: comment)
+        }
+    }
+
+    /// 撮影と保存が済んだ書きかけを、コメントを付けて一覧に入れ、`drawing` に戻る。
+    private func confirmDraft(comment: String) -> Outcome {
+        guard let confirmed = draft?.annotation(comment: comment) else {
             return .ignored
         }
-        confirmed.comment = comment
         annotations.append(confirmed)
         draft = nil
         phase = .drawing
@@ -504,7 +605,7 @@ extension SessionModel {
     /// 同じ分のうちに次の回を始めたときは、前の回の画像を上書きしないように番号を続ける。
     private func startNewSession() {
         stopCopiedTimer()
-        draft = nil
+        discardDraft()
         guard let clock else {
             sessionID = nil
             return
@@ -526,12 +627,44 @@ extension SessionModel {
         return id
     }
 
-    /// 書きかけの注釈と、その画像を捨てる。
+    /// 書きかけの注釈と、その画像を捨てる。撮影中なら、その撮影の完了は無視する（画像を保存しない）。
     private func discardDraft() {
-        if let draft {
-            removeImage(atPath: draft.imagePath)
+        if let path = draft?.imagePath {
+            removeImage(atPath: path)
         }
         draft = nil
+        pendingCapture = nil
+    }
+
+    /// `phase` が変わったときの後始末。`drawing` に入るたびにウィンドウの一覧を取り直し、隠したら捨てる。
+    private func phaseDidChange(from previous: Phase) {
+        guard phase != previous else {
+            return
+        }
+        switch phase {
+        case .drawing:
+            if let capturing {
+                startWindowListing(capturing)
+            }
+        case .hidden, .copied:
+            windowListing = nil
+        case .commenting, .listOpen:
+            break
+        }
+    }
+
+    /// ウィンドウの一覧の先読みを始める。
+    @discardableResult
+    private func startWindowListing(_ capturing: any WindowCapturing) -> Task<WindowListing, Never> {
+        let task = Task { @MainActor () -> WindowListing in
+            do {
+                return .success(try await capturing.windows())
+            } catch {
+                return .failure(error)
+            }
+        }
+        windowListing = task
+        return task
     }
 
     /// 画像を消す。消せなくても遷移は止めない（古い回の掃除で、いずれ消える）。

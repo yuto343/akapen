@@ -96,7 +96,7 @@ struct SeedTests {
         defer { app.cleanUp() }
         #expect(!app.environment.permission.isGranted)
         await app.send(.hotkeyPressed)
-        await app.send(.dragEnded(rect: TestApp.firstRect, screen: ScreenDescriptor(id: 1, frame: TestApp.window)))
+        await app.send(.dragEnded(rect: TestApp.firstRect, screen: TestApp.screen))
         #expect(app.model.phase == .drawing)
         #expect(app.model.lastFailure == .captureFailed)
         #expect(app.imageFiles().isEmpty)
@@ -143,14 +143,17 @@ struct SeedTests {
     }
 
     @Test
-    func annotationOutsideWindowsFails() async throws {
-        let seed = TestApp.setupDone(annotations: [
-            LaunchSeed.Annotation(comment: "外", rect: ScreenRect(x: 5000, y: 5000, width: 40, height: 40)),
-        ])
-        await #expect(throws: AppEnvironment.StartupError.seedAnnotationFailed(0, "noWindowUnderFrame")) {
-            let app = try await TestApp.make(seed: seed)
-            app.cleanUp()
-        }
+    func annotationOutsideWindowsCapturesAroundFrame() async throws {
+        // ウィンドウと重ならない枠でも、枠のまわりを撮って注釈になる（起動エラーにしない）。
+        let rect = ScreenRect(x: 5000, y: 5000, width: 40, height: 40)
+        let app = try await TestApp.make(seed: TestApp.setupDone(annotations: [
+            LaunchSeed.Annotation(comment: "外", rect: rect),
+        ]))
+        defer { app.cleanUp() }
+        let annotation = try #require(app.model.annotations.first)
+        #expect(annotation.comment == "外")
+        #expect(annotation.windowFrame == ScreenRect(x: 4800, y: 4800, width: 440, height: 440))
+        #expect(annotation.sourceAppName == "")
     }
 
     @Test

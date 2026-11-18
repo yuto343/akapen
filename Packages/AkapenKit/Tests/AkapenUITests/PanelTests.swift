@@ -428,7 +428,7 @@ struct PanelPlanTests {
     @Test
     func noticesFollowPhase() {
         // 枠を描く状態では、撮影の失敗もコピーの失敗も知らせる。一覧ではコピーと設定の保存の失敗だけ。
-        #expect(PanelPlan(SessionViewState(phase: .drawing, failure: .noWindowUnderFrame)).notice == .noWindowUnderFrame)
+        #expect(PanelPlan(SessionViewState(phase: .drawing, failure: .captureFailed)).notice == .captureFailed)
         #expect(PanelPlan(SessionViewState(phase: .drawing, failure: .pasteboardFailed)).notice == .pasteboardFailed)
         #expect(PanelPlan(SessionViewState(phase: .listOpen, failure: .pasteboardFailed)).notice == .pasteboardFailed)
         #expect(PanelPlan(SessionViewState(phase: .listOpen, failure: .captureFailed)).notice == nil)

@@ -101,7 +101,7 @@ struct EnglishStrings: StringTable {
         case .setupPermissionTitle:
             "Allow Screen Recording"
         case .setupPermissionBody:
-            "akapen captures the window under each frame. Images stay on this Mac in ~/Library/Caches/akapen."
+            "akapen captures the screen around each frame. Images stay on this Mac in ~/Library/Caches/akapen."
         case .setupStepOpenSettings:
             "Open System Settings → Privacy & Security"
         case .setupStepTurnOn:
@@ -118,10 +118,8 @@ struct EnglishStrings: StringTable {
             "Open System Settings"
         case .setupDone:
             "Done"
-        case .noticeNoWindow:
-            "No window under the frame"
         case .noticeCaptureFailed:
-            "Couldn’t capture the window"
+            "Couldn’t capture the screen"
         case .noticeImageSaveFailed:
             "Couldn’t save the image"
         case .noticePasteboardFailed:

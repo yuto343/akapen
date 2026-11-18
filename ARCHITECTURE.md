@@ -133,8 +133,9 @@ e2e/tests ──▶ AkapenAXID（だけ）
 | --- | --- |
 | `Session/SessionModel.swift` | 状態機械（下の「状態」）。`@MainActor @Observable` |
 | `Session/Annotation.swift` | 注釈 1 件（画像のパス、コメント、枠の位置） |
-| `Capture/WindowPicker.swift` | 枠と重なる面積が最も大きいウィンドウを選ぶ |
-| `Capture/FrameRenderer.swift` | 画像に赤枠を描き込み、長辺の上限に合わせて縮小する（CoreGraphics） |
+| `Session/DraftAnnotation.swift` | 書きかけの注釈（枠を描き終えた時点で作る。画像のパス・アプリ名・撮った範囲は撮影と保存が終わってから入る） |
+| `Capture/CaptureRegion.swift` | 描いた枠から撮る範囲を決める純粋な関数。枠内に見えている（手前のウィンドウに隠れていない部分の面積が枠の 5% 以上の）ウィンドウをまとめて囲む矩形、なければ枠の上下左右に 200pt 足した矩形を、枠を描いたディスプレイの中に切り詰める。一覧に出すアプリ名もここで決める |
+| `Capture/FrameRenderer.swift` | 撮った範囲の画像に赤枠を描き込み、長辺の上限に合わせて縮小する（CoreGraphics）。撮った `CGImage` をそのまま受け取る入口と、PNG を受け取る入口がある |
 | `Prompt/PromptBuilder.swift` | 定型文 +「パス → コメント」の文章を組み立てる |
 | `Prompt/Boilerplate.swift` | 言語ごとの定型文の既定値 |
 | `Settings/Settings.swift` | 設定の型（言語・ホットキー・確定キー・定型文・保存日数）。古い版が保存した `toolbarShortcut` のような知らないキーは無視して読む |
@@ -146,7 +147,7 @@ e2e/tests ──▶ AkapenAXID（だけ）
 
 | プロトコル | 本番（AkapenPlatform） | E2E 用（AkapenPlatform） |
 | --- | --- | --- |
-| `WindowCapturing`（ウィンドウ一覧と撮影） | `ScreenCaptureKitCapturer` | `FixtureCapturer`（固定のウィンドウ位置と固定の画像を返す） |
+| `WindowCapturing`（ウィンドウ一覧と、範囲の撮影） | `ScreenCaptureKitCapturer` | `FixtureCapturer`（固定のウィンドウ位置と、範囲の大きさ × 倍率の固定の画像を返す） |
 | `PromptPasteboard` | `NSPasteboard.general` | 名前つきのクリップボード（手元のコピー内容を壊さない） |
 | `SettingsStore` | `UserDefaults.standard` | テストごとの一時ディレクトリ |
 | `ImageStore`（画像の保存と掃除） | `~/Library/Caches/akapen/` | テストごとの一時ディレクトリ |
@@ -239,14 +240,22 @@ generator はこの一覧にある識別子だけを使う。足りないとき�
 | 状態 | ホットキー | `Esc` | ドラッグ終了 | 確定 / 取り消し | 一覧 | copy prompt | `dismissRequested` |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `hidden` | `drawing`（注釈が 1 件以上なら回の ID と画像の番号を引き継ぐ。0 件なら新しい回） | — | — | — | — | — | — |
-| `drawing` | `hidden`（注釈は残す） | `hidden`（注釈は残す） | 撮影して `commenting`（失敗・小さすぎる枠は `drawing` のまま） | — | `listOpen` | 注釈があれば `copied` | `hidden` |
-| `commenting` | 何もしない（書きかけを失わない） | 書きかけを捨てて `drawing` | — | 確定: `drawing`（空のコメントは何もしない）/ 取り消し: 書きかけを捨てて `drawing` | — | — | 書きかけを捨てて `hidden` |
+| `drawing` | `hidden`（注釈は残す） | `hidden`（注釈は残す） | 撮る範囲を決め、撮影を裏で始めてすぐ `commenting`（一覧を取れない・小さすぎる枠は `drawing` のまま） | — | `listOpen` | 注釈があれば `copied` | `hidden` |
+| `commenting` | 何もしない（書きかけを失わない） | 書きかけを捨てて `drawing` | — | 確定: `drawing`（空のコメントは何もしない。撮影の完了前なら、完了を待ってから一覧に入れる）/ 取り消し: 書きかけを捨てて `drawing` | — | — | 書きかけを捨てて `hidden` |
 | `listOpen` | `hidden` | `drawing`（編集中なら編集の取りやめだけ。`DECISIONS.md` A1。`SessionWindows` の入力欄が受ける） | — | — | `drawing` | 注釈があれば `copied` | `hidden` |
 | `copied` | 新しい回で `drawing` | — | — | — | — | — | — |
 
 - 入力は `send(_ event:)` の 1 本にまとめる（`hotkeyPressed` / `dragEnded(rect, screen)` / `commentConfirmed(text)` / `commentCancelled` / `escapePressed` / `listToggled` / `annotationEdited` / `annotationDeleted` / `copyPromptTapped` / `copiedExpired` / `dismissRequested` / `settingsChanged` / `setupCompleted`）。`annotationEdited` と `annotationDeleted` は `listOpen` のときだけ効く。
 - `dismissRequested` は、設定やセットアップのウィンドウを開くときに組み立ての側が送る（画面全体を覆う面がウィンドウを隠さないように）。
 - 撮影・保存・クリップボードへの書き込みは、注入されたプロトコル越しに `SessionModel` が呼ぶ。だから一連の流れは `swift test` で、偽の実装を差して最後まで確かめられる。
+- **枠を描き終えてから入力欄が出るまでを待たせない。** 流れは次のとおり。
+  - `drawing` に入るたびに（ホットキー、コメントの確定のあと、一覧を閉じたあと、など）、ウィンドウの一覧（`WindowCapturing.windows()`）を取り始めておく。隠したら捨てる。取れなかった一覧は使い回さず、次のドラッグで取り直す。
+  - ドラッグ終了では、先に取った一覧（まだ取れていなければ、取れるまで待つ）と、枠を描いたディスプレイ（`dragEnded` の `screen`）から、`CaptureRegion.resolve` で撮る範囲を決める。ウィンドウがなくても範囲は決まる（枠のまわり）ので、小さすぎる枠と一覧を取れないときを除き、必ず `commenting` に進む。
+  - 書きかけ（`DraftAnnotation`。画像のパスはまだない）を作ってすぐ `commenting` に移り、撮影（`capture(region:on:)` が範囲を 1 回撮った `CGImage` を返す）→ 赤枠の描き込みと PNG への書き出し（メインアクターの外）を裏で進める。
+  - 撮影の完了は、待ち行列の中の内部の入力として処理する。保存して、書きかけに画像のパス・アプリ名（枠内に見えているウィンドウのアプリ名を、見えている面積の大きい順に `, ` でつなぐ）・撮った範囲（`windowFrame`）を入れる。撮影か保存に失敗したら、書きかけを捨てて `drawing` に戻り、`captureFailed` / `imageSaveFailed` を出す。
+  - 撮影の完了前に確定したら、その確定は撮影の完了を待ってから一覧に入れて `drawing` に戻る（待つあいだ、後の入力は処理しない）。撮影の完了前に `Esc` などで書きかけを捨てたら、その撮影の結果は保存しない。撮影には世代を付け、古い撮影の完了が新しい書きかけを書き換えないようにする。
+  - 本番の `ScreenCaptureKitCapturer` は、`windows()` で取った `SCDisplay` と akapen 自身の `SCRunningApplication` を覚えておき、`capture(region:on:)` で `SCShareableContent` を取り直さない。撮影は、そのディスプレイから akapen 自身のアプリだけを外した絞り込み（`SCContentFilter(display:excludingApplications:exceptingWindows:)`）で、範囲を `sourceRect`（ディスプレイの左上を原点にした pt）に指定して `SCScreenshotManager.captureImage` を 1 回呼ぶ。大きさはディスプレイの実解像度（Retina なら 2 倍）、カーソルは写さない。ほかのウィンドウの影とデスクトップの壁紙は、画面に見えているとおりに写る。
+  - akapen が画面にウィンドウを出していないと、`SCShareableContent.excludingDesktopWindows(_:onScreenWindowsOnly: true)` の `applications` に akapen が載らない。そのときは、画面に出ていないものも含めた一覧（100ms ほど）から探して覚える（`windows()` の中で行い、撮影を待たせない）。
 - `isToolbarVisible` は `phase` から決まる（`drawing`・`commenting`・`listOpen` で true）。
 
 ## ウィンドウ
@@ -272,7 +281,7 @@ generator はこの一覧にある識別子だけを使う。足りないとき�
 - 赤枠の出入りには動きを付けない（付けると前の枠が薄く残って見える）。動きを付けるのは上端の案内だけ。
 - `SessionWindows` の `fadeDuration` が 0 なら動きを付けない（テスト用）。システムの「視差効果を減らす」は SwiftUI の `accessibilityReduceMotion` で読み、拡大縮小とずらしをやめる。
 
-撮影は対象のウィンドウだけを指定して行うので、akapen 自身のパネルは写り込まない。
+撮影は akapen 自身のアプリを外して行うので、akapen 自身のパネル（覆う面・赤枠・入力欄）は写り込まない。
 
 ## E2E の仕組み
 
@@ -389,7 +398,7 @@ CI は当面置かない。置くときは `make test`・`make e2e-lint`・`make
 
 | 層 | 道具 | 見るもの |
 | --- | --- | --- |
-| 単体 | `AkapenCoreTests` | 状態の遷移、プロンプトの組み立て、ウィンドウの選び方、赤枠の描き込みと縮小、フォルダの掃除、確定キーの判定。依存はすべて偽物 |
+| 単体 | `AkapenCoreTests` | 状態の遷移、プロンプトの組み立て、撮る範囲の決め方、赤枠の描き込みと縮小、フォルダの掃除、確定キーの判定。依存はすべて偽物 |
 | 結合（実装 1 つずつ） | `AkapenPlatformTests` | 画像の保存と掃除（一時ディレクトリの実ファイル）、設定の読み書き（専用の UserDefaults）、クリップボード（名前つき）、偽の撮影の実装 |
 | 結合（画面と状態） | `AkapenUITests` | `phase` を変えたときにどのパネルが出て、どれが外れるか。隠したパネルの中身が空に戻り、出し直した直後に前の中身が見えないか。`⌘C` / `⌘L` がどの状態で受け付けられるか。入力欄でのキー入力が正しいイベントになるか。設定・セットアップ・終了確認・メニューの操作が、正しい `SessionEvent` とコールバックになるか。キーの記録欄。文言の表。見比べ用の PNG の書き出し（`build/ui-snapshots/`。画素の一致は確かめない） |
 | 結合（一連の流れ） | `AkapenAppTests` | `AppEnvironment.make` で組んだ本物の依存に、イベントを順に送る。最後にクリップボードの文章と、ディスク上の画像と赤枠の位置を確かめる。環境変数ごとの依存の選び分けもここで見る |
@@ -421,6 +430,8 @@ CI は当面置かない。置くときは `make test`・`make e2e-lint`・`make
 11. **浮く部品は XCTest から「割り込みのダイアログ」に見える。** 枠を描く面へのドラッグの前に、XCTest がボタン類のパネルを割り込みとして扱い、akapen をアクティブにしてから続ける。ドラッグはそのまま通る。
 
 12. **十字のカーソルにならないことがある問題: 原因を確認し、解消済み（2026-11-18、ux-revise）。** akapen はアクティブにならないアプリ（LSUIElement + アクティブ化しないパネル）なので、macOS は `NSCursor.set()` とカーソル矩形を無視する。十字になるのは、マウスが動いて `.activeAlways` の追跡領域が `mouseMoved` を受けたときだけで、出した直後にマウスを動かさないと矢印のまま残る（本番で 12 回中 7 回、1.5 秒たっても矢印のまま）。同じ作りの実験アプリで、出し方を変えて `NSCursor.currentSystem` を 0.1 秒おきに読んで比べた。窓の不透明度を 1 にして出す・何度も `set()` し直す、はどれも効かなかった。アプリをアクティブにする（撮影対象のタイトルバーが非アクティブの色になる）か、接続に `SetsCursorInBackground` を立てると毎回すぐ十字になった。後者を `BackgroundCursor` として入れ、出した直後と少しあと（0.05・0.15・0.3 秒）に、カーソルが覆う面の上にあれば十字を当てる。直したあとの本番の組み立てで同じ測り方をすると、12 回中 12 回、最初の読み取り（0.0 秒）から十字になり、隠すと矢印に戻った。一覧を閉じた直後も 0.1 秒のうちに十字になった。
+
+13. **範囲の撮影（ScreenCaptureKit）: 実機で確認（2026-11-19、region-capture）。** 本番の `ScreenCaptureKitCapturer`・`CaptureRegion`・`FrameRenderer` をそのまま組み込んだ単独のプログラムで、外部ディスプレイ（5120×1440、倍率 1）と内蔵の Retina（1470×956、倍率 2）を撮った。画像の大きさはどちらも「範囲 × 倍率」ちょうど（例: 502×462pt → 502×462px / 1004×924px）で、縦横比は範囲と一致した。2 つのウィンドウの境目をまたぐ枠では両方を囲む範囲が撮れ、範囲に入ったほかのウィンドウとその影も画面のとおりに写った。`excludingDesktopWindows(true)` で取った `SCDisplay` の絞り込みでも、デスクトップの壁紙は写る（Dock と壁紙の持ち主以外を外して確かめた）。自分のアプリのウィンドウ（不透明のマゼンタ）は、自分のアプリを外した撮影で 0 画素、外さない撮影で 120000 画素だった。akapen が画面にウィンドウを出していないと `onScreenWindowsOnly: true` の一覧の `applications` に載らず、画面外も含めた一覧（約 100ms）には載る。1 回の撮影は 130〜300ms（範囲が広いほど長い）。
 
 追加の検証: `make test` の `PanelTests` で NSApplication.shared を初期化し、AppKit の NSPanel を実際に生成して、状態ごとの表示・非表示、覆う面がマウスを受けるか・キーになれるか、隠したあとに中身が空に戻ること、nonactivatingPanel を確認している。テスト後はパネルを外す。画面のあるローカルセッションが必要で、ヘッドレス CI の保証はしていない。
 

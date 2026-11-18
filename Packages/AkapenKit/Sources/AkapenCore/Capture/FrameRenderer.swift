@@ -18,37 +18,60 @@ public enum FrameRenderer {
 
     /// 描き込みに失敗した理由。
     public enum RenderError: Error, Equatable {
-        /// PNG として読めない、または大きさが 0。
+        /// PNG として読めない、または画像の大きさが 0。
         case unreadableImage
-        /// ウィンドウの矩形の幅か高さが 0 以下。
-        case invalidWindowFrame
+        /// 撮った範囲の幅か高さが 0 以下。
+        case invalidRegion
         /// 描画先を用意できなかった。
         case drawingFailed
         /// PNG に書き出せなかった。
         case encodingFailed
     }
 
-    /// 赤枠を描き込んで縮小した PNG を返す。
+    /// 赤枠を描き込んで縮小した PNG を返す（PNG を受け取る入口）。
     ///
     /// - Parameters:
-    ///   - png: ウィンドウ全体を写した PNG。
-    ///   - windowFrame: そのウィンドウの矩形（画面全体の座標、pt）。
-    ///   - frame: 描いた枠の矩形（画面全体の座標、pt）。ウィンドウからはみ出す分は内側に切り詰める。
+    ///   - png: 撮った範囲を写した PNG。
+    ///   - region: 撮った範囲（画面全体の座標、pt）。
+    ///   - frame: 描いた枠の矩形（画面全体の座標、pt）。
     ///   - maxLongEdge: 長辺の上限（px）。超えるときだけ縮小する。
     ///
-    /// 画像の倍率は「画像の幅(px) ÷ ウィンドウの幅(pt)」から求める。
-    /// 枠線は枠の矩形の外側に描き、囲んだ中身を隠さない。ただし画像の端に当たる辺は内側に寄せる。
-    /// 枠がウィンドウと重ならなければ、枠は描かずに縮小だけをする。
+    /// 読み込んだ画像を `render(image:region:frame:maxLongEdge:)` に渡すのと同じ結果になる。
     public static func render(
         png: Data,
-        windowFrame: ScreenRect,
+        region: ScreenRect,
         frame: ScreenRect,
         maxLongEdge: Int = defaultMaxLongEdge
     ) throws -> Data {
-        guard windowFrame.width > 0, windowFrame.height > 0 else {
-            throw RenderError.invalidWindowFrame
+        guard region.width > 0, region.height > 0 else {
+            throw RenderError.invalidRegion
         }
-        let source = try decode(png)
+        return try render(image: decode(png), region: region, frame: frame, maxLongEdge: maxLongEdge)
+    }
+
+    /// 赤枠を描き込んで縮小した PNG を返す（撮った画像をそのまま受け取る入口）。
+    ///
+    /// - Parameters:
+    ///   - image: 撮った範囲を写した画像。
+    ///   - region: 撮った範囲（画面全体の座標、pt）。
+    ///   - frame: 描いた枠の矩形（画面全体の座標、pt）。範囲からはみ出す分は内側に切り詰める。
+    ///   - maxLongEdge: 長辺の上限（px）。超えるときだけ縮小する。
+    ///
+    /// 画像の倍率は「画像の幅(px) ÷ 範囲の幅(pt)」から求める。
+    /// 枠線は枠の矩形の外側に描き、囲んだ中身を隠さない。ただし画像の端に当たる辺は内側に寄せる。
+    /// 枠が範囲と重ならなければ、枠は描かずに縮小だけをする。
+    public static func render(
+        image source: CGImage,
+        region: ScreenRect,
+        frame: ScreenRect,
+        maxLongEdge: Int = defaultMaxLongEdge
+    ) throws -> Data {
+        guard region.width > 0, region.height > 0 else {
+            throw RenderError.invalidRegion
+        }
+        guard source.width > 0, source.height > 0 else {
+            throw RenderError.unreadableImage
+        }
         let sourceWidth = source.width
         let sourceHeight = source.height
         let downscale = Swift.min(1.0, Double(Swift.max(maxLongEdge, 1)) / Double(Swift.max(sourceWidth, sourceHeight)))
@@ -58,13 +81,13 @@ public enum FrameRenderer {
         context.interpolationQuality = .high
         context.draw(source, in: CGRect(x: 0, y: 0, width: width, height: height))
         // 元の画像の倍率（px/pt）に縮小の比率を掛けた、縮小後の画像での px/pt。
-        let sourcePixelsPerPoint = Double(sourceWidth) / windowFrame.width
+        let sourcePixelsPerPoint = Double(sourceWidth) / region.width
         let pixelsPerPoint = sourcePixelsPerPoint * Double(width) / Double(sourceWidth)
-        if let clipped = frame.intersection(windowFrame) {
+        if let clipped = frame.intersection(region) {
             drawFrame(
                 clipped,
                 in: context,
-                windowFrame: windowFrame,
+                region: region,
                 pixelsPerPoint: pixelsPerPoint,
                 imageSize: (width, height)
             )
@@ -121,16 +144,16 @@ public enum FrameRenderer {
     private static func drawFrame(
         _ frame: ScreenRect,
         in context: CGContext,
-        windowFrame: ScreenRect,
+        region: ScreenRect,
         pixelsPerPoint: Double,
         imageSize: (width: Int, height: Int)
     ) {
         let stroke = strokeWidth(pixelsPerPoint: pixelsPerPoint)
         // 左上原点の px 座標。
-        let left = Int(((frame.x - windowFrame.x) * pixelsPerPoint).rounded())
-        let top = Int(((frame.y - windowFrame.y) * pixelsPerPoint).rounded())
-        let right = Int(((frame.maxX - windowFrame.x) * pixelsPerPoint).rounded())
-        let bottom = Int(((frame.maxY - windowFrame.y) * pixelsPerPoint).rounded())
+        let left = Int(((frame.x - region.x) * pixelsPerPoint).rounded())
+        let top = Int(((frame.y - region.y) * pixelsPerPoint).rounded())
+        let right = Int(((frame.maxX - region.x) * pixelsPerPoint).rounded())
+        let bottom = Int(((frame.maxY - region.y) * pixelsPerPoint).rounded())
         // 外側へ広げ、画像からはみ出す辺は画像の端で止める（その辺の帯は内側に寄る）。
         let outerLeft = Swift.max(0, left - stroke)
         let outerTop = Swift.max(0, top - stroke)

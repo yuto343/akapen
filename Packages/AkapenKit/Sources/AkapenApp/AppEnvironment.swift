@@ -207,7 +207,7 @@ import AkapenPlatform
         } catch {
             environment.startupCleanupError = String(describing: error)
         }
-        try await seedAnnotations(seed?.annotations ?? [], into: model)
+        try await seedAnnotations(seed?.annotations ?? [], windows: seed?.fixtureWindows ?? [], into: model)
         if let open = seed?.open {
             try await seedOpenView(open, into: model)
         }
@@ -226,7 +226,12 @@ import AkapenPlatform
     /// 注釈を、ホットキー → 枠 → コメントの確定の順に送って作る。画像は本来の撮影の経路で保存される。
     ///
     /// 確定すると枠を描ける状態に戻るので、2 件目からはそのまま枠を送る。作り終えたら `Esc` で隠す（注釈は残る）。
-    private static func seedAnnotations(_ annotations: [LaunchSeed.Annotation], into model: SessionModel) async throws {
+    /// 枠を描いた画面には、枠のまわりと偽のウィンドウをすべて含む仮の画面を渡す（実際の画面の大きさに結果を左右させない）。
+    private static func seedAnnotations(
+        _ annotations: [LaunchSeed.Annotation],
+        windows: [CaptureWindow],
+        into model: SessionModel
+    ) async throws {
         for (index, annotation) in annotations.enumerated() {
             if model.phase == .hidden {
                 await model.send(.hotkeyPressed).value
@@ -234,20 +239,40 @@ import AkapenPlatform
             guard model.phase == .drawing else {
                 throw StartupError.seedAnnotationFailed(index, "枠を描く状態に入れない（\(model.phase.rawValue)）")
             }
-            let screen = ScreenDescriptor(id: 0, frame: annotation.rect)
+            let screen = ScreenDescriptor(id: 0, frame: seedScreenFrame(around: annotation.rect, windows: windows))
             await model.send(.dragEnded(rect: annotation.rect, screen: screen)).value
             guard model.phase == .commenting else {
                 let reason = model.lastFailure.map(SessionSnapshot.name) ?? "枠が小さすぎる"
                 throw StartupError.seedAnnotationFailed(index, reason)
             }
+            let countBefore = model.annotations.count
+            // 撮影の完了前に確定したときは、撮影が終わるのを待ってから一覧に入る。撮影か保存に失敗すると、注釈は増えずに drawing に戻る。
             await model.send(.commentConfirmed(text: annotation.comment)).value
-            guard model.phase == .drawing else {
-                throw StartupError.seedAnnotationFailed(index, "コメントが空")
+            guard model.phase == .drawing, model.annotations.count == countBefore + 1 else {
+                let reason = model.lastFailure.map(SessionSnapshot.name) ?? "コメントが空"
+                throw StartupError.seedAnnotationFailed(index, reason)
             }
         }
         if model.phase == .drawing {
             await model.send(.escapePressed).value
         }
+    }
+
+    /// seed の注釈の枠を描いた、仮の画面の矩形。枠の上下左右に余白（`CaptureRegion.marginWithoutWindow`）を足した矩形と、
+    /// 偽のウィンドウの矩形をすべて囲む。撮る範囲がこの画面で切り詰められないようにするため。
+    static func seedScreenFrame(around rect: ScreenRect, windows: [CaptureWindow]) -> ScreenRect {
+        let margin = CaptureRegion.marginWithoutWindow
+        var left = rect.x - margin
+        var top = rect.y - margin
+        var right = rect.x + rect.width + margin
+        var bottom = rect.y + rect.height + margin
+        for window in windows {
+            left = min(left, window.frame.x)
+            top = min(top, window.frame.y)
+            right = max(right, window.frame.x + window.frame.width)
+            bottom = max(bottom, window.frame.y + window.frame.height)
+        }
+        return ScreenRect(x: left, y: top, width: right - left, height: bottom - top)
     }
 
     /// 起動後に出しておくものを、`hotkeyPressed`（ボタン類を出す。注釈があれば同じ回を続ける）と `listToggled` を送って作る。

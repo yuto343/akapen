@@ -2,15 +2,15 @@ import CoreGraphics
 import Foundation
 import AkapenCore
 
-/// 決まったウィンドウの一覧と、決まった絵の画像を返す偽の撮影。E2E と結合テスト用。
+/// 決まったウィンドウの一覧と、決まった絵の画像を返す偽の撮影。E2E と結合テスト用。OS の画面には触らない。
 ///
 /// 絵は、明るい地に薄い格子と、四隅の目印。赤い画素は含めない（描き込まれた赤枠を、赤い画素の外接矩形で探せるように）。
-/// 同じウィンドウの大きさと倍率なら、毎回 1 バイトも違わない PNG を返す。
+/// 同じ範囲の大きさと倍率なら、毎回 1 画素も違わない画像を返す（範囲の位置やディスプレイには左右されない）。
 @MainActor public final class FixtureCapturer: WindowCapturing {
     /// 画像を作れないときのエラー。
     public enum FixtureError: Error, Equatable {
-        /// ウィンドウの大きさが 1 ピクセルに満たない。
-        case emptyWindow
+        /// 範囲の大きさが 1 ピクセルに満たない。
+        case emptyRegion
         /// 画像の生成に失敗した。
         case renderingFailed
     }
@@ -46,27 +46,23 @@ import AkapenCore
         fixedWindows
     }
 
-    /// 「ウィンドウの大きさ × 倍率」の PNG を返す。
-    public func capture(window: CaptureWindow) async throws -> Data {
-        try Self.render(width: window.frame.width, height: window.frame.height, scale: scale)
+    /// 「範囲の大きさ × 倍率」の画像を返す。ディスプレイは見ない（倍率は `init` で渡したもの）。
+    public func capture(region: ScreenRect, on display: ScreenDescriptor) async throws -> CGImage {
+        try Self.render(width: region.width, height: region.height, scale: scale)
     }
 
-    /// 決まった絵の PNG を作る。大きさは pt、`scale` を掛けてピクセルにする。
-    static func render(width: Double, height: Double, scale: Int) throws -> Data {
+    /// 決まった絵の画像を作る。大きさは pt、`scale` を掛けてピクセルにする。
+    static func render(width: Double, height: Double, scale: Int) throws -> CGImage {
         let pixelWidth = Int((width * Double(scale)).rounded())
         let pixelHeight = Int((height * Double(scale)).rounded())
         guard pixelWidth > 0, pixelHeight > 0 else {
-            throw FixtureError.emptyWindow
+            throw FixtureError.emptyRegion
         }
         let pixels = pixelBuffer(width: pixelWidth, height: pixelHeight, scale: scale)
         guard let image = makeImage(pixels: pixels, width: pixelWidth, height: pixelHeight) else {
             throw FixtureError.renderingFailed
         }
-        do {
-            return try PNGEncoding.encode(image)
-        } catch {
-            throw FixtureError.renderingFailed
-        }
+        return image
     }
 
     /// RGBX（1 画素 4 バイト、4 バイト目は使わない）の画素の並び。

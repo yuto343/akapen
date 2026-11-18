@@ -30,15 +30,17 @@ func dragCapturesWindowAndStartsCommenting() async throws {
     #expect(model.lastDrawnRect == Harness.frame)
     #expect(model.lastFailure == nil)
     let draft = try #require(model.draft)
-    #expect(draft.comment == "")
     #expect(draft.rect == Harness.frame)
     #expect(draft.sourceAppName == "Sample App")
     #expect(draft.windowFrame == FakeCapturer.sampleWindow.frame)
     #expect(draft.createdAt == Harness.start.addingTimeInterval(5))
     #expect(draft.imagePath == "/akapen-test-cache/20261118-1432/01.png")
-    #expect(harness.capturer.capturedWindows == [FakeCapturer.sampleWindow])
+    // 枠内に見えているウィンドウ全体を、枠を描いたディスプレイで 1 回撮る。
+    #expect(harness.capturer.capturedRegions.map(\.region) == [FakeCapturer.sampleWindow.frame])
+    #expect(harness.capturer.capturedRegions.map(\.display) == [Harness.screen])
     // 保存された画像には、赤枠が描き込まれている。
-    let saved = try #require(harness.images.files[draft.imagePath])
+    let path = try #require(draft.imagePath)
+    let saved = try #require(harness.images.files[path])
     let bitmap = try #require(TestImages.decode(saved))
     #expect(bitmap.width == 800)
     #expect(bitmap.height == 600)
@@ -48,14 +50,26 @@ func dragCapturesWindowAndStartsCommenting() async throws {
 
 @Test
 @MainActor
-func dragPicksWindowWithLargestOverlap() async throws {
+func dragCapturesAllWindowsVisibleInFrame() async throws {
+    // 枠（x: 150〜250）の左 10pt が手前のウィンドウにかかる（枠の 10%）。両方を囲む範囲を撮る。
     let front = CaptureWindow(id: 1, frame: ScreenRect(x: 0, y: 0, width: 160, height: 400), appName: "Front")
     let back = FakeCapturer.sampleWindow
     let harness = try Harness(windows: [front, back])
     await harness.send(.hotkeyPressed)
     await harness.drag()
-    #expect(harness.capturer.capturedWindows == [back])
-    #expect(harness.model.draft?.sourceAppName == "Sample App")
+    let union = ScreenRect(x: 0, y: 0, width: 500, height: 400)
+    #expect(harness.capturer.capturedRegions.map(\.region) == [union])
+    let draft = try #require(harness.model.draft)
+    #expect(draft.windowFrame == union)
+    // 見えている面積の大きい順。
+    #expect(draft.sourceAppName == "Sample App, Front")
+    // 画像は範囲の大きさ × 倍率で、赤枠は範囲の中の枠の位置にある。
+    let path = try #require(draft.imagePath)
+    let saved = try #require(harness.images.files[path])
+    let bitmap = try #require(TestImages.decode(saved))
+    #expect(bitmap.width == 1000)
+    #expect(bitmap.height == 800)
+    #expect(bitmap.frameRedBox() == TestImages.PixelBox(minX: 294, minY: 194, maxX: 505, maxY: 305))
 }
 
 @Test
@@ -74,7 +88,8 @@ func tinyDragDoesNothing() async throws {
         #expect(model.lastDrawnRect == rect)
         #expect(model.lastFailure == nil)
     }
-    #expect(harness.capturer.windowsCalls == 0)
+    #expect(harness.capturer.capturedRegions.isEmpty)
+    #expect(harness.images.saveCalls.isEmpty)
     // 4pt ちょうどは撮る。
     await harness.drag(ScreenRect(x: 150, y: 100, width: 4, height: 4))
     #expect(model.phase == .commenting)
@@ -82,22 +97,25 @@ func tinyDragDoesNothing() async throws {
 
 @Test
 @MainActor
-func dragWithoutWindowUnderFrameFails() async throws {
+func dragWithoutWindowCapturesAroundFrame() async throws {
+    // ウィンドウのない所に描いても、枠のまわり（上下左右に 200pt）を撮って入力欄を出す。範囲は画面の中に切り詰める。
     let harness = try Harness()
     let model = harness.model
     await harness.send(.hotkeyPressed)
     let outside = ScreenRect(x: 900, y: 700, width: 50, height: 50)
     await harness.drag(outside)
-    #expect(model.phase == .drawing)
-    #expect(model.lastFailure == .noWindowUnderFrame)
-    #expect(model.lastDrawnRect == outside)
-    #expect(model.draft == nil)
-    #expect(harness.capturer.capturedWindows.isEmpty)
-    #expect(harness.images.files.isEmpty)
-    // 次の入力が成功したら失敗は消える。
-    await harness.drag()
     #expect(model.phase == .commenting)
     #expect(model.lastFailure == nil)
+    #expect(model.lastDrawnRect == outside)
+    let region = ScreenRect(x: 700, y: 500, width: 450, height: 400)
+    #expect(harness.capturer.capturedRegions.map(\.region) == [region])
+    let draft = try #require(model.draft)
+    #expect(draft.windowFrame == region)
+    #expect(draft.sourceAppName == "")
+    #expect(draft.isCaptured)
+    await harness.send(.commentConfirmed(text: "背景"))
+    #expect(model.phase == .drawing)
+    #expect(model.annotations.map(\.sourceAppName) == [""])
 }
 
 @Test
@@ -122,18 +140,6 @@ func captureFailureKeepsDrawing() async throws {
     #expect(harness.model.phase == .drawing)
     #expect(harness.model.lastFailure == .captureFailed)
     #expect(harness.model.draft == nil)
-    #expect(harness.images.saveCalls.isEmpty)
-}
-
-@Test
-@MainActor
-func unreadableCaptureIsCaptureFailed() async throws {
-    let harness = try Harness()
-    harness.capturer.pngOverride = Data("broken".utf8)
-    await harness.send(.hotkeyPressed)
-    await harness.drag()
-    #expect(harness.model.phase == .drawing)
-    #expect(harness.model.lastFailure == .captureFailed)
     #expect(harness.images.saveCalls.isEmpty)
 }
 
@@ -836,14 +842,16 @@ func setupCompletedSaveFailure() async throws {
 func failureIsKeptWhileInputsAreIgnored() async throws {
     let harness = try Harness()
     let model = harness.model
+    harness.capturer.captureError = TestError()
     await harness.send(.hotkeyPressed)
-    await harness.drag(ScreenRect(x: 900, y: 700, width: 50, height: 50))
-    #expect(model.lastFailure == .noWindowUnderFrame)
+    await harness.drag()
+    #expect(model.phase == .drawing)
+    #expect(model.lastFailure == .captureFailed)
     // 何もしない入力では消えない。
     await harness.send(.copyPromptTapped)
     await harness.send(.commentConfirmed(text: "x"))
     await harness.drag(ScreenRect(x: 150, y: 100, width: 2, height: 2))
-    #expect(model.lastFailure == .noWindowUnderFrame)
+    #expect(model.lastFailure == .captureFailed)
     // 成功した入力で消える。
     await harness.send(.escapePressed)
     #expect(model.phase == .hidden)
@@ -908,14 +916,14 @@ func onChangeIsCalledOnlyWhenStateChanges() async throws {
     #expect(harness.changeCount == 1)
     await harness.send(.copyPromptTapped)
     #expect(harness.changeCount == 1)
-    // 撮影は、描いた枠の記録と、commenting への遷移で 2 回。
+    // 撮影は、描いた枠の記録、commenting への遷移、撮影の完了（画像のパスが入る）で 3 回。
     await harness.drag()
-    #expect(harness.changeCount == 3)
-    await harness.send(.commentConfirmed(text: "x"))
     #expect(harness.changeCount == 4)
+    await harness.send(.commentConfirmed(text: "x"))
+    #expect(harness.changeCount == 5)
     // 同じ設定を送っても変わらない。
     await harness.send(.settingsChanged(harness.model.settings))
-    #expect(harness.changeCount == 4)
+    #expect(harness.changeCount == 5)
 }
 
 @Test
@@ -947,25 +955,26 @@ func isToolbarVisibleFollowsPhase() async throws {
 
 @Test
 @MainActor
-func inputsSentDuringCaptureAreProcessedInOrder() async throws {
+func inputsSentWhileWaitingForCaptureAreProcessedInOrder() async throws {
     let harness = try Harness()
     let model = harness.model
     await harness.send(.hotkeyPressed)
     harness.capturer.hold()
-    let drag = model.send(.dragEnded(rect: Harness.frame, screen: Harness.screen))
-    // 撮影の途中で、確定と一覧の切り替えを送る。
+    await harness.dragWithoutWaitingForCapture()
+    #expect(model.phase == .commenting)
+    // 撮影の途中で確定すると、撮影の完了を待つ。そのあいだに送った一覧の切り替えは、確定のあとに処理する。
     let confirm = model.send(.commentConfirmed(text: "after capture"))
     let list = model.send(.listToggled)
     await harness.capturer.waitUntilCaptureStarts()
-    #expect(model.phase == .drawing)
+    #expect(model.phase == .commenting)
     #expect(model.annotations.isEmpty)
     harness.capturer.release()
-    await drag.value
     await confirm.value
     #expect(model.annotations.map(\.comment) == ["after capture"])
     await list.value
     #expect(model.phase == .listOpen)
     // 待ち行列が空になれば、次の入力はその場で処理される。
+    await harness.finishCapture()
     model.send(.listToggled)
     #expect(model.phase == .drawing)
 }
@@ -979,6 +988,285 @@ func synchronousInputsAreHandledImmediately() async throws {
     #expect(model.phase == .drawing)
     model.send(.escapePressed)
     #expect(model.phase == .hidden)
+}
+
+// MARK: - 撮影の完了を待たずにコメントを書く
+
+@Test
+@MainActor
+func dragStartsCommentingBeforeCaptureFinishes() async throws {
+    let harness = try Harness()
+    let model = harness.model
+    await harness.send(.hotkeyPressed)
+    harness.clock.advance(by: .seconds(5))
+    harness.capturer.hold()
+    await harness.dragWithoutWaitingForCapture()
+    await harness.capturer.waitUntilCaptureStarts()
+    // 撮影の完了を待たずに、入力欄を出す状態になる。画像はまだない。
+    #expect(model.phase == .commenting)
+    #expect(model.lastFailure == nil)
+    let pending = try #require(model.draft)
+    #expect(pending.rect == Harness.frame)
+    #expect(pending.createdAt == Harness.start.addingTimeInterval(5))
+    #expect(!pending.isCaptured)
+    #expect(pending.imagePath == nil)
+    #expect(pending.sourceAppName == nil)
+    #expect(pending.windowFrame == nil)
+    #expect(harness.images.saveCalls.isEmpty)
+    #expect(harness.capturer.capturedRegions.map(\.region) == [FakeCapturer.sampleWindow.frame])
+    harness.capturer.release()
+    await harness.finishCapture()
+    // 撮影と保存が終わると、同じ書きかけに画像のパス・アプリ名・撮った範囲が入る。
+    #expect(model.phase == .commenting)
+    let captured = try #require(model.draft)
+    #expect(captured.id == pending.id)
+    #expect(captured.isCaptured)
+    #expect(captured.imagePath == "/akapen-test-cache/20261118-1432/01.png")
+    #expect(captured.sourceAppName == "Sample App")
+    #expect(captured.windowFrame == FakeCapturer.sampleWindow.frame)
+    let path = try #require(captured.imagePath)
+    #expect(harness.images.files[path] != nil)
+}
+
+@Test
+@MainActor
+func dragWaitsForWindowListThatIsStillLoading() async throws {
+    let harness = try Harness()
+    let model = harness.model
+    harness.capturer.holdListing()
+    await harness.send(.hotkeyPressed)
+    let drag = model.send(.dragEnded(rect: Harness.frame, screen: Harness.screen))
+    // 一覧が取れるまでは、撮る範囲を決められないので `drawing` のまま待つ。
+    await Task.yield()
+    #expect(model.phase == .drawing)
+    #expect(model.lastDrawnRect == Harness.frame)
+    harness.capturer.releaseListing()
+    await drag.value
+    #expect(model.phase == .commenting)
+    // 一覧は drawing に入ったときの 1 回だけ取る。
+    #expect(harness.capturer.windowsCalls == 1)
+}
+
+@Test
+@MainActor
+func confirmBeforeCaptureFinishesWaitsAndKeepsComment() async throws {
+    let harness = try Harness()
+    let model = harness.model
+    await harness.send(.hotkeyPressed)
+    harness.capturer.hold()
+    await harness.dragWithoutWaitingForCapture()
+    let draftID = try #require(model.draft?.id)
+    let confirm = model.send(.commentConfirmed(text: "  ボタンの余白 \n"))
+    // 二重に確定しても、一覧に入るのは 1 件だけ。
+    let again = model.send(.commentConfirmed(text: "二回目"))
+    await harness.capturer.waitUntilCaptureStarts()
+    #expect(model.phase == .commenting)
+    #expect(model.annotations.isEmpty)
+    #expect(harness.images.saveCalls.isEmpty)
+    harness.capturer.release()
+    await confirm.value
+    // 撮影の完了を待ってから一覧に入り、drawing に戻る。
+    #expect(model.phase == .drawing)
+    #expect(model.draft == nil)
+    #expect(model.lastFailure == nil)
+    let added = try #require(model.annotations.first)
+    #expect(added.id == draftID)
+    #expect(added.comment == "ボタンの余白")
+    #expect(added.imagePath == "/akapen-test-cache/20261118-1432/01.png")
+    #expect(added.sourceAppName == "Sample App")
+    #expect(added.windowFrame == FakeCapturer.sampleWindow.frame)
+    #expect(harness.images.files[added.imagePath] != nil)
+    await again.value
+    await harness.finishCapture()
+    #expect(model.annotations.map(\.comment) == ["ボタンの余白"])
+    #expect(harness.images.saveCalls.count == 1)
+    #expect(model.phase == .drawing)
+}
+
+@Test
+@MainActor
+func leavingBeforeCaptureFinishesLeavesNoImage() async throws {
+    let leaves: [[SessionEvent]] = [
+        [.escapePressed],
+        [.commentCancelled],
+        [.dismissRequested],
+        // Esc で drawing に戻り、ホットキーで隠す。
+        [.escapePressed, .hotkeyPressed],
+    ]
+    for events in leaves {
+        let harness = try Harness()
+        let model = harness.model
+        await harness.send(.hotkeyPressed)
+        harness.capturer.hold()
+        await harness.dragWithoutWaitingForCapture()
+        await harness.capturer.waitUntilCaptureStarts()
+        for event in events {
+            await harness.send(event)
+        }
+        let phase = model.phase
+        #expect(model.draft == nil)
+        let changes = harness.changeCount
+        harness.capturer.release()
+        await harness.finishCapture()
+        // 撮影が終わっても、画像のファイルは残らず、状態も書き換わらない。
+        #expect(harness.images.saveCalls.isEmpty)
+        #expect(harness.images.files.isEmpty)
+        #expect(model.phase == phase)
+        #expect(model.draft == nil)
+        #expect(model.annotations.isEmpty)
+        #expect(model.lastFailure == nil)
+        #expect(harness.changeCount == changes)
+    }
+}
+
+@Test
+@MainActor
+func captureFailureAfterCommentingStartedDiscardsDraft() async throws {
+    let harness = try Harness()
+    let model = harness.model
+    await harness.send(.hotkeyPressed)
+    harness.capturer.hold()
+    harness.capturer.captureError = TestError()
+    await harness.dragWithoutWaitingForCapture()
+    #expect(model.phase == .commenting)
+    harness.capturer.release()
+    await harness.finishCapture()
+    // 書きかけを捨てて drawing に戻り、失敗を出す。
+    #expect(model.phase == .drawing)
+    #expect(model.draft == nil)
+    #expect(model.lastFailure == .captureFailed)
+    #expect(harness.images.saveCalls.isEmpty)
+    // 失敗のあとも続けて枠を描ける。
+    harness.capturer.captureError = nil
+    await harness.drag()
+    #expect(model.phase == .commenting)
+    #expect(model.lastFailure == nil)
+    #expect(model.draft?.imagePath == "/akapen-test-cache/20261118-1432/01.png")
+}
+
+@Test
+@MainActor
+func failureWhileConfirmIsWaitingDiscardsDraft() async throws {
+    for failure in [SessionFailure.captureFailed, .imageSaveFailed] {
+        let harness = try Harness()
+        let model = harness.model
+        await harness.send(.hotkeyPressed)
+        harness.capturer.hold()
+        if failure == .captureFailed {
+            harness.capturer.captureError = TestError()
+        } else {
+            harness.images.saveError = TestError()
+        }
+        await harness.dragWithoutWaitingForCapture()
+        let confirm = model.send(.commentConfirmed(text: "書いた内容"))
+        await harness.capturer.waitUntilCaptureStarts()
+        harness.capturer.release()
+        await confirm.value
+        await harness.finishCapture()
+        #expect(model.phase == .drawing)
+        #expect(model.draft == nil)
+        #expect(model.annotations.isEmpty)
+        #expect(model.lastFailure == failure)
+        #expect(harness.images.files.isEmpty)
+    }
+}
+
+@Test
+@MainActor
+func staleCaptureDoesNotTouchNewerDraft() async throws {
+    let other = CaptureWindow(id: 9, frame: ScreenRect(x: 600, y: 400, width: 300, height: 200), appName: "Other App")
+    let harness = try Harness(windows: [FakeCapturer.sampleWindow, other])
+    let model = harness.model
+    await harness.send(.hotkeyPressed)
+    harness.capturer.hold()
+    await harness.dragWithoutWaitingForCapture()
+    let firstCompletion = model.captureCompletion
+    await harness.send(.escapePressed)
+    // Esc で drawing に戻ると一覧を取り直す。その一覧が取れてから、別のウィンドウに次の枠を描く。
+    await harness.finishListing()
+    let second = ScreenRect(x: 650, y: 450, width: 60, height: 40)
+    await harness.dragWithoutWaitingForCapture(second)
+    let newer = try #require(model.draft)
+    #expect(harness.capturer.capturedRegions.map(\.region) == [FakeCapturer.sampleWindow.frame, other.frame])
+    // 両方の撮影を進める。先に終わる古い撮影の完了は、新しい書きかけを書き換えない。
+    harness.capturer.release()
+    await firstCompletion?.value
+    await harness.finishCapture()
+    let draft = try #require(model.draft)
+    #expect(model.phase == .commenting)
+    #expect(draft.id == newer.id)
+    #expect(draft.rect == second)
+    #expect(draft.sourceAppName == "Other App")
+    #expect(draft.windowFrame == other.frame)
+    #expect(draft.imagePath == "/akapen-test-cache/20261118-1432/01.png")
+    #expect(harness.images.saveCalls.count == 1)
+    #expect(harness.images.files.count == 1)
+}
+
+@Test
+@MainActor
+func windowListIsReloadedEachTimeDrawingStarts() async throws {
+    let harness = try Harness()
+    let model = harness.model
+    let capturer = harness.capturer
+    await harness.send(.hotkeyPressed)
+    await harness.finishListing()
+    #expect(capturer.windowsCalls == 1)
+    // 一覧を開いて閉じると取り直す。
+    await harness.send(.listToggled)
+    await harness.send(.listToggled)
+    await harness.finishListing()
+    #expect(capturer.windowsCalls == 2)
+    // コメントの確定のあと。
+    await harness.drag()
+    await harness.send(.commentConfirmed(text: "one"))
+    await harness.finishListing()
+    #expect(capturer.windowsCalls == 3)
+    // 撮影には、先読みした一覧を使う（枠を描き終えたときに取り直さない）。
+    #expect(model.phase == .drawing)
+    // 隠して出し直したとき。
+    await harness.send(.hotkeyPressed)
+    #expect(model.windowListing == nil)
+    await harness.send(.hotkeyPressed)
+    await harness.finishListing()
+    #expect(capturer.windowsCalls == 4)
+}
+
+@Test
+@MainActor
+func reloadedWindowListIsUsedForPicking() async throws {
+    let moved = CaptureWindow(id: 8, frame: ScreenRect(x: 140, y: 90, width: 200, height: 100), appName: "Moved App")
+    let harness = try Harness()
+    let model = harness.model
+    await harness.send(.hotkeyPressed)
+    await harness.finishListing()
+    // drawing に入った時点の一覧には `moved` がない。入り直すと、新しい一覧から選ぶ。
+    harness.capturer.windowList = [moved, FakeCapturer.sampleWindow]
+    await harness.send(.listToggled)
+    await harness.send(.listToggled)
+    await harness.drag()
+    // `moved` が枠をすべて覆うので、奥のウィンドウは見えておらず範囲に入らない。
+    #expect(harness.capturer.capturedRegions.map(\.region) == [moved.frame])
+    #expect(model.draft?.sourceAppName == "Moved App")
+}
+
+@Test
+@MainActor
+func failedWindowListIsReloadedOnNextDrag() async throws {
+    let harness = try Harness()
+    let model = harness.model
+    harness.capturer.windowsError = TestError()
+    await harness.send(.hotkeyPressed)
+    await harness.drag()
+    #expect(model.phase == .drawing)
+    #expect(model.lastFailure == .captureFailed)
+    #expect(harness.capturer.windowsCalls == 1)
+    // 取れなかった一覧は使い回さず、次のドラッグで取り直す。
+    harness.capturer.windowsError = nil
+    await harness.drag()
+    #expect(harness.capturer.windowsCalls == 2)
+    #expect(model.phase == .commenting)
+    #expect(model.lastFailure == nil)
 }
 
 // MARK: - 起動時の掃除

@@ -37,6 +37,7 @@ extension AkapenUITestCase {
 
     /// 枠を描き終えて、コメントの入力欄が出ているところまで進める（「コメントの入力欄が出ているところから始める」前提。
     /// 起動時の前提では作れないので、ホットキー（ボタン類が出ていれば押さない。一覧が開いていれば閉じる）と枠のドラッグで作る）。
+    /// 入力欄は撮影の完了を待たずに出るが、前提を毎回同じにするため、書きかけの注釈の撮影と保存が終わるまで待つ。
     /// SampleTarget の要素を囲む枠を描き、描いた枠を返す。
     @discardableResult
     func startCommenting(around sampleIdentifier: String = AXID.Sample.button) -> CGRect {
@@ -52,6 +53,7 @@ extension AkapenUITestCase {
         let rect = drawFrame(around: sampleIdentifier)
         waitForPhase(.commenting)
         waitForElement(AXID.Comment.field)
+        waitForCapturedDraft()
         return rect
     }
 

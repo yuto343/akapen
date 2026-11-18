@@ -118,9 +118,7 @@ public enum StringKey: String, CaseIterable, Sendable {
     case setupOpenSystemSettings
     /// セットアップを終えるボタン `Done`。
     case setupDone
-    /// 枠の下にウィンドウがなかったときの案内（`DECISIONS.md` A9）。
-    case noticeNoWindow
-    /// ウィンドウを撮影できなかったときの案内。
+    /// 画面を撮影できなかったときの案内。
     case noticeCaptureFailed
     /// 撮った画像を保存できなかったときの案内。
     case noticeImageSaveFailed
@@ -237,8 +235,6 @@ public struct UIStrings: Sendable {
     /// 直前の操作の失敗を知らせる文言（案内の表示に出す）。
     public func failureMessage(_ failure: SessionFailure) -> String {
         switch failure {
-        case .noWindowUnderFrame:
-            self[.noticeNoWindow]
         case .captureFailed:
             self[.noticeCaptureFailed]
         case .imageSaveFailed:

@@ -162,7 +162,7 @@ struct ConfigurationTests {
         #expect(app.model.phase == .hidden)
         #expect(QuitPolicy.pendingCount(app.model) == 1)
         await app.send(.hotkeyPressed)
-        await app.send(.dragEnded(rect: TestApp.secondRect, screen: ScreenDescriptor(id: 1, frame: TestApp.window)))
+        await app.send(.dragEnded(rect: TestApp.secondRect, screen: TestApp.screen))
         #expect(QuitPolicy.pendingCount(app.model) == 2)
     }
 }

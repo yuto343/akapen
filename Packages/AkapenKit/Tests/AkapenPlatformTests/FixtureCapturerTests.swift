@@ -1,7 +1,6 @@
 import AkapenCore
 import CoreGraphics
 import Foundation
-import ImageIO
 import Testing
 import AkapenPlatform
 
@@ -18,30 +17,48 @@ struct FixtureCapturerTests {
         #expect(try await capturer.windows() == windows)
     }
 
+    private let display = ScreenDescriptor(id: 1, frame: ScreenRect(x: 0, y: 0, width: 1440, height: 900))
+
+    private let regions = [
+        ScreenRect(x: 100, y: 80, width: 480, height: 320),
+        ScreenRect(x: 0, y: 0, width: 300.5, height: 41),
+    ]
+
     @Test
     func captureIsDeterministic() async throws {
         let capturer = FixtureCapturer(windows: windows)
-        let first = try await capturer.capture(window: windows[0])
-        let second = try await capturer.capture(window: windows[0])
-        let another = try await FixtureCapturer(windows: windows).capture(window: windows[0])
+        let first = try rgba(try await capturer.capture(region: regions[0], on: display))
+        let second = try rgba(try await capturer.capture(region: regions[0], on: display))
+        let another = try rgba(try await FixtureCapturer(windows: windows).capture(region: regions[0], on: display))
         #expect(first == second)
         #expect(first == another)
     }
 
+    @Test
+    func captureDependsOnlyOnRegionSize() async throws {
+        // 範囲の位置やディスプレイが違っても、大きさが同じなら同じ画素（流した画面の配置に結果を左右させない）。
+        let capturer = FixtureCapturer(windows: windows)
+        let moved = ScreenRect(x: -1340, y: 500, width: 480, height: 320)
+        let otherDisplay = ScreenDescriptor(id: 2, frame: ScreenRect(x: -1440, y: 0, width: 1440, height: 900))
+        let first = try rgba(try await capturer.capture(region: regions[0], on: display))
+        let second = try rgba(try await capturer.capture(region: moved, on: otherDisplay))
+        #expect(first == second)
+    }
+
     @Test(arguments: [1, 2, 3])
-    func captureSizeIsWindowTimesScale(scale: Int) async throws {
+    func captureSizeIsRegionTimesScale(scale: Int) async throws {
         let capturer = FixtureCapturer(windows: windows, scale: scale)
-        for window in windows {
-            let image = try decode(try await capturer.capture(window: window))
-            #expect(image.width == Int((window.frame.width * Double(scale)).rounded()))
-            #expect(image.height == Int((window.frame.height * Double(scale)).rounded()))
+        for region in regions {
+            let image = try await capturer.capture(region: region, on: display)
+            #expect(image.width == Int((region.width * Double(scale)).rounded()))
+            #expect(image.height == Int((region.height * Double(scale)).rounded()))
         }
     }
 
     @Test
     func captureHasNoRedPixels() async throws {
         let capturer = FixtureCapturer(windows: windows)
-        let image = try decode(try await capturer.capture(window: windows[0]))
+        let image = try await capturer.capture(region: regions[0], on: display)
         let pixels = try rgba(image)
         var redCount = 0
         var colors = Set<UInt32>()
@@ -60,18 +77,11 @@ struct FixtureCapturerTests {
     }
 
     @Test
-    func captureRejectsEmptyWindow() async throws {
-        let empty = CaptureWindow(id: 1, frame: ScreenRect(x: 0, y: 0, width: 0, height: 10), appName: "Empty")
-        let capturer = FixtureCapturer(windows: [empty])
-        await #expect(throws: FixtureCapturer.FixtureError.emptyWindow) {
-            try await capturer.capture(window: empty)
+    func captureRejectsEmptyRegion() async throws {
+        let capturer = FixtureCapturer(windows: windows)
+        await #expect(throws: FixtureCapturer.FixtureError.emptyRegion) {
+            try await capturer.capture(region: ScreenRect(x: 0, y: 0, width: 0, height: 10), on: display)
         }
-    }
-
-    private func decode(_ png: Data) throws -> CGImage {
-        let source = try #require(CGImageSourceCreateWithData(png as CFData, nil))
-        #expect(CGImageSourceGetType(source) as String? == "public.png")
-        return try #require(CGImageSourceCreateImageAtIndex(source, 0, nil))
     }
 
     private func rgba(_ image: CGImage) throws -> [UInt8] {

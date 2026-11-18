@@ -140,7 +140,7 @@ struct PanelPlan: Equatable {
         switch failure {
         case .pasteboardFailed, .settingsSaveFailed:
             failure
-        case .noWindowUnderFrame, .captureFailed, .imageSaveFailed, nil:
+        case .captureFailed, .imageSaveFailed, nil:
             nil
         }
     }

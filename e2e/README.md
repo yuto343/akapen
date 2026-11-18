@@ -111,10 +111,10 @@ spec では次の言葉を使う。generator はこの表で `state.json` の値
 | コピーを終えた状態 | `phase` が `copied`、またはコピー完了の表示が消えたあとの `hidden`。どちらでも、注釈は 0 件でボタン類は出ていない |
 | ボタン類が出ている / 出ていない | `isToolbarVisible` |
 | 注釈（件数・順番・コメント・画像のパス） | `annotations`。確定済みのものだけで、書きかけは含まない。順番は確定した順 |
-| 書きかけの注釈 | コメントを書いている間の、撮影済みでコメントが未確定の注釈（`draft`。画像のパスは `draft.imagePath`） |
+| 書きかけの注釈 | コメントを書いている間の、コメントが未確定の注釈（`draft`）。入力欄は撮影の完了を待たずに出るので、画像のパスなどは撮影と保存が終わってから入る。撮った画像を見るときは `waitForCapturedDraft()` で待ち、`capturedDraft.imagePath` を使う（`startCommenting()` はそこまで待つ） |
 | 最後に描いた枠 | `lastDrawnRect` |
 | 直前にコピーした件数 | `lastCopiedCount` |
-| 直前の失敗（枠の下にウィンドウがない、撮影・保存・コピーの失敗） | `lastFailure` |
+| 直前の失敗（撮影・保存・コピーの失敗） | `lastFailure` |
 | 設定・セットアップ・終了の確認のウィンドウが出ている | `windows.settings` / `windows.setup`（ページは `windows.setupPage`）/ `windows.quitConfirm` |
 | ホットキーが効く（登録されている） | `hotkeys.draw`。キーの記録欄が記録を待つ間は `hotkeys.suspended` が true |
 | 設定の〜（言語・ホットキー・確定キー・定型文・画像を残す日数） | `settings` の各値。定型文は言語ごと |
@@ -146,7 +146,7 @@ spec では次の言葉を使う。generator はこの表で `state.json` の値
 - **ボタン類が出ている（枠を描く状態。注釈 0 件でも）・一覧を開いている状態も起動時に作る**（`launch(open: .toolbar / .list)`）。`open` を省くと、注釈があっても何も出ていない状態で起動する（注釈は残っている）。
 - 「コメントの入力欄が出ている状態」は起動時には作れない。枠のドラッグで作る（`startCommenting(around:)`。何も出ていなければホットキーから）。
 - **時刻は `AKAPEN_NOW` で固定する。** テストの中で現在時刻を読まない。古い回は、固定した時刻から逆算した名前のフォルダを、起動前に置き場へ置いておく。
-- **撮影は偽物（`fixture`）。** 偽の撮影（`FixtureCapturer`）は、決まったウィンドウの位置と決まった画像（明るい地と格子。赤い画素なし）を返す。ウィンドウは SampleTarget のウィンドウ（`SAMPLE_FRAME`）と同じ位置・大きさ（`launch(...)` が SampleTarget の実際のウィンドウの位置を seed に入れる）。画面収録の許可を `denied` にすると、偽の撮影も失敗する。実際の画面が正しく写るかは `Live/` で見る。
+- **撮影は偽物（`fixture`）。** 偽の撮影（`FixtureCapturer`）は、決まったウィンドウの位置と、撮る範囲の大きさ × 倍率の決まった画像（明るい地と格子。赤い画素なし）を返す。ウィンドウは SampleTarget のウィンドウ（`SAMPLE_FRAME`）と同じ位置・大きさ（`launch(...)` が SampleTarget の実際のウィンドウの位置を seed に入れる）。画面収録の許可を `denied` にすると、偽の撮影も失敗する。実際の画面が正しく写るかは `Live/` で見る。
 - 前提の組み立ては `tests/Support/` が持つ（どんな前提を指定できるかは、Support を読む）。`AKAPEN_SEED` の JSON の形は `Support` と `AkapenApp/LaunchSeed.swift` が決めるもので、spec には書かない。
 - テストごとに一時ディレクトリを作り、終わったら消す。失敗したときは、画面の画像と要素ツリーが結果に添付される。
 
@@ -157,7 +157,7 @@ spec では次の言葉を使う。generator はこの表で `state.json` の値
 | `AkapenUITestCase.swift` | 親クラス。`app`（akapen）・`sample`（SampleTarget）・`stateDirectory`・`imagesDirectory`・`pasteboardName`、`sampleFrame`（`140,64,1000,660`）・`sampleAppName`・`fixedNow`。`element(_:)`・`sampleElement(_:)`（識別子で引く）、`waitForElement(_:)`・`waitForElementToDisappear(_:)`・`isShown(_:)`、`poll(timeout:_:)` |
 | `Launch.swift` | `launch(_ state: LaunchState, settings: LaunchSettings, annotations: [SeedAnnotation], open: OpenView?, screenRecording: ScreenRecording)`、`relaunch()`、`terminateApp()`、`placeOldSession(daysBeforeNow:imageCount:)`、`sessionFolderName(daysBeforeNow:)`、`bringSampleToFront()`。型は `LaunchState`（`.setupDone` / `.firstRun`）、`LaunchSettings`、`SeedAnnotation`（`samples(_:)`・`sampleComments`）、`OpenView`（`.toolbar`: ボタン類が出ている / `.list`: 一覧を開いている）、`ScreenRecording`、`AppLanguage`、`ConfirmKeySetting`、`Shortcut`（`defaultHotkey`、`init(key:modifiers:)`） |
 | `Gestures.swift` | ホットキー: `pressHotkey(_:)`・`startDrawing(with:)`。枠: `drawFrame(around:outset:)`・`drawFrame(_:)`・`dragBarely(on:distance:)`。コメント: `startCommenting(around:)`・`typeComment(_:)`・`newLineInComment(_:)`・`confirmComment(_:)`・`pressReturnInComment(modifiers:)`・`writeComment(_:confirmKey:)`・`commentText()`・`pressEscape()`・`annotate(around:comment:confirmKey:)`。ボタン類: `tapList()`・`tapCopyPrompt()`・`pressToolbarShortcut(.copyPrompt / .list)`（`⌘C` / `⌘L`）。一覧: `openList()`・`listComment(_:)`・`listRowCount()`・`listThumbnailPath(_:)`・`listRetentionDays()`・`editAnnotation(_:to:confirmKey:)`・`deleteAnnotation(_:)`。メニューバー: `openMenuBarMenu()`・`menuBarStatusText()`・`openSettingsFromMenuBar()`・`chooseQuitFromMenuBar()`・`pressCommandQ()`。終了の確認: `answerQuitConfirm(quit:)`・`quitConfirmMessage()`。記録欄: `recordShortcut(_:in:)`・`recorderText(_:)`。設定: `closeSettings()`・`chooseLanguage(_:)`・`chooseConfirmKey(_:)`・`enterRetentionDays(_:)`・`replaceBoilerplate(with:)`。セットアップ: `continueSetup()`・`finishSetup()`・`closeSetup()`。SampleTarget: `clickSampleSubmit()`・`sampleSubmitCount()`・`typeInSample(_:into:)`・`sampleText(_:)` |
-| `Verify.swift` | アプリの状態: `appState()`（`AppState`）・`waitForState(_:timeout:_:)`・`waitForPhase(_:)`・`waitForCopyFinished()`・`assertStateStays(_:for:_:)`・`isAppRunning`・`waitForAppToQuit()`。クリップボード: `copiedPrompt()`（`CopiedPrompt`: `boilerplate`・`entries`・`text`、`expectedText(boilerplate:entries:)`）・`pasteboardText()`・`putOnPasteboard(_:)`、`DefaultBoilerplate.english` / `.japanese`。画像: `savedImage(at:)`（`SavedImage`: 画素の大きさ・縦横の比・赤い画素の外接矩形）・`assertImage(at:showsFrame:window:tolerance:)`・`assertRect(_:matches:tolerance:)`・`imageFiles()`・`imageFilesInCurrentSession()`・`sessionFolders()`・`fileExists(_:)`・`fileContents(_:)`。表示の言語: `displayedText(_:)`・`containsJapanese(_:)` |
+| `Verify.swift` | アプリの状態: `appState()`（`AppState`）・`waitForState(_:timeout:_:)`・`waitForPhase(_:)`・`waitForCapturedDraft()`（`AppState.capturedDraft`）・`waitForCopyFinished()`・`assertStateStays(_:for:_:)`・`isAppRunning`・`waitForAppToQuit()`。クリップボード: `copiedPrompt()`（`CopiedPrompt`: `boilerplate`・`entries`・`text`、`expectedText(boilerplate:entries:)`）・`pasteboardText()`・`putOnPasteboard(_:)`、`DefaultBoilerplate.english` / `.japanese`。画像: `savedImage(at:)`（`SavedImage`: 画素の大きさ・縦横の比・赤い画素の外接矩形）・`assertImage(at:showsFrame:window:tolerance:)`・`assertRect(_:matches:tolerance:)`・`imageFiles()`・`imageFilesInCurrentSession()`・`sessionFolders()`・`fileExists(_:)`・`fileContents(_:)`。表示の言語: `displayedText(_:)`・`containsJapanese(_:)` |
 
 ### 撮影対象のアプリ（SampleTarget）
 
@@ -187,7 +187,7 @@ Paper の「Sample App」（`.director/design/sample-app.md`）に近い構成�
 | 内容 | 層 |
 | --- | --- |
 | 状態の遷移の全組み合わせ、撮影・保存・コピーの失敗、撮影の途中の入力の順序 | 単体（`AkapenCoreTests`）、結合（`AkapenAppTests`） |
-| 複数のウィンドウにかかる枠の対象の選び方、赤枠の太さと縮小 | 単体（`WindowPicker` / `FrameRenderer`） |
+| 撮る範囲の決め方（複数のウィンドウにかかる枠・かすっただけのウィンドウ・ウィンドウのない所・画面の端）、赤枠の太さと縮小 | 単体（`CaptureRegion` / `FrameRenderer`） |
 | 回のフォルダ名、古いフォルダの選び方の境目 | 単体（`CacheLayout`） |
 | 状態に対してどのパネルが出入りするか、置き場所の計算 | 結合（`AkapenUITests`） |
 | 複数のディスプレイでの出し場所 | 結合（`AkapenUITests`。ディスプレイの枚数に左右されないように偽の画面で） |

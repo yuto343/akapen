@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import AkapenCore
 
@@ -27,10 +28,10 @@ import AkapenCore
         return try await base.windows()
     }
 
-    public func capture(window: CaptureWindow) async throws -> Data {
+    public func capture(region: ScreenRect, on display: ScreenDescriptor) async throws -> CGImage {
         guard permission.isGranted else {
             throw CaptureError.permissionDenied
         }
-        return try await base.capture(window: window)
+        return try await base.capture(region: region, on: display)
     }
 }

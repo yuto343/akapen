@@ -4,7 +4,7 @@ import AkapenAXID
 
 /// 画面上端の案内の表示（`Drag to frame` と `esc to cancel`。App 01）。
 ///
-/// 直前の操作が失敗したときは、1 つ目の文言を失敗の知らせ（`No window under the frame` など。`DECISIONS.md` A9）に替える。
+/// 直前の操作が失敗したときは、1 つ目の文言を失敗の知らせ（`Couldn’t capture the screen` など）に替える。
 public struct DrawHintView: View {
     private let strings: UIStrings
     private let notice: SessionFailure?

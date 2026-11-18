@@ -11,8 +11,8 @@ final class CommentCancelTests: AkapenUITestCase {
         // 前提: 注釈は 0 件で、枠を描き終えてコメントの入力欄が出ている。
         launch(.setupDone)
         startCommenting()
-        let commenting = waitForPhase(.commenting)
-        let draft = try XCTUnwrap(commenting.draft)
+        let commenting = waitForCapturedDraft()
+        let draft = try XCTUnwrap(commenting.capturedDraft)
         XCTAssertTrue(fileExists(draft.imagePath))
 
         // 操作: コメントの入力を取り消す（Esc）。
@@ -50,8 +50,8 @@ final class CommentCancelTests: AkapenUITestCase {
         let before = waitForPhase(.hidden)
         XCTAssertEqual(before.annotations.count, 1)
         startCommenting(around: AXID.Sample.thirdField)
-        let commenting = waitForPhase(.commenting)
-        let draft = try XCTUnwrap(commenting.draft)
+        let commenting = waitForCapturedDraft()
+        let draft = try XCTUnwrap(commenting.capturedDraft)
         typeComment("This frame is in the wrong place")
 
         // 操作: コメントの入力を取り消す（Esc）。

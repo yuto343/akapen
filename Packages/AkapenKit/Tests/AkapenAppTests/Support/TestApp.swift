@@ -1,7 +1,7 @@
 import AppKit
 import Foundation
 import AkapenApp
-import AkapenCore
+@testable import AkapenCore
 
 /// E2E と同じ設定（一時ディレクトリ・テストごとに一意な名前のクリップボード・固定の時刻・偽の撮影）で組み立てたアプリ。
 ///
@@ -14,6 +14,9 @@ import AkapenCore
 
     /// 偽の撮影が返すウィンドウ（`LaunchSeed.defaultWindows` と同じ。SampleTarget の既定の位置と大きさ）。
     static let window = ScreenRect(x: 140, y: 64, width: 1000, height: 660)
+
+    /// 枠を描く画面（流した Mac の画面の大きさに左右されないよう、決まった大きさにする）。`window` を含む。
+    static let screen = ScreenDescriptor(id: 1, frame: ScreenRect(x: 0, y: 0, width: 1440, height: 900))
 
     /// ウィンドウの中の、1 つ目の枠。
     static let firstRect = ScreenRect(x: 1008, y: 429, width: 108, height: 46)
@@ -93,8 +96,10 @@ import AkapenCore
 
     // MARK: - 操作
 
+    /// 入力を送り、その処理と、始まった撮影の完了（保存と状態への反映）まで待つ。
     func send(_ event: SessionEvent) async {
         await model.send(event).value
+        await model.captureCompletion?.value
     }
 
     /// 枠を描ける状態にして（何も出ていなければホットキー、一覧が開いていれば閉じる）→ 枠 → コメントの確定。確定すると `drawing` に戻る。
@@ -107,7 +112,7 @@ import AkapenCore
         case .drawing, .commenting:
             break
         }
-        await send(.dragEnded(rect: rect, screen: ScreenDescriptor(id: 1, frame: rect)))
+        await send(.dragEnded(rect: rect, screen: Self.screen))
         await send(.commentConfirmed(text: comment))
     }
 

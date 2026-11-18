@@ -75,7 +75,7 @@ public struct LaunchSeed: Equatable, Sendable {
     public struct Annotation: Codable, Equatable, Sendable {
         /// コメント。空白と改行だけのものは起動エラー。
         public var comment: String
-        /// 描いた枠（画面全体を通した、左上が原点の矩形。pt）。`windows` のどれかと重なること。
+        /// 描いた枠（画面全体を通した、左上が原点の矩形。pt）。撮る範囲は、枠内に見えている `windows` から決まる（なければ枠のまわり）。
         public var rect: ScreenRect
 
         /// 値をそのまま持つ。

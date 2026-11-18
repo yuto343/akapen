@@ -28,8 +28,8 @@ enum TestImages {
         CGColorSpace(name: CGColorSpace.sRGB)!
     }
 
-    /// 単色の PNG を作る。
-    static func solidPNG(width: Int, height: Int, color: RGB) -> Data {
+    /// 単色の画像を作る。
+    static func solidImage(width: Int, height: Int, color: RGB) -> CGImage {
         let context = CGContext(
             data: nil,
             width: width,
@@ -51,9 +51,14 @@ enum TestImages {
             )!
         )
         context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+        return context.makeImage()!
+    }
+
+    /// 単色の PNG を作る。
+    static func solidPNG(width: Int, height: Int, color: RGB) -> Data {
         let data = NSMutableData()
         let destination = CGImageDestinationCreateWithData(data as CFMutableData, "public.png" as CFString, 1, nil)!
-        CGImageDestinationAddImage(destination, context.makeImage()!, nil)
+        CGImageDestinationAddImage(destination, solidImage(width: width, height: height, color: color), nil)
         _ = CGImageDestinationFinalize(destination)
         return data as Data
     }

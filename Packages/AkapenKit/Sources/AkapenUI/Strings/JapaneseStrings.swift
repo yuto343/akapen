@@ -101,7 +101,7 @@ struct JapaneseStrings: StringTable {
         case .setupPermissionTitle:
             "画面収録を許可する"
         case .setupPermissionBody:
-            "akapen は枠の下のウィンドウを撮影します。画像はこの Mac の\n~/Library/Caches/akapen に残ります。"
+            "akapen は枠のまわりの画面を撮影します。画像はこの Mac の\n~/Library/Caches/akapen に残ります。"
         case .setupStepOpenSettings:
             "システム設定 → プライバシーとセキュリティを開く"
         case .setupStepTurnOn:
@@ -118,10 +118,8 @@ struct JapaneseStrings: StringTable {
             "システム設定を開く"
         case .setupDone:
             "完了"
-        case .noticeNoWindow:
-            "枠の下にウィンドウがありません"
         case .noticeCaptureFailed:
-            "ウィンドウを撮影できませんでした"
+            "画面を撮影できませんでした"
         case .noticeImageSaveFailed:
             "画像を保存できませんでした"
         case .noticePasteboardFailed:

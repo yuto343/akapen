@@ -1,5 +1,5 @@
 // spec: e2e/specs/draw/capture.md
-// spec-sha256: 626e100e092c01d2f50f506278a9c9bc5c9c1185760f845e6491a48380f18a77
+// spec-sha256: 8723887972d919f2be5572ef4a89f7c27718eba38abe1ded612e2bb40104f11b
 // このファイルは生成物。直接編集しない。md を直して e2e-generator で作り直す。
 
 import XCTest
@@ -18,8 +18,9 @@ final class DrawCaptureTests: AkapenUITestCase {
 
         // 期待される結果: アプリの状態で、コメントを書いている状態になっており、
         // 書きかけの注釈の画像のパスが、この回のフォルダの画像を指している。
-        let state = waitForPhase(.commenting)
-        let draft = try XCTUnwrap(state.draft)
+        // 入力欄は撮影の完了を待たずに出るので、書きかけの注釈の撮影と保存が終わるまで待つ。
+        let state = waitForCapturedDraft()
+        let draft = try XCTUnwrap(state.capturedDraft)
         let session = try XCTUnwrap(state.storage.sessionDirectory)
         XCTAssertTrue(draft.imagePath.hasPrefix(session.hasSuffix("/") ? session : session + "/"), "画像のパスがこの回のフォルダの下にない")
 

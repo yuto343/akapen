@@ -79,12 +79,12 @@ struct StateFileTests {
         let session = try #require(app.sessionDirectory)
         #expect(storage["sessionID"] as? String == sessionID(for: TestApp.now))
         #expect(storage["sessionDirectory"] as? String == session.path(percentEncoded: false))
-        await app.send(.dragEnded(rect: TestApp.firstRect, screen: ScreenDescriptor(id: 1, frame: TestApp.window)))
+        await app.send(.dragEnded(rect: TestApp.firstRect, screen: TestApp.screen))
         state = try app.stateJSON()
         #expect(state["phase"] as? String == "commenting")
         let draft = try #require(state["draft"] as? [String: Any])
         #expect(draft["imagePath"] as? String == session.appending(path: "01.png").path(percentEncoded: false))
-        #expect(draft["comment"] as? String == "")
+        #expect(draft["id"] as? String == app.model.draft?.id.uuidString)
         #expect(draft["sourceAppName"] as? String == "Sample App")
         #expect(draft["createdAt"] as? String == TestApp.nowText)
         let windowFrame = try #require(draft["windowFrame"] as? [String: Double])
@@ -127,14 +127,15 @@ struct StateFileTests {
 
     @Test
     func failureAndSettingsState() async throws {
-        let app = try await TestApp.make(seed: LaunchSeed(settings: TestApp.setupDone().settings, windows: []))
+        // 画面収録の許可がないと、撮れずに drawing のまま失敗が残る。
+        let app = try await TestApp.make(seed: LaunchSeed(settings: TestApp.setupDone().settings, screenRecording: .denied))
         defer { app.cleanUp() }
         app.environment.startWritingState()
         await app.send(.hotkeyPressed)
-        await app.send(.dragEnded(rect: TestApp.firstRect, screen: ScreenDescriptor(id: 1, frame: TestApp.window)))
+        await app.send(.dragEnded(rect: TestApp.firstRect, screen: TestApp.screen))
         var state = try app.stateJSON()
         #expect(state["phase"] as? String == "drawing")
-        #expect(state["lastFailure"] as? String == "noWindowUnderFrame")
+        #expect(state["lastFailure"] as? String == "captureFailed")
         var settings = app.model.settings
         settings.language = .ja
         settings.confirmKey = .commandEnter

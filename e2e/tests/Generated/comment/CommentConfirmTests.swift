@@ -13,8 +13,8 @@ final class CommentConfirmTests: AkapenUITestCase {
         let before = waitForPhase(.hidden)
         XCTAssertEqual(before.annotations.count, 1)
         startCommenting(around: AXID.Sample.thirdField)
-        let commenting = waitForPhase(.commenting)
-        let draft = try XCTUnwrap(commenting.draft)
+        let commenting = waitForCapturedDraft()
+        let draft = try XCTUnwrap(commenting.capturedDraft)
         let comment = "Make the label bold"
 
         // 操作: コメントを書いて確定する。
@@ -85,7 +85,7 @@ final class CommentConfirmTests: AkapenUITestCase {
         // 前提: 注釈は 0 件で、コメントの入力欄が出ている。
         launch(.setupDone, settings: LaunchSettings(confirmKey: .enter))
         startCommenting(around: AXID.Sample.button)
-        let firstDraft = try XCTUnwrap(waitForPhase(.commenting).draft)
+        let firstDraft = try XCTUnwrap(waitForCapturedDraft().capturedDraft)
 
         // 操作: 1 つ目のコメントを書いて確定する。
         typeComment("First comment")
@@ -98,8 +98,8 @@ final class CommentConfirmTests: AkapenUITestCase {
 
         // 期待される結果: ホットキーを押し直さずに次の枠を描くと、コメントの入力欄が出る。
         // してはいけないこと: 1 つ目を確定したあと、次の枠が描けない。
-        let commenting = waitForPhase(.commenting)
-        let secondDraft = try XCTUnwrap(commenting.draft)
+        let commenting = waitForCapturedDraft()
+        let secondDraft = try XCTUnwrap(commenting.capturedDraft)
         waitForElement(AXID.Comment.field)
 
         // 操作: 2 つ目のコメントを書いて確定する。
@@ -125,8 +125,8 @@ final class CommentConfirmTests: AkapenUITestCase {
         // 前提: 確定キーは既定。注釈は 0 件で、コメントの入力欄が出ている。
         launch(.setupDone, settings: LaunchSettings(confirmKey: .enter))
         startCommenting()
-        let commenting = waitForPhase(.commenting)
-        let draft = try XCTUnwrap(commenting.draft)
+        let commenting = waitForCapturedDraft()
+        let draft = try XCTUnwrap(commenting.capturedDraft)
 
         // 操作: 何も書かずに確定キーを押す。
         confirmComment(.enter)
@@ -165,8 +165,8 @@ final class CommentConfirmTests: AkapenUITestCase {
         // 前提: 注釈は 0 件で、コメントの入力欄が出ている。途中まで書いてある。
         launch(.setupDone, settings: LaunchSettings(confirmKey: .enter))
         startCommenting()
-        let commenting = waitForPhase(.commenting)
-        let draft = try XCTUnwrap(commenting.draft)
+        let commenting = waitForCapturedDraft()
+        let draft = try XCTUnwrap(commenting.capturedDraft)
         let partial = "Half written comment"
         typeComment(partial)
 

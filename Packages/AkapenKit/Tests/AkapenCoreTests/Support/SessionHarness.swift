@@ -41,8 +41,25 @@ import Foundation
         await model.send(event).value
     }
 
+    /// 枠を描き終え、撮影と保存が終わって書きかけに反映されるまで待つ。
     func drag(_ rect: ScreenRect = SessionHarness.frame) async {
         await send(.dragEnded(rect: rect, screen: Self.screen))
+        await finishCapture()
+    }
+
+    /// 枠を描き終えた入力の処理だけを待つ（撮影の完了は待たない）。
+    func dragWithoutWaitingForCapture(_ rect: ScreenRect = SessionHarness.frame) async {
+        await send(.dragEnded(rect: rect, screen: Self.screen))
+    }
+
+    /// 撮影中の書きかけがあれば、その撮影の完了が状態に反映されるまで待つ。
+    func finishCapture() async {
+        await model.captureCompletion?.value
+    }
+
+    /// 先読みしているウィンドウの一覧の取得が終わるまで待つ。
+    func finishListing() async {
+        _ = await model.windowListing?.value
     }
 
     /// 枠を描ける状態にして（何も出ていなければホットキー、一覧が開いていれば閉じる）、枠を描いてコメントを確定するまで。

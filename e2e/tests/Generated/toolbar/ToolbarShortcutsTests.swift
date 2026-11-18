@@ -117,8 +117,8 @@ final class ToolbarShortcutsTests: AkapenUITestCase {
         // 前提: 確定済みの注釈が 2 件あり、ボタン類が出ている。枠を描き終え、コメントの入力欄が出ている。クリップボードには別の文章。
         let before = launchWithTwoAnnotations(open: .toolbar)
         startCommenting(around: AXID.Sample.thirdField)
-        let commenting = waitForPhase(.commenting)
-        let draft = try XCTUnwrap(commenting.draft)
+        let commenting = waitForCapturedDraft()
+        let draft = try XCTUnwrap(commenting.capturedDraft)
         typeComment("Not finished yet")
 
         // 操作: ⌘C と ⌘L を押す。

@@ -157,8 +157,8 @@ public struct SessionSnapshot: Encodable, Equatable {
     public let isToolbarVisible: Bool
     /// 確定済みの注釈（確定した順）。
     public let annotations: [Annotation]
-    /// 書きかけの注釈（撮影済みで、コメントが未確定のもの。`comment` は空）。
-    public let draft: Annotation?
+    /// 書きかけの注釈（コメントが未確定のもの）。撮影と保存が終わるまで、画像のパス・アプリ名・ウィンドウの矩形は nil。
+    public let draft: DraftAnnotation?
     public let lastDrawnRect: ScreenRect?
     public let lastCopiedCount: Int
     /// 直前の操作の失敗（`SessionFailure` の名前）。
@@ -191,8 +191,6 @@ public struct SessionSnapshot: Encodable, Equatable {
     /// 失敗の名前（`state.json` に書く値）。
     static func name(_ failure: SessionFailure) -> String {
         switch failure {
-        case .noWindowUnderFrame:
-            "noWindowUnderFrame"
         case .captureFailed:
             "captureFailed"
         case .imageSaveFailed:
