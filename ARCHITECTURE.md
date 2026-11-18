@@ -19,14 +19,14 @@ akapen/
 ├── DESIGN.md
 ├── ARCHITECTURE.md
 ├── project.yml                     # XcodeGen の定義（.xcodeproj は生成物。コミットしない）
-├── Makefile                        # gen / build / run / test / e2e / e2e-lint
+├── Makefile                        # gen / build / run / test / e2e / e2e-live / e2e-lint / clean
+├── scripts/                        # e2e.py（E2E の実行と排他ロック）、xcode.sh（xcodebuild の呼び出し）
+├── docs/FOUNDATION.md              # 公開 API、state.json v2、AKAPEN_SEED の形
 ├── assets/                         # 元素材（ロゴ・アイコン・LP 用の動画）。既存
 │
 ├── App/                            # アプリのターゲット（エントリだけ。ロジックを置かない）
 │   ├── main.swift                  # AkapenApp の AppDelegate を起こすだけ
-│   ├── Info.plist                  # LSUIElement = true（Dock に出さない）
-│   ├── akapen.entitlements
-│   └── Assets.xcassets             # AppIcon、メニューバー用アイコン
+│   └── Assets.xcassets             # AppIcon（メニューバーのアイコンは AkapenUI/Resources）
 │
 ├── Packages/AkapenKit/             # ローカルの Swift パッケージ
 │   ├── Package.swift
@@ -61,13 +61,12 @@ akapen/
 │   │   │   ├── Launch.swift
 │   │   │   ├── Gestures.swift
 │   │   │   └── Verify.swift
-│   │   ├── Generated/              # generator / healer が書く：直接編集しない
-│   │   │   └── draw/DrawCaptureTests.swift
-│   │   ├── Spike/SmokeTests.swift  # 手で書く：組み立ての確認。生成テストが揃ったら消す
+│   │   ├── Generated/              # generator / healer が書く：直接編集しない（spec 1 本につき 1 ファイル）
+│   │   │   └── <機能>/<Dir><Name>Tests.swift   # 例: draw/DrawCaptureTests.swift
 │   │   └── Live/                   # 手で書く：実際の画面収録を通す確認（手元だけ）
 │   │       └── LiveCaptureTests.swift
 │   └── sample-target/              # 撮影対象にする小さなアプリ「Sample App」のターゲット
-│       └── main.swift ほか
+│       └── main.swift、SampleDelegate / SampleLayout / SampleViews.swift、Localizable.xcstrings
 │
 └── .claude/agents/
     ├── e2e-planner.md
@@ -341,7 +340,7 @@ Playwright の MCP のように「実物を操作しながら書く」ことは�
 | --- | --- |
 | `make test` | `swift test`（単体テスト） |
 | `make e2e-lint` | `node e2e/check-specs.mjs` |
-| `make e2e` | `make gen` → `xcodebuild test`（`Live/` 以外（`Spike/` を含む）。撮影は `fixture`） |
+| `make e2e` | `make gen` → `xcodebuild test`（`Live/` 以外。`Seed` と `Generated/`。撮影は `fixture`） |
 | `make e2e ONLY=DrawFrameTests` | 1 クラスだけ走らせる（generator / healer が使う） |
 | `make e2e-live` | `Live/` だけを、実際の画面収録で走らせる（手元だけ。画面収録の許可が要る） |
 
@@ -379,15 +378,15 @@ CI は当面置かない。置くときは `make test`・`make e2e-lint`・`make
 
 ## 確かめた結果
 
-2026-11-18、macOS 26.2 / Xcode 26.2 / XcodeGen 2.47.0、2 画面の実機で検証。1〜6 は foundation のスパイク（`FoundationSpikeTests`。組み立ての作業で `e2e/tests/Spike/SmokeTests.swift` に置き換えた）、7〜11 は組み立て（app-wiring）の作業で確かめた。`SmokeTests` は生成テストに置き換えるまで `make e2e` に含める。
+2026-11-18、macOS 26.2 / Xcode 26.2 / XcodeGen 2.47.0、2 画面の実機で検証。1〜6 は foundation の段階のスパイク（当時の `FoundationSpikeTests`）、7〜11 は組み立て（app-wiring）の段階（当時の `Spike/SmokeTests`）で確かめた。どちらのテストも、生成テスト（`Generated/`）に置き換えて消した。いまは `Seed` と `Generated/` が `make e2e` で走る。以下は検証したときの記録で、秒数や件数はその時点のもの。
 
 1. **Carbon ホットキー: 確認済み。** SampleTarget をアクティブにし、XCUITest の `typeKey(";", modifierFlags: .command)` を送ると `drawing` になった。E2E 専用の迂回入口は不要なので追加していない。`Seed` でも確認。
 2. **非アクティブパネルと LSUIElement: 確認済み。** Toolbar の 3 ボタンを AkapenAXID で取得できた。描画後に `toolbar.add` をクリックして `drawing` に戻ることも確認。
 3. **座標ドラッグ: 確認済み。** SampleTarget のボタンの位置を基準に 180×110 pt を描き、state.json の x/y/width/height がそれぞれ 4 pt 以内で一致。描画面を外した後の下のボタンへのクリックで回数が 1 に増えた。Esc で hidden に戻った。最初の試行は下のアプリを宛先にドラッグし、XCTest の割り込み処理がアプリを再アクティブ化して失敗した。座標を描画面の要素へ変換して入力するよう修正。完全透明な面のヒットテストも避けるため、背景に 1% の alpha を設定した。
 4. **AXID のリンク: 確認済み。** UI テストはパッケージ製品のうち AkapenAXID だけをリンクし、`import AkapenAXID` でビルド・実行できた。
-5. **反復時間: 確認済み。** 最終のテストコード 1 行編集後の `make e2e ONLY=FoundationSpikeTests` は 54.0 秒（テスト本体 24.8 秒）。その前の修正後の試行は 58.3 秒だった。60 秒を大きく超えないため build-for-testing / test-without-building の分離は現時点では追加しない。初回の全 2 件はコンパイルと失敗を含め 99.5 秒だった。
+5. **反復時間: 確認済み。** 当時の最終のテストコード 1 行編集後の `make e2e ONLY=FoundationSpikeTests` は 54.0 秒（テスト本体 24.8 秒）。その前の修正後の試行は 58.3 秒だった。60 秒を大きく超えないため build-for-testing / test-without-building の分離は現時点では追加しない。初回の全 2 件はコンパイルと失敗を含め 99.5 秒だった。
 6. **GUI アプリへパス入り文章を貼って画像を読めるか: 未確認。** 元の設計の検証課題として残す。読まれない場合は PromptPasteboard に画像ファイルも入れる。
-7. **ホットキーの押下は 1 回 約 10 秒かかる。** `sample.typeKey(";", modifierFlags: .command)` の「Synthesize event」が約 10 秒かかってから戻る（キーがグローバルなホットキーとして横取りされ、SampleTarget に届かないため、XCTest がキーの配送を待ちきるまで戻らないと見ている）。動作は正しい。ホットキーを何度も押すテストは長くなる。
+7. **ホットキーの押下が約 10 秒かかる問題: 解消済み。** 当初は `sample.typeKey(";", modifierFlags: .command)` が約 10 秒かかってから戻った。グローバルなホットキーは OS に横取りされて SampleTarget に届かず、XCTest が送り先のアプリのキー受け取りを待ちきるまで戻らなかったため。いまは `pressHotkey(_:)`（`e2e/tests/Support/Gestures.swift`）が、akapen がそのキーを登録しているとき（`state.json` の `hotkeys`）は akapen を、登録していないときは SampleTarget を送り先にして押す。詳しくは `e2e/README.md`「走らせ方」。
 8. **`XCTNSPredicateExpectation` の待ちは当てにならなかった。** `state.json` が条件を満たしてから数秒あっても一致を拾わず時間切れになった（終了の確認）。`Support` の待ちは、`state.json` を 0.1 秒おきに読み直すポーリング（`poll`）にした。
 9. **`XCUIApplication.terminate()` は確認を出さずに止める。** 注釈が残っていても `applicationShouldTerminate` を通らずに終了する（後始末と `relaunch()` が終了の確認で止まらない）。メニューの終了・`⌘Q`・Apple Event の quit は `applicationShouldTerminate` を通る。
 10. **アクティブにならない起動。** `make run`（`open`）で起動すると、ほかのアプリが使われている最中なので `NSApp.activate()` が断られ、セットアップのウィンドウがほかのウィンドウの後ろに出た。設定とセットアップのウィンドウは、開くときに `orderFrontRegardless()` で手前に出すようにした。

@@ -138,32 +138,30 @@ E2E の起動時の前提。JSON を環境変数にそのまま入れる（フ�
 
 ## 運用
 
-`make e2e` は Live 以外（`Seed`、`Spike/SmokeTests`、`Generated/`）、`make e2e-live` は Live 配下のクラス（`LiveCaptureTests`）のみ。`ONLY` は選択範囲に存在するクラス名を指定する。`make e2e-lint` は、生成テストができるまで「生成ファイルが無い」で落ちる。
+`make e2e` は Live 以外（`Seed`、`Generated/`）、`make e2e-live` は Live 配下のクラス（`LiveCaptureTests`）のみ。`ONLY` は選択範囲に存在するクラス名を指定する。`make e2e-lint` は spec の書式と、spec と生成テストの対応を確かめる（`e2e/README.md`）。
 
 ロックはリポジトリの絶対パスのハッシュを名前にして OS の一時ディレクトリへ置く。`fcntl.flock` でプロセス終了時も解放され、待機中の実行は順番に進む。`make clean` でロックの inode が入れ替わらない。
 
-## 受け入れ確認
+## 経緯（段階ごとの受け入れ確認の記録）
+
+ここから下は、各段階の終わりに確かめた結果の記録。件数や秒数はその時点のもので、いまの値ではない。いまの E2E の構成と件数は `e2e/README.md`、実機での検証の記録は `ARCHITECTURE.md`「確かめた結果」を見る。この段階で使っていた `FoundationSpikeTests` と `Spike/SmokeTests` は、生成テストに置き換えて消した。
+
+### foundation の段階（2026-11-18）
 
 - `make gen`: 成功。3 ターゲットを生成。
 - `make build`: 成功。Swift 6、macOS 15.0、Sandbox なし、LSUIElement=true。
-- `make test`: 成功。Swift Testing 6 件（Core 1、Platform 1、UI 2、App 2）。
-- `make e2e`: 成功。Spike と Seed の 2 件、失敗 0。最終の全件ログは `build/logs/e2e-all.log` と `build/logs/e2e-all-summary.json`（所要 75.7 秒）。
-- `cmp AGENTS.md .director/AGENTS.draft.md`: 一致。
-- `git diff --check`: 成功。
-- 最終 build と E2E 全件のログに `warning:` / `error:` なし。AppIntents を使用しないため、Xcode 内部のメタデータ抽出は `LM_SKIP_METADATA_EXTRACTION=YES`。
-- `codesign -dvv`: Apple Development: <名前> (ZC8TW78G32)、TeamIdentifier G5564YSC93。アドホックへの切り替えなし。
+- `make test`: 成功。Swift Testing 6 件。
+- `make e2e`: 成功。当時の `FoundationSpikeTests` と `Seed` の 2 件。所要 75.7 秒。`ONLY=FoundationSpikeTests` は 54.0 秒（1 件）。60 秒を大きく超えないため、ビルドとテストの実行の分離は追加していない。
+- `codesign -dvv`: Apple Development 証明書、TeamIdentifier G5564YSC93。アドホックへの切り替えなし。
+- AppIntents を使用しないため、Xcode 内部のメタデータ抽出は `LM_SKIP_METADATA_EXTRACTION=YES`。
 
-検証 1〜6 の操作と結果は `ARCHITECTURE.md` の「確かめた結果」に記録。追加の AppKit パネル検証は `panelsFollowState`。GUI アプリへパス入り文章を貼って画像を読めるかは、このブリーフの範囲外なので未確認。
+検証 1〜6 の操作と結果は `ARCHITECTURE.md`「確かめた結果」に記録。GUI アプリへパス入り文章を貼って画像を読めるかは、この段階の範囲外なので未確認。
 
-残す作業は、ブリーフのスコープ外である撮影・コメント・一覧・コピー・永続設定・セットアップ・終了確認と正式デザイン。E2E の仕様 md・README・lint・生成エージェントは今回作っていない。コミット・push・ブランチ変更もしていない。
+### 組み立て（app-wiring）の段階（2026-11-18）
 
-最終の 1 行編集後の `make e2e ONLY=FoundationSpikeTests` は成功（1 件、54.0 秒）。最新の結果は `build/e2e.xcresult`、ログは `build/logs/test.log`。60 秒を大きく超えないため、実行とビルドの分離は追加していない。
-
-## 組み立て（app-wiring）の受け入れ確認（2026-11-18）
-
-- `make test`: 成功。Swift Testing 324 件（`AkapenAppTests` は 50 件: 一連の流れ・分岐・設定の選び分け・`AKAPEN_SEED`・`state.json`・ホットキーの登録）。
+- `make test`: 成功。Swift Testing 324 件（`AkapenAppTests` は 50 件）。
 - `make build`: 成功。警告なし。
-- `make e2e`: 成功。`Seed` 1 件と `Spike/SmokeTests` 3 件（ホットキー → 枠 → コメント → 一覧 → コピー、メニューバーから設定と終了の確認、初回のセットアップ）。所要 126 秒。
-- `make e2e-lint`: 18 本すべて「生成ファイルが無い」だけで落ちる（`--specs-only` は OK）。
-- `make e2e-live`: 落ちる。akapen に画面収録の許可がないため撮影に失敗し、akapen がセットアップの 2 ページ目（許可の案内）を開いた。許可のダイアログは出ない（`CGPreflightScreenCaptureAccess` だけを呼ぶ）。
+- `make e2e`: 成功。`Seed` 1 件と、当時の `Spike/SmokeTests` 3 件（ホットキー → 枠 → コメント → 一覧 → コピー、メニューバーから設定と終了の確認、初回のセットアップ）。所要 126 秒。
+- `make e2e-lint`: 当時は生成テストがなく、18 本すべて「生成ファイルが無い」で落ちた（`--specs-only` は OK）。いまは通る。
+- `make e2e-live`: 落ちた。akapen に画面収録の許可がなく撮影に失敗し、akapen がセットアップの 2 ページ目（許可の案内）を開いた。許可のダイアログは出ない（`CGPreflightScreenCaptureAccess` だけを呼ぶ）。
 - `make run`（本番の組み立て）: メニューバーにアイコンが出て、セットアップ（1 ページ目、既定の `⌘;`）が手前に出ることを画面の画像で確認。終了後、`defaults read com.yuto343.akapen` はドメインなし、`~/Library/Caches/akapen` はなし。ログイン時の起動は有効にしていない。
