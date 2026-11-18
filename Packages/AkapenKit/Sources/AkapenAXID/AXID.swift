@@ -2,7 +2,6 @@
 public enum AXID {
     /// Toolbar の操作対象。
     public enum Toolbar {
-        public static let add = "toolbar.add"
         public static let list = "toolbar.list"
         public static let copyPrompt = "toolbar.copyPrompt"
     }
@@ -47,7 +46,6 @@ public enum AXID {
     public enum Settings {
         public static let language = "settings.language"
         public static let hotkey = "settings.hotkey"
-        public static let toolbarShortcut = "settings.toolbarShortcut"
         public static let confirmKey = "settings.confirmKey"
         public static let boilerplate = "settings.boilerplate"
         public static let imageRetentionDays = "settings.imageRetentionDays"
@@ -63,8 +61,6 @@ public enum AXID {
         public static let confirmKeyCommandEnter = "settings.confirmKey.commandEnter"
         /// ホットキーの記録欄の下に出す知らせ（`This shortcut is unavailable` など）。
         public static let hotkeyMessage = "settings.hotkey.message"
-        /// ボタン類の表示切り替えの記録欄の下に出す知らせ。
-        public static let toolbarShortcutMessage = "settings.toolbarShortcut.message"
     }
     /// Setup の操作対象。
     public enum Setup {

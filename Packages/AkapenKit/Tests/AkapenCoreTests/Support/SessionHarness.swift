@@ -45,12 +45,16 @@ import Foundation
         await send(.dragEnded(rect: rect, screen: Self.screen))
     }
 
-    /// ホットキーから、枠を描いてコメントを確定するまで。
+    /// 枠を描ける状態にして（何も出ていなければホットキー、一覧が開いていれば閉じる）、枠を描いてコメントを確定するまで。
+    /// 確定すると `drawing` に戻る。
     func annotate(_ comment: String, rect: ScreenRect = SessionHarness.frame) async {
-        if model.phase == .idle || model.phase == .listOpen {
-            await send(.addTapped)
-        } else {
+        switch model.phase {
+        case .hidden, .copied:
             await send(.hotkeyPressed)
+        case .listOpen:
+            await send(.listToggled)
+        case .drawing, .commenting:
+            break
         }
         await drag(rect)
         await send(.commentConfirmed(text: comment))

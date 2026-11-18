@@ -2,7 +2,6 @@
 public struct Settings: Codable, Equatable, Sendable {
     public var language: Language = .en
     public var hotkey = KeyboardShortcut()
-    public var toolbarShortcut: KeyboardShortcut?
     public var confirmKey: ConfirmKey = .enter
     /// 言語ごとの定型文。キーは `Language.rawValue`。
     /// 読むときは `boilerplate(for:)` を使う（キーがない言語は既定文を返す）。
@@ -17,20 +16,18 @@ public struct Settings: Codable, Equatable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case language
         case hotkey
-        case toolbarShortcut
         case confirmKey
         case boilerplates
         case imageRetentionDays
         case setupCompleted
     }
 
-    /// 欠けているキーは既定値で補う。古い保存内容でも読める。
+    /// 欠けているキーは既定値で補い、知らないキー（古い版の `toolbarShortcut` など）は無視する。古い保存内容でも読める。
     public init(from decoder: any Decoder) throws {
         let defaults = Settings()
         let container = try decoder.container(keyedBy: CodingKeys.self)
         language = try container.decodeIfPresent(Language.self, forKey: .language) ?? defaults.language
         hotkey = try container.decodeIfPresent(KeyboardShortcut.self, forKey: .hotkey) ?? defaults.hotkey
-        toolbarShortcut = try container.decodeIfPresent(KeyboardShortcut.self, forKey: .toolbarShortcut)
         confirmKey = try container.decodeIfPresent(ConfirmKey.self, forKey: .confirmKey) ?? defaults.confirmKey
         boilerplates = try container.decodeIfPresent([String: String].self, forKey: .boilerplates) ?? defaults.boilerplates
         imageRetentionDays = try container.decodeIfPresent(Int.self, forKey: .imageRetentionDays) ?? defaults.imageRetentionDays

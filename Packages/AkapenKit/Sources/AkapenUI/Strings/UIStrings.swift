@@ -2,12 +2,18 @@ import AkapenCore
 
 /// 引数のない文言のキー。値は `EnglishStrings` と `JapaneseStrings` の表にある。
 public enum StringKey: String, CaseIterable, Sendable {
-    /// 「+」ボタンの読み上げ用の名前。
-    case add
     /// 「List」ボタン。
     case list
     /// 「Copy prompt」ボタン。
     case copyPrompt
+    /// 「List」ボタンのショートカットの小さな表示 `⌘L`。
+    case listShortcut
+    /// 「Copy prompt」ボタンのショートカットの小さな表示 `⌘C`。
+    case copyPromptShortcut
+    /// 「List」ボタンのツールチップ。
+    case listHelp
+    /// 「Copy prompt」ボタンのツールチップ。
+    case copyPromptHelp
     /// 終了確認の終了のボタン `Quit`。
     case quit
     /// 案内の表示の `Drag to frame`。
@@ -60,10 +66,6 @@ public enum StringKey: String, CaseIterable, Sendable {
     case languageJapanese
     /// 設定の行 `Hotkey`。
     case settingsHotkey
-    /// 設定の行 `Show / hide buttons`。
-    case settingsToolbarShortcut
-    /// 設定の行の補足 `Optional shortcut`。
-    case settingsToolbarShortcutCaption
     /// 設定の行 `Confirm comment with`。
     case settingsConfirmKey
     /// 確定キーの選択肢 `↵ Enter`。

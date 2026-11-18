@@ -2,12 +2,18 @@
 struct JapaneseStrings: StringTable {
     func text(_ key: StringKey) -> String {
         switch key {
-        case .add:
-            "追加"
         case .list:
             "一覧"
         case .copyPrompt:
             "プロンプトをコピー"
+        case .listShortcut:
+            "⌘L"
+        case .copyPromptShortcut:
+            "⌘C"
+        case .listHelp:
+            "一覧を開く・閉じる（⌘L）"
+        case .copyPromptHelp:
+            "プロンプトをコピー（⌘C）"
         case .quit:
             "終了"
         case .drawHint:
@@ -60,10 +66,6 @@ struct JapaneseStrings: StringTable {
             "日本語"
         case .settingsHotkey:
             "ホットキー"
-        case .settingsToolbarShortcut:
-            "ボタン類の表示・非表示"
-        case .settingsToolbarShortcutCaption:
-            "割り当ては任意"
         case .settingsConfirmKey:
             "コメントの確定キー"
         case .confirmKeyEnter:

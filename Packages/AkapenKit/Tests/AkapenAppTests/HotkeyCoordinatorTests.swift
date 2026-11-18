@@ -10,32 +10,26 @@ struct HotkeyCoordinatorTests {
     private let controlOptionK = KeyboardShortcut(keyCode: 40, modifiers: [.control, .option])
     private let commandShiftB = KeyboardShortcut(keyCode: 11, modifiers: [.command, .shift])
 
-    private func settings(hotkey: KeyboardShortcut? = nil, toolbar: KeyboardShortcut? = nil) -> Settings {
+    private func settings(hotkey: KeyboardShortcut? = nil) -> Settings {
         var settings = Settings()
         if let hotkey {
             settings.hotkey = hotkey
         }
-        settings.toolbarShortcut = toolbar
         return settings
     }
 
     @Test
-    func registersHotkeyAndOptionalToolbarShortcut() {
+    func registersHotkey() {
         let harness = Harness()
         harness.coordinator.apply(settings())
         #expect(harness.draw.current == commandSemicolon)
-        #expect(harness.toolbar.current == nil)
         #expect(harness.coordinator.status.draw == commandSemicolon)
-        #expect(harness.coordinator.status.toolbar == nil)
-        harness.coordinator.apply(settings(toolbar: commandShiftB))
-        #expect(harness.toolbar.current == commandShiftB)
         harness.draw.fire()
-        harness.toolbar.fire()
-        #expect(harness.events == ["draw", "toolbar"])
+        #expect(harness.events == ["draw"])
     }
 
     @Test
-    func reregistersOnlyWhatChanged() {
+    func reregistersOnlyWhenChanged() {
         let harness = Harness()
         harness.coordinator.apply(settings())
         harness.coordinator.apply(settings())
@@ -43,46 +37,35 @@ struct HotkeyCoordinatorTests {
         harness.coordinator.apply(settings(hotkey: controlOptionK))
         #expect(harness.draw.registerCount == 2)
         #expect(harness.draw.current == controlOptionK)
-        #expect(harness.toolbar.registerCount == 0)
-        // 割り当てを外すと、登録も外す。
-        harness.coordinator.apply(settings(hotkey: controlOptionK, toolbar: commandShiftB))
-        harness.coordinator.apply(settings(hotkey: controlOptionK, toolbar: nil))
-        #expect(harness.toolbar.current == nil)
-        harness.toolbar.fire()
-        #expect(harness.events.isEmpty)
     }
 
     @Test
     func suspendsWhileRecording() {
         let harness = Harness()
-        harness.coordinator.apply(settings(toolbar: commandShiftB))
+        harness.coordinator.apply(settings())
         harness.coordinator.setSuspended(true, by: .settings)
         #expect(harness.draw.current == nil)
-        #expect(harness.toolbar.current == nil)
         #expect(harness.coordinator.status.isSuspended)
         // 記録の途中で設定が変わっても、外したまま。
-        harness.coordinator.apply(settings(hotkey: controlOptionK, toolbar: commandShiftB))
+        harness.coordinator.apply(settings(hotkey: controlOptionK))
         #expect(harness.draw.current == nil)
         harness.coordinator.setSuspended(true, by: .setup)
         harness.coordinator.setSuspended(false, by: .settings)
         #expect(harness.draw.current == nil)
         harness.coordinator.setSuspended(false, by: .setup)
         #expect(harness.draw.current == controlOptionK)
-        #expect(harness.toolbar.current == commandShiftB)
         #expect(!harness.coordinator.status.isSuspended)
     }
 
     @Test
     func canUseProbesRealRegistration() {
         let harness = Harness()
-        harness.coordinator.apply(settings(toolbar: commandShiftB))
+        harness.coordinator.apply(settings())
         harness.coordinator.setSuspended(true, by: .settings)
         #expect(harness.coordinator.canUse(controlOptionK, for: .draw))
         #expect(harness.probe.current == nil)
         #expect(harness.probe.registerCount == 1)
-        // もう 1 つの役が使っているキーは使えない。
-        #expect(!harness.coordinator.canUse(commandShiftB, for: .draw))
-        #expect(!harness.coordinator.canUse(commandSemicolon, for: .toolbar))
+        #expect(harness.coordinator.canUse(commandShiftB, for: .draw))
         // 登録できないキー（ほかのアプリとぶつかる）は使えない。
         harness.probe.failing = [controlOptionK]
         #expect(!harness.coordinator.canUse(controlOptionK, for: .draw))
@@ -116,10 +99,9 @@ struct HotkeyCoordinatorTests {
     @Test
     func unregisterAllOnQuit() {
         let harness = Harness()
-        harness.coordinator.apply(settings(toolbar: commandShiftB))
+        harness.coordinator.apply(settings())
         harness.coordinator.unregisterAll()
         #expect(harness.draw.current == nil)
-        #expect(harness.toolbar.current == nil)
         #expect(harness.coordinator.status.draw == nil)
     }
 }
@@ -127,7 +109,6 @@ struct HotkeyCoordinatorTests {
 /// 偽の登録と、押されたときの記録。
 @MainActor private final class Harness {
     let draw = FakeHotkey()
-    let toolbar = FakeHotkey()
     let probe = FakeHotkey()
     private(set) var events: [String] = []
     private(set) var coordinator: HotkeyCoordinator!
@@ -135,13 +116,9 @@ struct HotkeyCoordinatorTests {
     init() {
         coordinator = HotkeyCoordinator(
             draw: draw,
-            toolbar: toolbar,
             probe: probe,
             onDraw: { [weak self] in
                 self?.events.append("draw")
-            },
-            onToolbar: { [weak self] in
-                self?.events.append("toolbar")
             }
         )
     }

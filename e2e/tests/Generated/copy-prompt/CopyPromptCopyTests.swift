@@ -1,5 +1,5 @@
 // spec: e2e/specs/copy-prompt/copy.md
-// spec-sha256: 8d95af3b60cfb6b806ea64ebb5a2a575ba8041672fdc2e54365dc4dcd0e9af5f
+// spec-sha256: 5fb3fb0767a396e53e199e76a5e930408ec706aee398bdc2722d5d71b36f90ef
 // このファイルは生成物。直接編集しない。md を直して e2e-generator で作り直す。
 
 import XCTest
@@ -15,11 +15,11 @@ final class CopyPromptCopyTests: AkapenUITestCase {
         SeedAnnotation("Change this label to Save\nand make it bold"),
     ]
 
-    /// 前提をそろえる: 英語・定型文は既定のまま、確定済みの注釈が 2 件、ボタン類だけが出ている。クリップボードには別の文章。
+    /// 前提をそろえる: 英語・定型文は既定のまま、確定済みの注釈が 2 件、ボタン類が出ている（枠を描く状態）。クリップボードには別の文章。
     private func launchWithTwoAnnotations() -> AppState {
-        launch(.setupDone, annotations: seededAnnotations)
+        launch(.setupDone, annotations: seededAnnotations, open: .toolbar)
         putOnPasteboard(previousClipboard)
-        let state = waitForPhase(.idle)
+        let state = waitForPhase(.drawing)
         XCTAssertTrue(state.isToolbarVisible)
         XCTAssertEqual(state.settings.language, .en)
         XCTAssertEqual(state.settings.boilerplate(.en), DefaultBoilerplate.english)
@@ -76,7 +76,7 @@ final class CopyPromptCopyTests: AkapenUITestCase {
         // 期待される結果: ボタン類が消え、コピーしたことと件数が分かる表示が出る。
         let message = displayedText(AXID.Copied.message)
         XCTAssertTrue(message.contains("2"), "コピーした件数が表示にない: \(message)")
-        waitForElementToDisappear(AXID.Toolbar.add)
+        waitForElementToDisappear(AXID.Toolbar.list)
 
         // 期待される結果: アプリの状態で、コピーを終えた状態になっており、注釈は 0 件、直前にコピーした件数は 2、ボタン類は出ていない。
         let state = waitForCopyFinished()
@@ -88,7 +88,7 @@ final class CopyPromptCopyTests: AkapenUITestCase {
         XCTAssertNotNil(copiedPrompt())
         XCTAssertNil(state.draft)
         // してはいけないこと: ボタン類が出たまま残る。
-        XCTAssertFalse(isShown(AXID.Toolbar.add))
+        XCTAssertFalse(isShown(AXID.Toolbar.list))
     }
 
     // scenario: コピーしても、画像ファイルは消えずに残る
@@ -130,7 +130,7 @@ final class CopyPromptCopyTests: AkapenUITestCase {
 
         // 期待される結果: ボタン類が出て、マウスが枠を描く操作になる。
         XCTAssertTrue(state.isToolbarVisible)
-        waitForElement(AXID.Toolbar.add)
+        waitForElement(AXID.Toolbar.list)
         waitForElement(AXID.Draw.surface)
 
         // してはいけないこと: 前の回の注釈が残っている。
@@ -163,7 +163,7 @@ final class CopyPromptCopyTests: AkapenUITestCase {
         startDrawing()
         let newComment = "This field should be wider"
         annotate(around: AXID.Sample.thirdField, comment: newComment)
-        let annotated = waitForPhase(.idle)
+        let annotated = waitForPhase(.drawing)
         XCTAssertEqual(annotated.annotations.count, 1)
         let newAnnotation = try XCTUnwrap(annotated.annotations.first)
         tapCopyPrompt()
@@ -190,22 +190,22 @@ final class CopyPromptCopyTests: AkapenUITestCase {
 
     // scenario: 注釈が 0 件のときは、コピーされない
     func testCopyWithoutAnnotationsDoesNothing() throws {
-        // 前提: 確定済みの注釈が 0 件で、ボタン類だけが出ている。クリップボードには別の文章。
+        // 前提: 確定済みの注釈が 0 件で、ボタン類が出ている（枠を描く状態）。クリップボードには別の文章。
         launch(.setupDone, open: .toolbar)
         putOnPasteboard(previousClipboard)
-        let before = waitForState("ボタン類だけが出ている") { $0.phase == .idle && $0.isToolbarVisible }
+        let before = waitForState("ボタン類が出ている") { $0.phase == .drawing && $0.isToolbarVisible }
         XCTAssertTrue(before.annotations.isEmpty)
 
         // 操作: コピーしようとする。
         tapCopyPrompt()
 
-        // 期待される結果: アプリの状態で、ボタン類だけが出ている状態のままで、直前にコピーした件数も変わらない。
+        // 期待される結果: アプリの状態で、枠を描く状態のままで、直前にコピーした件数も変わらない。
         // してはいけないこと: ボタン類が消え、コピーを終えた状態になる。
-        let state = assertStateStays("ボタン類だけが出ている状態のまま", for: 1.5) { state in
-            state.phase == .idle && state.isToolbarVisible && state.lastCopiedCount == before.lastCopiedCount
+        let state = assertStateStays("枠を描く状態のまま", for: 1.5) { state in
+            state.phase == .drawing && state.isToolbarVisible && state.lastCopiedCount == before.lastCopiedCount
         }
         XCTAssertTrue(state.annotations.isEmpty)
-        XCTAssertTrue(isShown(AXID.Toolbar.add))
+        XCTAssertTrue(isShown(AXID.Toolbar.list))
 
         // 期待される結果: クリップボードに入った文章で、前もって入れておいた文章から変わっていない。
         // してはいけないこと: 定型文だけの文章がクリップボードに入る。

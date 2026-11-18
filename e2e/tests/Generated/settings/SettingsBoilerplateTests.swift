@@ -1,5 +1,5 @@
 // spec: e2e/specs/settings/boilerplate.md
-// spec-sha256: f9038a1f501f7a91fe285793f0b43b0be5c912b56ab93ca627cbeb04bb5b63c3
+// spec-sha256: b44a8c33f50b413691476634a539fb8ee6f86d472a72b9e27bc48b8502d58465
 // このファイルは生成物。直接編集しない。md を直して e2e-generator で作り直す。
 
 import XCTest
@@ -11,9 +11,9 @@ final class SettingsBoilerplateTests: AkapenUITestCase {
 
     // scenario: 定型文を書き換えると、コピーしたプロンプトの冒頭がその文になる
     func testEditedBoilerplateLeadsCopiedPrompt() throws {
-        // 前提: セットアップ済み、言語は英語（既定）。どの言語の定型文も書き換えていない。確定済みの注釈が 1 件あり、ボタン類だけが出ている。
+        // 前提: セットアップ済み、言語は英語（既定）。どの言語の定型文も書き換えていない。確定済みの注釈が 1 件あり、akapen は何も出していない。
         launch(.setupDone, annotations: SeedAnnotation.samples(1))
-        let start = waitForPhase(.idle)
+        let start = waitForPhase(.hidden)
         XCTAssertEqual(start.settings.language, .en)
         XCTAssertEqual(start.settings.boilerplate(.en), DefaultBoilerplate.english)
         XCTAssertEqual(start.settings.boilerplate(.ja), DefaultBoilerplate.japanese)
@@ -30,8 +30,10 @@ final class SettingsBoilerplateTests: AkapenUITestCase {
         XCTAssertEqual(edited.settings.boilerplate(.ja), DefaultBoilerplate.japanese)
         closeSettings()
 
-        // 操作: プロンプトをコピーする。
+        // 操作: ホットキーでボタン類を出し、プロンプトをコピーする。
         bringSampleToFront()
+        pressHotkey()
+        waitForPhase(.drawing)
         tapCopyPrompt()
         let copied = waitForCopyFinished()
         XCTAssertEqual(copied.lastCopiedCount, 1)
@@ -51,13 +53,13 @@ final class SettingsBoilerplateTests: AkapenUITestCase {
 
     // scenario: 書き換えた定型文は、言語を切り替えても言語ごとに保たれる
     func testEditedBoilerplateIsKeptPerLanguage() throws {
-        // 前提: セットアップ済み、言語は英語（既定）。英語の定型文だけを書き換えてある。確定済みの注釈が 1 件あり、ボタン類だけが出ている。
+        // 前提: セットアップ済み、言語は英語（既定）。英語の定型文だけを書き換えてある。確定済みの注釈が 1 件あり、akapen は何も出していない。
         launch(
             .setupDone,
             settings: LaunchSettings(boilerplates: [.en: customBoilerplate]),
             annotations: SeedAnnotation.samples(1)
         )
-        let start = waitForPhase(.idle)
+        let start = waitForPhase(.hidden)
         XCTAssertEqual(start.settings.language, .en)
         XCTAssertEqual(start.settings.boilerplate(.en), customBoilerplate)
         XCTAssertEqual(start.settings.boilerplate(.ja), DefaultBoilerplate.japanese)
@@ -75,8 +77,10 @@ final class SettingsBoilerplateTests: AkapenUITestCase {
         XCTAssertEqual(japanese.settings.boilerplate(.ja), DefaultBoilerplate.japanese)
         closeSettings()
 
-        // 操作: プロンプトをコピーする。
+        // 操作: ホットキーでボタン類を出し、プロンプトをコピーする。
         bringSampleToFront()
+        pressHotkey()
+        waitForPhase(.drawing)
         tapCopyPrompt()
         waitForCopyFinished()
 

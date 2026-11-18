@@ -9,7 +9,6 @@ struct SettingsStoreTests {
         var settings = Settings()
         settings.language = .ja
         settings.hotkey = KeyboardShortcut(keyCode: 12, modifiers: [.command, .shift])
-        settings.toolbarShortcut = KeyboardShortcut(keyCode: 13, modifiers: .option)
         settings.confirmKey = .commandEnter
         settings.setBoilerplate("書き換えた定型文", for: .ja)
         settings.imageRetentionDays = 3

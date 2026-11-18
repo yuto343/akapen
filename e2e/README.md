@@ -26,7 +26,8 @@ e2e/
 │   ├── copy-prompt/          # プロンプトをコピーする（App 04）
 │   ├── menu-bar/             # メニューバーと終了確認（App 05・09）
 │   ├── settings/             # 設定ページ（App 06）
-│   └── setup/                # 初回のセットアップ（App 07・08）
+│   ├── setup/                # 初回のセットアップ（App 07・08）
+│   └── toolbar/              # ボタン類が出ているあいだのショートカット（⌘C / ⌘L）
 ├── tests/                    # UI テストのターゲット AkapenE2E（XCTest / XCUITest）
 │   ├── Seed.swift            # 手で書く：generator / healer の起点、起動のスモークテスト
 │   ├── Support/              # 手で書く：起動・前提づくり・操作・検証のヘルパー
@@ -104,9 +105,8 @@ spec では次の言葉を使う。generator はこの表で `state.json` の値
 | spec の言葉 | アプリの状態 |
 | --- | --- |
 | 何も出ていない状態 | `phase` が `hidden` |
-| 枠を描く状態 | `phase` が `drawing` |
+| 枠を描く状態（ボタン類が出ている状態） | `phase` が `drawing`。ボタン類が出ていて、画面全体を覆う面がマウスを受けている（下のアプリは操作できない） |
 | コメントを書いている状態 | `phase` が `commenting`（書きかけの注釈がある） |
-| ボタン類だけが出ている状態 | `phase` が `idle` で、ボタン類が出ている |
 | 一覧を開いている状態 | `phase` が `listOpen` |
 | コピーを終えた状態 | `phase` が `copied`、またはコピー完了の表示が消えたあとの `hidden`。どちらでも、注釈は 0 件でボタン類は出ていない |
 | ボタン類が出ている / 出ていない | `isToolbarVisible` |
@@ -116,8 +116,8 @@ spec では次の言葉を使う。generator はこの表で `state.json` の値
 | 直前にコピーした件数 | `lastCopiedCount` |
 | 直前の失敗（枠の下にウィンドウがない、撮影・保存・コピーの失敗） | `lastFailure` |
 | 設定・セットアップ・終了の確認のウィンドウが出ている | `windows.settings` / `windows.setup`（ページは `windows.setupPage`）/ `windows.quitConfirm` |
-| ホットキーが効く（登録されている） | `hotkeys.draw` / `hotkeys.toolbar`。キーの記録欄が記録を待つ間は `hotkeys.suspended` が true |
-| 設定の〜（言語・ホットキー・ボタン類の表示を切り替えるキー・確定キー・定型文・画像を残す日数） | `settings` の各値。定型文は言語ごと |
+| ホットキーが効く（登録されている） | `hotkeys.draw`。キーの記録欄が記録を待つ間は `hotkeys.suspended` が true |
+| 設定の〜（言語・ホットキー・確定キー・定型文・画像を残す日数） | `settings` の各値。定型文は言語ごと |
 | セットアップ済み / セットアップは終わっていない | `settings.setupCompleted` |
 | akapen のプロセスが動いている / 終了している | テストから見たアプリのプロセスの状態（終了したあとは `state.json` が書き出されないため） |
 | この回のフォルダ | 画像の置き場の下の、いまの回のフォルダ（`storage.sessionDirectory`。名前は固定した時刻から決まる） |
@@ -135,16 +135,16 @@ spec では次の言葉を使う。generator はこの表で `state.json` の値
 | `AKAPEN_STATE_DIR=<dir>` | 設定（`settings.json`）・画像（`images/`）・`state.json` の置き場。テストごとに新しい一時ディレクトリ。実際の `~/Library/Caches/akapen` と UserDefaults には触らない。E2E では必須 |
 | `AKAPEN_PASTEBOARD=<name>` | 名前つきのクリップボードを使う。手元のコピー内容を壊さない。E2E では必須 |
 | `AKAPEN_CAPTURE=fixture \| live` | 撮影の実装。`make e2e` は `fixture`（偽物）、`make e2e-live` は `live` |
-| `AKAPEN_SEED=<json>` | 起動時の前提。設定の一部（セットアップ済みか、言語・ホットキー・ボタン類の表示を切り替えるキー・確定キー・定型文・日数）、画面収録の許可の有無、偽の撮影が返すウィンドウ、確定済みの注釈、ボタン類・一覧を出しておくか。JSON をそのまま入れる |
+| `AKAPEN_SEED=<json>` | 起動時の前提。設定の一部（セットアップ済みか、言語・ホットキー・確定キー・定型文・日数）、画面収録の許可の有無、偽の撮影が返すウィンドウ、確定済みの注釈、ボタン類・一覧を出しておくか。JSON をそのまま入れる |
 | `AKAPEN_NOW=<ISO8601>` | 時計を固定する。回のフォルダ名と、古いフォルダの掃除の判定に効く |
 
 - E2E で必須の変数がない・値が読めない・`AKAPEN_SEED` が読めない（知らないキーを含む）ときは、akapen は起動エラーで終わり、理由を `AKAPEN_STATE_DIR/startup-error.txt` に書く。`launch(...)` はそれを読んでテストを落とす。
 - akapen は、前提づくり（seed の設定 → 古い回の掃除 → seed の注釈 → ボタン類・一覧）と画面の組み立てを終えてから `state.json` の書き出しを始める。`launch(...)` は `state.json` ができるまで待つ。
-- `AKAPEN_SEED` と `state.json` の形は `docs/FOUNDATION.md`（「AKAPEN_SEED」「state.json v2」）。テストからは `Support/` の型（`LaunchSettings`・`SeedAnnotation`・`AppState`）で扱い、JSON を直接書かない。
+- `AKAPEN_SEED` と `state.json` の形は `docs/FOUNDATION.md`（「AKAPEN_SEED」「state.json v3」）。テストからは `Support/` の型（`LaunchSettings`・`SeedAnnotation`・`AppState`）で扱い、JSON を直接書かない。
 
 - **注釈が既にある状態は `AKAPEN_SEED` で入れる**（`launch(annotations:)`）。枠を描いてコメントを確定する操作で作らない（それが本題のシナリオを除く）。注釈の画像は、起動時に偽の撮影から本来と同じ経路で作られる。
-- **ボタン類だけが出ている（注釈 0 件でも）・一覧を開いている状態も起動時に作る**（`launch(open: .toolbar / .list)`）。
-- 「枠を描く状態」「コメントの入力欄が出ている状態」は起動時には作れない。ホットキーと枠のドラッグで作る（`startDrawing()`・`startCommenting(around:)`）。
+- **ボタン類が出ている（枠を描く状態。注釈 0 件でも）・一覧を開いている状態も起動時に作る**（`launch(open: .toolbar / .list)`）。`open` を省くと、注釈があっても何も出ていない状態で起動する（注釈は残っている）。
+- 「コメントの入力欄が出ている状態」は起動時には作れない。枠のドラッグで作る（`startCommenting(around:)`。何も出ていなければホットキーから）。
 - **時刻は `AKAPEN_NOW` で固定する。** テストの中で現在時刻を読まない。古い回は、固定した時刻から逆算した名前のフォルダを、起動前に置き場へ置いておく。
 - **撮影は偽物（`fixture`）。** 偽の撮影（`FixtureCapturer`）は、決まったウィンドウの位置と決まった画像（明るい地と格子。赤い画素なし）を返す。ウィンドウは SampleTarget のウィンドウ（`SAMPLE_FRAME`）と同じ位置・大きさ（`launch(...)` が SampleTarget の実際のウィンドウの位置を seed に入れる）。画面収録の許可を `denied` にすると、偽の撮影も失敗する。実際の画面が正しく写るかは `Live/` で見る。
 - 前提の組み立ては `tests/Support/` が持つ（どんな前提を指定できるかは、Support を読む）。`AKAPEN_SEED` の JSON の形は `Support` と `AkapenApp/LaunchSeed.swift` が決めるもので、spec には書かない。
@@ -155,13 +155,13 @@ spec では次の言葉を使う。generator はこの表で `state.json` の値
 | ファイル | ヘルパー |
 | --- | --- |
 | `AkapenUITestCase.swift` | 親クラス。`app`（akapen）・`sample`（SampleTarget）・`stateDirectory`・`imagesDirectory`・`pasteboardName`、`sampleFrame`（`140,64,1000,660`）・`sampleAppName`・`fixedNow`。`element(_:)`・`sampleElement(_:)`（識別子で引く）、`waitForElement(_:)`・`waitForElementToDisappear(_:)`・`isShown(_:)`、`poll(timeout:_:)` |
-| `Launch.swift` | `launch(_ state: LaunchState, settings: LaunchSettings, annotations: [SeedAnnotation], open: OpenView?, screenRecording: ScreenRecording)`、`relaunch()`、`terminateApp()`、`placeOldSession(daysBeforeNow:imageCount:)`、`sessionFolderName(daysBeforeNow:)`、`bringSampleToFront()`。型は `LaunchState`（`.setupDone` / `.firstRun`）、`LaunchSettings`、`SeedAnnotation`（`samples(_:)`・`sampleComments`）、`OpenView`（`.toolbar` / `.list`）、`ScreenRecording`、`AppLanguage`、`ConfirmKeySetting`、`Shortcut`（`commandSemicolon`、`init(key:modifiers:)`） |
-| `Gestures.swift` | ホットキー: `pressHotkey(_:)`・`startDrawing(with:)`。枠: `drawFrame(around:outset:)`・`drawFrame(_:)`・`dragBarely(on:distance:)`。コメント: `startCommenting(around:)`・`typeComment(_:)`・`newLineInComment(_:)`・`confirmComment(_:)`・`pressReturnInComment(modifiers:)`・`writeComment(_:confirmKey:)`・`commentText()`・`pressEscape()`・`annotate(around:comment:confirmKey:)`。ボタン類: `tapAdd()`・`tapList()`・`tapCopyPrompt()`。一覧: `openList()`・`listComment(_:)`・`listRowCount()`・`listThumbnailPath(_:)`・`listRetentionDays()`・`editAnnotation(_:to:confirmKey:)`・`deleteAnnotation(_:)`。メニューバー: `openMenuBarMenu()`・`menuBarStatusText()`・`openSettingsFromMenuBar()`・`chooseQuitFromMenuBar()`・`pressCommandQ()`。終了の確認: `answerQuitConfirm(quit:)`・`quitConfirmMessage()`。記録欄: `recordShortcut(_:in:)`・`clearShortcut(in:)`・`recorderText(_:)`。設定: `closeSettings()`・`chooseLanguage(_:)`・`chooseConfirmKey(_:)`・`enterRetentionDays(_:)`・`replaceBoilerplate(with:)`。セットアップ: `continueSetup()`・`finishSetup()`・`closeSetup()`。SampleTarget: `clickSampleSubmit()`・`sampleSubmitCount()`・`typeInSample(_:into:)`・`sampleText(_:)` |
+| `Launch.swift` | `launch(_ state: LaunchState, settings: LaunchSettings, annotations: [SeedAnnotation], open: OpenView?, screenRecording: ScreenRecording)`、`relaunch()`、`terminateApp()`、`placeOldSession(daysBeforeNow:imageCount:)`、`sessionFolderName(daysBeforeNow:)`、`bringSampleToFront()`。型は `LaunchState`（`.setupDone` / `.firstRun`）、`LaunchSettings`、`SeedAnnotation`（`samples(_:)`・`sampleComments`）、`OpenView`（`.toolbar`: ボタン類が出ている / `.list`: 一覧を開いている）、`ScreenRecording`、`AppLanguage`、`ConfirmKeySetting`、`Shortcut`（`commandSemicolon`、`init(key:modifiers:)`） |
+| `Gestures.swift` | ホットキー: `pressHotkey(_:)`・`startDrawing(with:)`。枠: `drawFrame(around:outset:)`・`drawFrame(_:)`・`dragBarely(on:distance:)`。コメント: `startCommenting(around:)`・`typeComment(_:)`・`newLineInComment(_:)`・`confirmComment(_:)`・`pressReturnInComment(modifiers:)`・`writeComment(_:confirmKey:)`・`commentText()`・`pressEscape()`・`annotate(around:comment:confirmKey:)`。ボタン類: `tapList()`・`tapCopyPrompt()`・`pressToolbarShortcut(.copyPrompt / .list)`（`⌘C` / `⌘L`）。一覧: `openList()`・`listComment(_:)`・`listRowCount()`・`listThumbnailPath(_:)`・`listRetentionDays()`・`editAnnotation(_:to:confirmKey:)`・`deleteAnnotation(_:)`。メニューバー: `openMenuBarMenu()`・`menuBarStatusText()`・`openSettingsFromMenuBar()`・`chooseQuitFromMenuBar()`・`pressCommandQ()`。終了の確認: `answerQuitConfirm(quit:)`・`quitConfirmMessage()`。記録欄: `recordShortcut(_:in:)`・`recorderText(_:)`。設定: `closeSettings()`・`chooseLanguage(_:)`・`chooseConfirmKey(_:)`・`enterRetentionDays(_:)`・`replaceBoilerplate(with:)`。セットアップ: `continueSetup()`・`finishSetup()`・`closeSetup()`。SampleTarget: `clickSampleSubmit()`・`sampleSubmitCount()`・`typeInSample(_:into:)`・`sampleText(_:)` |
 | `Verify.swift` | アプリの状態: `appState()`（`AppState`）・`waitForState(_:timeout:_:)`・`waitForPhase(_:)`・`waitForCopyFinished()`・`assertStateStays(_:for:_:)`・`isAppRunning`・`waitForAppToQuit()`。クリップボード: `copiedPrompt()`（`CopiedPrompt`: `boilerplate`・`entries`・`text`、`expectedText(boilerplate:entries:)`）・`pasteboardText()`・`putOnPasteboard(_:)`、`DefaultBoilerplate.english` / `.japanese`。画像: `savedImage(at:)`（`SavedImage`: 画素の大きさ・縦横の比・赤い画素の外接矩形）・`assertImage(at:showsFrame:window:tolerance:)`・`assertRect(_:matches:tolerance:)`・`imageFiles()`・`imageFilesInCurrentSession()`・`sessionFolders()`・`fileExists(_:)`・`fileContents(_:)`。表示の言語: `displayedText(_:)`・`containsJapanese(_:)` |
 
 ### 撮影対象のアプリ（SampleTarget）
 
-Paper の「Sample App」（`.director/design/sample-app.md`）に近い構成の小さなアプリ。E2E では、枠を描く相手と、「確定したあと下のアプリを操作できる」を確かめる相手を兼ねる。
+Paper の「Sample App」（`.director/design/sample-app.md`）に近い構成の小さなアプリ。E2E では、枠を描く相手と、「ボタン類を隠したあと下のアプリを操作できる」「ボタン類が出ているあいだは下のアプリに届かない」を確かめる相手を兼ねる。
 
 - 構成: タイトルバー、左にサイドバー（項目 4 つ）、右にフォーム（見出し、入力欄 3 つ、区切り線、`Cancel` / `Submit`）。`Submit` を押した回数をボタンの行の左端に出す（絵にはないが E2E で使う）。`Cancel` は 3 つの入力欄を空にする。
 - 識別子: `AXID.Sample.*`。`button`（`Submit`）と `count`（押した回数。値は回数の数字だけ）は `AXID.swift`、それ以外（`window`、`sidebar`、`sidebarItem(_:)`、`form`、`heading`、`firstField`、`secondField`、`thirdField`、`cancel`）は `SampleAXID.swift`。
@@ -204,6 +204,7 @@ Paper の「Sample App」（`.director/design/sample-app.md`）に近い構成�
 - **実行中は、この Mac のマウスとキーボードがテストに取られる。** 走らせている間は触らない。
 - **走らせる前に、画面にシステムのダイアログ（「〜が予期しない理由で終了しました」など）が残っていないことを確かめる。** 設定とセットアップのウィンドウは主画面の中央に出るので、ダイアログが重なると XCTest のクリックがダイアログに当たり、テストが「状態が変わらない」で落ちる（ログに `Found 1 interrupting element` と出る）。
 - **ホットキーは、akapen を送り先にして押す**（`pressHotkey(_:)`）。XCTest の `typeKey` は送り先のアプリがキーを受け取るまで待ち、受け取らなければ約 10 秒待つ。グローバルなホットキーは OS が横取りして akapen に届けるので、SampleTarget を送り先にすると毎回 10 秒待たされる。`pressHotkey(_:)` は、akapen がそのキーをホットキーとして登録しているとき（アプリの状態の `hotkeys`）は akapen を、登録していないときは SampleTarget を送り先にする。akapen を送り先にすると XCTest が akapen を前面にするが、ホットキーの働きは変わらない。
+- **入力ソースの表示は出さない。** 入力欄にフォーカスが移ると、macOS はキャレットの横に入力ソースの表示（`InputSource` の小さな窓）を出すことがある。この窓はアプリのプロセスの窓なので、XCTest が割り込みのダイアログとみなして閉じるボタンを探し、テストが落ちる（`No matches found for Descendants matching type Button from input {( Dialog )}`）。`AkapenUITestCase` は、akapen と SampleTarget を起動引数 `-TSMLanguageIndicatorEnabled NO` つきで起動して、そのプロセスでだけ出さないようにしている（手元の設定には触らない）。
 - `waitForElement(_:)` は、要素が既に出ていれば待たずに返す（`waitForExistence` は、出ていても 1 回目の確認まで約 1 秒待つ）。
 - メニューバーから設定を開いた直後は、まれに XCTest のキー（`Enter`）が akapen に届かない（`typeKey` が約 5 秒待ってあきらめる。2 回目は届く）。`enterRetentionDays(_:)` は、その待ちに当たったときだけ `Enter` を送り直す。ほかの入力で同じ落ち方（キーを送る所で約 5 秒止まり、状態が変わらない）をしたら、アプリの不具合と決める前にこれを疑う。
 - **`make e2e` / `make e2e-live` は排他ロックを取る。** ほかの担当（人・エージェント）が走らせている間は `Waiting for E2E lock...` のまま待たされる。待たされても異常ではない。E2E を `make` を通さずに（`xcodebuild` を直接）走らせない。ロックが効かなくなり、2 つのテストが同じマウスを取り合って両方壊れる。
@@ -267,9 +268,10 @@ node e2e/check-specs.mjs --hash <md>     # その md の SHA-256（生成ファ�
 
 | spec | シナリオ |
 | --- | --- |
-| `draw/start.md` | 3 |
+| `draw/start.md` | 2 |
 | `draw/capture.md` | 2 |
 | `draw/cancel.md` | 3 |
+| `draw/toggle.md` | 4 |
 | `comment/confirm.md` | 5 |
 | `comment/cancel.md` | 2 |
 | `comment/confirm-key.md` | 3 |
@@ -281,9 +283,9 @@ node e2e/check-specs.mjs --hash <md>     # その md の SHA-256（生成ファ�
 | `menu-bar/quit.md` | 3 |
 | `settings/language.md` | 2 |
 | `settings/hotkey.md` | 2 |
-| `settings/toolbar-shortcut.md` | 3 |
 | `settings/boilerplate.md` | 2 |
 | `settings/retention.md` | 3 |
 | `setup/first-run.md` | 7 |
+| `toolbar/shortcuts.md` | 4 |
 
-2026-11-18 時点で 18 本・54 件。すべての spec に生成テスト（`tests/Generated/`）があり、`make e2e`（`Seed` を含めて 55 件）が通る。組み立ての確認に使っていた `tests/Spike/`（`SmokeTests`）は、生成テストで置き換えたので消した。
+2026-11-18 時点（ux-revise のあと）で 19 本・58 件。すべての spec に生成テスト（`tests/Generated/`）があり、`make e2e`（`Seed` を含めて 59 件）が通る。組み立ての確認に使っていた `tests/Spike/`（`SmokeTests`）は、生成テストで置き換えたので消した。

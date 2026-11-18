@@ -24,6 +24,8 @@ import AkapenCore
 
     /// いまのページ。
     private(set) var page: Page = .hotkey
+    /// 直前のページの切り替えが、先へ進む向きだったか（ページの出る動きの向きに使う）。
+    private(set) var movedForward = true
     /// 画面収録の許可が取れているか。
     private(set) var isGranted = false
     /// 表示の言語。
@@ -116,6 +118,7 @@ import AkapenCore
         guard self.page != page else {
             return
         }
+        movedForward = page.rawValue > self.page.rawValue
         self.page = page
         onPageChange?(page)
     }

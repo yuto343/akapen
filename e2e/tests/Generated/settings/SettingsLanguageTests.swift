@@ -1,5 +1,5 @@
 // spec: e2e/specs/settings/language.md
-// spec-sha256: 3bf62f036094b3123810231a5f83ea1abeda680344242da72a5dc6a86e444c2e
+// spec-sha256: 1a1727a74310fc657a025819d782a904979dee505d80d20fbe8cc569c7eb3074
 // このファイルは生成物。直接編集しない。md を直して e2e-generator で作り直す。
 
 import XCTest
@@ -8,12 +8,11 @@ import AkapenAXID
 final class SettingsLanguageTests: AkapenUITestCase {
     // scenario: 日本語に切り替えると、表示とプロンプトの定型文が日本語になる
     func testSwitchToJapanese() throws {
-        // 前提: セットアップ済み、言語は英語（既定）。定型文はどの言語も書き換えていない。確定済みの注釈が 1 件あり、ボタン類だけが出ている。
+        // 前提: セットアップ済み、言語は英語（既定）。定型文はどの言語も書き換えていない。確定済みの注釈が 1 件あり、akapen は何も出していない。
         launch(.setupDone, annotations: SeedAnnotation.samples(1))
-        let start = waitForPhase(.idle)
+        let start = waitForPhase(.hidden)
         XCTAssertEqual(start.settings.language, .en)
         let annotation = try XCTUnwrap(start.annotations.first)
-        XCTAssertFalse(containsJapanese(displayedText(AXID.Toolbar.copyPrompt)))
 
         // 操作: 設定で日本語に切り替える。
         openSettingsFromMenuBar()
@@ -30,17 +29,23 @@ final class SettingsLanguageTests: AkapenUITestCase {
             poll(timeout: 5) { self.containsJapanese(self.displayedText(AXID.Settings.language)) },
             "設定の表示が日本語にならない: \(displayedText(AXID.Settings.language))"
         )
-        XCTAssertTrue(
-            poll(timeout: 5) { self.containsJapanese(self.displayedText(AXID.Toolbar.copyPrompt)) },
-            "ボタン類の表示が日本語にならない: \(displayedText(AXID.Toolbar.copyPrompt))"
-        )
 
         // してはいけないこと: 注釈のコメントまで訳されたり、書き換わったりする。
         XCTAssertEqual(switched.comments, start.comments)
         closeSettings()
 
-        // 操作: プロンプトをコピーする。
+        // 操作: ホットキーでボタン類を出す。
         bringSampleToFront()
+        pressHotkey()
+        waitForPhase(.drawing)
+
+        // 期待される結果: 設定やボタン類の表示が日本語に変わる。（ボタン類）
+        XCTAssertTrue(
+            poll(timeout: 5) { self.containsJapanese(self.displayedText(AXID.Toolbar.copyPrompt)) },
+            "ボタン類の表示が日本語にならない: \(displayedText(AXID.Toolbar.copyPrompt))"
+        )
+
+        // 操作: プロンプトをコピーする。
         tapCopyPrompt()
         waitForCopyFinished()
 
@@ -57,12 +62,11 @@ final class SettingsLanguageTests: AkapenUITestCase {
 
     // scenario: 英語に戻すと、英語の既定の定型文に戻る
     func testSwitchBackToEnglish() throws {
-        // 前提: セットアップ済み、言語は日本語。定型文はどの言語も書き換えていない。確定済みの注釈が 1 件あり、ボタン類だけが出ている。
+        // 前提: セットアップ済み、言語は日本語。定型文はどの言語も書き換えていない。確定済みの注釈が 1 件あり、akapen は何も出していない。
         launch(.setupDone, settings: LaunchSettings(language: .ja), annotations: SeedAnnotation.samples(1))
-        let start = waitForPhase(.idle)
+        let start = waitForPhase(.hidden)
         XCTAssertEqual(start.settings.language, .ja)
         let annotation = try XCTUnwrap(start.annotations.first)
-        XCTAssertTrue(containsJapanese(displayedText(AXID.Toolbar.copyPrompt)))
 
         // 操作: 設定で英語に戻す。
         openSettingsFromMenuBar()
@@ -78,14 +82,20 @@ final class SettingsLanguageTests: AkapenUITestCase {
             poll(timeout: 5) { !self.containsJapanese(self.displayedText(AXID.Settings.language)) },
             "設定の表示が英語にならない: \(displayedText(AXID.Settings.language))"
         )
+        closeSettings()
+
+        // 操作: ホットキーでボタン類を出す。
+        bringSampleToFront()
+        pressHotkey()
+        waitForPhase(.drawing)
+
+        // 期待される結果: 設定やボタン類の表示が英語に変わる。（ボタン類）
         XCTAssertTrue(
             poll(timeout: 5) { !self.containsJapanese(self.displayedText(AXID.Toolbar.copyPrompt)) },
             "ボタン類の表示が英語にならない: \(displayedText(AXID.Toolbar.copyPrompt))"
         )
-        closeSettings()
 
         // 操作: プロンプトをコピーする。
-        bringSampleToFront()
         tapCopyPrompt()
         waitForCopyFinished()
 

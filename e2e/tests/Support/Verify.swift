@@ -8,18 +8,16 @@ import XCTest
 // - 保存された画像: `savedImage(at:)`（有無・画素の大きさ・赤い画素の外接矩形）、`imageFiles()`、`assertImage(at:showsFrame:)`
 // - アプリの状態: `appState()`（`state.json` を型のある値で）、`waitForPhase(_:)`、`waitForState(_:_:)`、`waitForAppToQuit()`
 
-/// akapen が書き出す `state.json`（v2）。形は `docs/FOUNDATION.md`「state.json v2」。
+/// akapen が書き出す `state.json`（v3）。形は `docs/FOUNDATION.md`「state.json v3」。
 struct AppState: Decodable {
     /// 状態。spec の言葉との対応は e2e/README.md「spec の言葉とアプリの状態」。
     enum Phase: String, Decodable {
         /// 何も出ていない状態。
         case hidden
-        /// 枠を描く状態。
+        /// 枠を描く状態（ボタン類が出ていて、画面全体を覆う面がマウスを受けている）。
         case drawing
         /// コメントを書いている状態。
         case commenting
-        /// ボタン類だけが出ている状態（`isToolbarVisible` が true のとき）。
-        case idle
         /// 一覧を開いている状態。
         case listOpen
         /// コピーを終えた状態（コピー完了の表示が出ている）。
@@ -59,8 +57,6 @@ struct AppState: Decodable {
     struct Settings: Decodable {
         var language: AppLanguage
         var hotkey: Shortcut
-        /// ボタン類の表示を切り替えるキー。未割り当てなら nil。
-        var toolbarShortcut: Shortcut?
         var confirmKey: ConfirmKeySetting
         /// 言語ごとの定型文（書き換えていない言語は既定文）。キーは `en` / `ja`。
         var boilerplates: [String: String]
@@ -101,10 +97,9 @@ struct AppState: Decodable {
     /// 実際に登録しているグローバルなホットキー。
     struct Hotkeys: Decodable {
         var draw: Shortcut?
-        var toolbar: Shortcut?
         /// キーの記録欄が記録を待っているあいだは true（登録を外している）。
         var suspended: Bool
-        /// 直前の登録に失敗した役（`draw` / `toolbar`）。
+        /// 直前の登録に失敗した役（`draw`）。
         var failed: [String]
     }
 
@@ -147,11 +142,11 @@ struct AppState: Decodable {
         let json = """
             {"schemaVersion": 0, "phase": "hidden", "isToolbarVisible": false, "annotations": [], "draft": null,
              "lastDrawnRect": null, "lastCopiedCount": 0, "lastFailure": null,
-             "settings": {"language": "en", "hotkey": {"keyCode": 41, "modifiers": 1}, "toolbarShortcut": null,
+             "settings": {"language": "en", "hotkey": {"keyCode": 41, "modifiers": 1},
                           "confirmKey": "enter", "boilerplates": {}, "imageRetentionDays": 0, "setupCompleted": false},
              "storage": {"imagesDirectory": "", "sessionID": null, "sessionDirectory": null},
              "windows": {"settings": false, "setup": false, "setupPage": null, "quitConfirm": false},
-             "hotkeys": {"draw": null, "toolbar": null, "suspended": false, "failed": []}}
+             "hotkeys": {"draw": null, "suspended": false, "failed": []}}
             """
         // 決まった文なので必ず読める。
         return try! JSONDecoder().decode(AppState.self, from: Data(json.utf8))

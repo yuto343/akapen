@@ -21,7 +21,7 @@ akapen/
 ├── project.yml                     # XcodeGen の定義（.xcodeproj は生成物。コミットしない）
 ├── Makefile                        # gen / build / run / test / e2e / e2e-live / e2e-lint / clean
 ├── scripts/                        # e2e.py（E2E の実行と排他ロック）、xcode.sh（xcodebuild の呼び出し）
-├── docs/FOUNDATION.md              # 公開 API、state.json v2、AKAPEN_SEED の形
+├── docs/FOUNDATION.md              # 公開 API、state.json v3、AKAPEN_SEED の形
 ├── assets/                         # 元素材（ロゴ・アイコン・LP 用の動画）。既存
 │
 ├── App/                            # アプリのターゲット（エントリだけ。ロジックを置かない）
@@ -53,7 +53,8 @@ akapen/
 │   │   ├── copy-prompt/            # プロンプトをコピーする（App 04）
 │   │   ├── menu-bar/               # メニューバーと終了確認（App 05・09）
 │   │   ├── settings/               # 設定ページ（App 06）
-│   │   └── setup/                  # 初回のセットアップ（App 07・08）
+│   │   ├── setup/                  # 初回のセットアップ（App 07・08）
+│   │   └── toolbar/                # ボタン類が出ているあいだのショートカット（⌘C / ⌘L）
 │   ├── tests/                      # UI テストのターゲット（XCTest / XCUITest）
 │   │   ├── Seed.swift              # 手で書く：generator / healer の起点
 │   │   ├── Support/                # 手で書く：起動・前提づくり・検証のヘルパー
@@ -103,11 +104,11 @@ e2e/tests ──▶ AkapenAXID（だけ）
 | `LaunchConfiguration.swift` | 起動引数・環境変数を読んで値にする。純粋な関数（`[String: String]` → 設定値）。E2E で足りない・読めない値を `problems` に集める |
 | `LaunchSeed.swift` | `AKAPEN_SEED`（E2E の起動時の前提の JSON）を読む。純粋な関数 |
 | `AppEnvironment.swift` | `LaunchConfiguration` から使う実装を選び（`choose`。OS に触らない）、依存一式（`SessionModel` と各プロトコルの実装、ホットキー）を組み立てる（`make`）。起動時の処理（seed の設定、古い回の掃除、seed の注釈）もここ。`state.json` を書き出す |
-| `HotkeyCoordinator.swift` | グローバルなホットキー 2 つの登録を設定に合わせ続ける。記録欄が記録を待つ間は外す。記録欄に渡す「使えるか」の判定 |
+| `HotkeyCoordinator.swift` | グローバルなホットキー（ボタン類の表示のトグル）の登録を設定に合わせ続ける。記録欄が記録を待つ間は外す。記録欄に渡す「使えるか」の判定。ボタン類が出ているあいだの `⌘C` / `⌘L` はグローバルには登録しない |
 | `AppController.swift` | 画面（メニューバー・メインメニュー・浮く部品・設定・セットアップ・終了の確認）を依存一式につなぐ。状態の遷移は判断しない |
 | `QuitPolicy.swift` | 終了の確認を出すか（確定済みの注釈か書きかけの注釈があるか）と、確認に出す件数 |
 | `PermissionCheckedCapturer.swift` | 許可がなければ撮影を断る包み。E2E の偽の撮影を、本物と同じく許可に従わせる |
-| `SessionSnapshot.swift` | `state.json`（v2）の中身 |
+| `SessionSnapshot.swift` | `state.json`（v3）の中身 |
 | `AppDelegate.swift` | `AppEnvironment` と `AppController` を作る。終了の要求（メニュー・`⌘Q`・システム）を `applicationShouldTerminate` で受ける |
 
 `AppEnvironment.make(_:)` は、アプリの起動・E2E・結合テストのどれからも同じものを呼ぶ。結合テストが通した組み立てが、そのまま実物のアプリの組み立てになる。
@@ -118,7 +119,10 @@ e2e/tests ──▶ AkapenAXID（だけ）
 
 - 終了の要求は、確定済みの注釈か書きかけの注釈があれば終了の確認を出し（件数は確定済み + 書きかけ 1）、なければそのまま終了する（`DECISIONS.md` A4）。メニュー・`⌘Q`（メインメニュー）・システムの終了の要求のどれも `applicationShouldTerminate` を通る。
 - 設定とセットアップのキーの記録欄が記録を待つ間は、ホットキーの登録を外す。設定が変わるたびに、変わった役だけ登録し直す。
-- 画面収録の許可がないために撮影できなかったら、セットアップの 2 ページ目を開き、`Esc` と同じ入力を送って枠を描く状態から抜ける（枠を描く面がセットアップのウィンドウを覆わないように）。
+- 画面収録の許可がないために撮影できなかったら、セットアップの 2 ページ目を開き、浮く部品を下げる入力（`dismissRequested`）を送る（画面全体を覆う面がセットアップのウィンドウを覆わないように）。
+- メニューバー・`⌘,` から設定を開くときも、先に `dismissRequested` を送る。ボタン類が出ているあいだは面が画面全体を覆うので、そのままでは設定のウィンドウを操作できない。
+- 起動時に `BackgroundCursor.enable()`（`AkapenPlatform`）を呼び、アクティブでないままカーソルを変えられるようにする（下の「確かめた結果」12）。
+- 終了の確認を取りやめたら、キー入力を、いまの状態で受け取るべきパネル（覆う面・コメント欄・一覧）に戻す（`SessionWindows.restoreFocus()`）。
 - セットアップを終えたら、ログイン時の起動を有効にする（失敗しても続ける。E2E では何もしない実装）。
 - 状態が変わるたびに、浮く部品・開いている設定とセットアップ・メインメニューの文言を映し直す（言語の切り替えがすぐに効く）。メニューバーのメニューは開くたびに読み直す。
 - 終了する直前に、ホットキーの登録を外す。
@@ -133,7 +137,7 @@ e2e/tests ──▶ AkapenAXID（だけ）
 | `Capture/FrameRenderer.swift` | 画像に赤枠を描き込み、長辺の上限に合わせて縮小する（CoreGraphics） |
 | `Prompt/PromptBuilder.swift` | 定型文 +「パス → コメント」の文章を組み立てる |
 | `Prompt/Boilerplate.swift` | 言語ごとの定型文の既定値 |
-| `Settings/Settings.swift` | 設定の型（言語・ホットキー・確定キー・定型文・保存日数） |
+| `Settings/Settings.swift` | 設定の型（言語・ホットキー・確定キー・定型文・保存日数）。古い版が保存した `toolbarShortcut` のような知らないキーは無視して読む |
 | `Storage/CacheLayout.swift` | 回ごとのフォルダ名とファイル名の決め方、古いフォルダの選び出し |
 | `Input/ConfirmKeyPolicy.swift` | 押されたキー・修飾キー・変換中かどうかから「確定 / 改行 / 何もしない」を決める |
 | `Ports/*.swift` | OS に触る部分のプロトコル（下の表） |
@@ -153,13 +157,15 @@ e2e/tests ──▶ AkapenAXID（だけ）
 
 外部ライブラリは入れない。ホットキーの登録は Carbon の薄い包みで足り、記録用の入力欄は Paper のデザインに合わせて自前で作る。
 
+プロトコルの裏に置かないもの: `BackgroundCursor`（`AkapenPlatform`）。アクティブでないアプリのカーソルの変更を効かせるため、起動時に 1 回だけ、ウィンドウサーバーへの接続に `SetsCursorInBackground` を立てる（公開されていない関数を名前で探して呼び、見つからなければ何もしない）。`AppController.start()` が呼ぶ。
+
 ### AkapenUI
 
 Paper の画面と 1 対 1 で対応させる。色・文字サイズ・角丸・余白は Paper の値を `Tokens.swift` に写し、画面のコードには数値や色を直接書かない。
 
 | ディレクトリ・ファイル | 中身 | Paper |
 | --- | --- | --- |
-| `Toolbar/` | 画面端のボタン類（「+」「一覧」「copy prompt」）。`ToolbarView` | App 01〜04 |
+| `Toolbar/` | 画面端のボタン類（「一覧」「copy prompt」。それぞれに `⌘L` / `⌘C` を小さく添え、ツールチップでも示す）。`ToolbarView` | App 01〜04 |
 | `Draw/` | 案内の表示、赤枠、大きさの表示。`DrawHintView`・`RedFrameView`・`SizeLabelView`・`OverlayView` | App 01 |
 | `Comment/` | 枠の横の入力欄。`CommentView`、複数行の入力欄 `GrowingTextController`（一覧と設定の定型文でも使う） | App 02 |
 | `List/` | 注釈の一覧。`ListView`、サムネイルの切り抜き | App 03 |
@@ -168,10 +174,10 @@ Paper の画面と 1 対 1 で対応させる。色・文字サイズ・角丸�
 | `QuitConfirm/` | 終了の確認。制御役 `QuitConfirmController`、確認の箱 `QuitConfirmView` | App 09 |
 | `Settings/` | 設定のウィンドウ。制御役 `SettingsController`、状態 `SettingsForm`、画面 `SettingsView` | App 06 |
 | `Setup/` | 初回のセットアップ。制御役 `SetupController`、状態 `SetupFlow`、画面 `SetupView` | App 07・08 |
-| `Common/` | 共通の部品。ボタンの見た目、アイコン、文字のスタイルと影、キーの記録欄（`KeyRecorderModel` と、キー入力を受け取る `KeyCaptureView`。設定とセットアップで共通）、キーの表示（`ShortcutText`。キーボードの配列に従う） | — |
+| `Common/` | 共通の部品。ボタンの見た目（`ControlButtonStyle`。ホバーの地の変化・押したときの縮み・指のカーソル）、ホバー中のカーソル（`hoverCursor(_:)`。`.activeAlways` の追跡領域で `NSCursor.set()` するので、アクティブでないパネルの上でも効く）、アイコン、文字のスタイルと影、キーの記録欄（`KeyRecorderModel` と、キー入力を受け取る `KeyCaptureView`。設定とセットアップで共通）、キーの表示（`ShortcutText`。キーボードの配列に従う） | — |
 | `Windows/` | AppKit のパネルと通常のウィンドウ（下の「ウィンドウ」）。`SessionWindows`、`ContentWindow`、置き場所の計算 `PanelPlacement`、座標の変換 `ScreenCoordinates` | — |
 | `Strings/` | 表示の文言の表（`EnglishStrings` / `JapaneseStrings`）と、引き方の `UIStrings`。言語はシステムではなく `Settings.language` で選ぶ。単数・複数は `PluralKey` で出し分ける | — |
-| `Tokens.swift` | デザイントークン | — |
+| `Tokens.swift` | デザイントークン。動きは `Tokens.Motion`（出るときのばね、出始めの大きさ 0.96、消えるときの 0.15 秒、ホバーの 0.12 秒、押したときの 0.97、ページ送りのずらし） | — |
 | `Resources/` | アプリのアイコン（タイル）とメニューバーのアイコン | — |
 
 文言は文字列カタログ（`Localizable.xcstrings`）ではなく、Swift の表に置く。カタログは `swift test` ではコンパイルされず、`swift test` と `xcodebuild` で結果が変わるため。
@@ -187,7 +193,7 @@ Paper の画面と 1 対 1 で対応させる。色・文字サイズ・角丸�
 | --- | --- | --- |
 | `MenuBarController` | `init(model:)` | `onOpenSettings`・`onQuitRequested`（コールバック。自分では設定を開かず、終了もしない）。件数と言語はメニューを開くたびに `model` から読み直す |
 | `QuitConfirmController` | `init(model:)`（言語だけを読む） | `show(annotationCount:)`、`hide()`、`isShown`、`onResult`（`.quit` / `.cancel`） |
-| `SettingsController` | `init(model:canUseHotkey:canUseToolbarShortcut:)` | `show()`、`close()`、`isShown`、`onRecordingChanged`、`onClosed`、`refresh()`（ほかの所で変わった設定を映す）。変更はその場で `model.send(.settingsChanged(_:))` |
+| `SettingsController` | `init(model:canUseHotkey:)` | `show()`、`close()`、`isShown`、`onRecordingChanged`、`onClosed`、`refresh()`（ほかの所で変わった設定を映す）。変更はその場で `model.send(.settingsChanged(_:))` |
 | `SetupController` | `init(model:permission:canUseHotkey:)` | `show()`、`showPermission()`（2 ページ目を開く）、`isShowingPermission`、`close()`、`isShown`、`refresh()`、`onCompleted`、`onDismissed`、`onRecordingChanged`。`Done` で `model.send(.setupCompleted)` |
 | `MainMenuController` | `init(language:)` | `install()`、`setLanguage(_:)`、`onOpenSettings`・`onQuitRequested` |
 
@@ -199,7 +205,7 @@ Paper の画面と 1 対 1 で対応させる。色・文字サイズ・角丸�
 
 ```swift
 public enum AXID {
-    public enum Toolbar { public static let add = "toolbar.add", list = "toolbar.list", copyPrompt = "toolbar.copyPrompt" }
+    public enum Toolbar { public static let list = "toolbar.list", copyPrompt = "toolbar.copyPrompt" }
     public enum Draw    { public static let surface = "draw.surface", hint = "draw.hint" }
     public enum Comment { public static let field = "comment.field" }
     public enum List    { public static func row(_ i: Int) -> String { "list.row.\(i)" } /* … */ }
@@ -211,38 +217,60 @@ generator はこの一覧にある識別子だけを使う。足りないとき�
 
 ## 状態
 
-`SessionModel` が 1 つの `phase` を持つ。
+`SessionModel` が 1 つの `phase` を持つ。`hidden / drawing / commenting / listOpen / copied` の 5 つ。
+
+- **ボタン類が出ている ⇔ `drawing`・`commenting`・`listOpen`。** 出ているあいだは、画面全体を覆う透明のパネルがマウスを受け、カーソルは十字（下のアプリは操作できない）。枠を描くのは `drawing` のときだけ。
+- 注釈は `hidden` に戻っても消えない。回は `copy prompt` で終わる（注釈が空になる）まで続く。
 
 ```
-        ホットキー                 ドラッグ終了（撮影）            確定
-hidden ───────────▶ drawing ───────────────────────▶ commenting ───────▶ idle
-                     ▲  │ Esc（注釈 0 件なら hidden、あれば idle）          │
-                     │  ▼                                                │
-                     └──────────────── 「+」/ ホットキー ─────────────────┤
-                                                                         │ 「一覧」
-                                       idle ◀──────────── listOpen ◀─────┤
-                                                                         │ 「copy prompt」
-                                     hidden ◀──（一定時間）── copied ◀────┘
+                  ホットキー（注釈があれば同じ回を続ける）
+        ┌───────────────────────────────────────────┐
+        │                                           ▼
+     hidden ◀── ホットキー / Esc ─────────────── drawing ◀─────── 確定 / 取り消し / Esc ────┐
+        ▲  ◀── ホットキー ── listOpen ◀─ 一覧 ─▶  │  ドラッグ終了（撮影）                     │
+        │                    （閉じる / Esc で drawing）└─────────────────────────────▶ commenting
+        │                                           │ copy prompt（drawing / listOpen から）
+        └──────────────（一定時間）───── copied ◀────┘
+                                          │ ホットキー: 新しい回で drawing
 ```
 
-- 入力は `send(_ event:)` の 1 本にまとめる（`hotkeyPressed` / `dragEnded(rect, screen)` / `commentConfirmed(text)` / `commentCancelled` / `escapePressed` / `addTapped` / `listToggled` / `annotationEdited` / `annotationDeleted` / `copyPromptTapped`）。
+遷移の表（書いていない組み合わせは何もしない）:
+
+| 状態 | ホットキー | `Esc` | ドラッグ終了 | 確定 / 取り消し | 一覧 | copy prompt | `dismissRequested` |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `hidden` | `drawing`（注釈が 1 件以上なら回の ID と画像の番号を引き継ぐ。0 件なら新しい回） | — | — | — | — | — | — |
+| `drawing` | `hidden`（注釈は残す） | `hidden`（注釈は残す） | 撮影して `commenting`（失敗・小さすぎる枠は `drawing` のまま） | — | `listOpen` | 注釈があれば `copied` | `hidden` |
+| `commenting` | 何もしない（書きかけを失わない） | 書きかけを捨てて `drawing` | — | 確定: `drawing`（空のコメントは何もしない）/ 取り消し: 書きかけを捨てて `drawing` | — | — | 書きかけを捨てて `hidden` |
+| `listOpen` | `hidden` | `drawing`（編集中なら編集の取りやめだけ。`DECISIONS.md` A1。`SessionWindows` の入力欄が受ける） | — | — | `drawing` | 注釈があれば `copied` | `hidden` |
+| `copied` | 新しい回で `drawing` | — | — | — | — | — | — |
+
+- 入力は `send(_ event:)` の 1 本にまとめる（`hotkeyPressed` / `dragEnded(rect, screen)` / `commentConfirmed(text)` / `commentCancelled` / `escapePressed` / `listToggled` / `annotationEdited` / `annotationDeleted` / `copyPromptTapped` / `copiedExpired` / `dismissRequested` / `settingsChanged` / `setupCompleted`）。`annotationEdited` と `annotationDeleted` は `listOpen` のときだけ効く。
+- `dismissRequested` は、設定やセットアップのウィンドウを開くときに組み立ての側が送る（画面全体を覆う面がウィンドウを隠さないように）。
 - 撮影・保存・クリップボードへの書き込みは、注入されたプロトコル越しに `SessionModel` が呼ぶ。だから一連の流れは `swift test` で、偽の実装を差して最後まで確かめられる。
-- `commenting` で入力を取り消したときは、撮った画像を捨てて `idle`（注釈 0 件なら `hidden`）に戻す。DESIGN.md に定めがないので仮の挙動。
+- `isToolbarVisible` は `phase` から決まる（`drawing`・`commenting`・`listOpen` で true）。
 
 ## ウィンドウ
 
-`phase` を見て出し入れするだけで、判断は持たない。
+`phase` を見て出し入れするだけで、判断は持たない（どのパネルを出すかは `PanelPlan`）。
 
 | ウィンドウ | 種類 | 出ている間 |
 | --- | --- | --- |
-| 枠を描く面 | 画面全体を覆う枠なしのパネル。マウスを受け取る | `drawing` のみ。それ以外は外すので、下のアプリを普段どおり操作できる |
-| ボタン類 | 手前に浮く、アクティブ化しないパネル | `hidden` 以外 |
+| 覆う面 | 画面全体を覆う枠なしのパネル。マウスを受け取り、カーソルを十字にする | ボタン類が出ているあいだ（`drawing`・`commenting`・`listOpen`）。枠を描くのは `drawing` だけで、キーになれるのも `drawing` だけ（`Esc`・`⌘C`・`⌘L` を受ける）。`commenting` では書きかけの赤枠を描く |
+| ボタン類 | 手前に浮く、アクティブ化しないパネル | `drawing`・`commenting`・`listOpen` |
 | コメント入力 | キー入力を受け取れる、アクティブ化しないパネル | `commenting` |
-| 一覧 | 手前に浮くパネル | `listOpen` |
+| 一覧 | 手前に浮く、キー入力を受け取れるパネル（`Esc`・`⌘C`・`⌘L` を受ける。編集中の `⌘C` は入力欄の文字のコピー） | `listOpen` |
+| コピー完了の表示 | マウスを受け取らないパネル | `copied` |
 | 設定 / セットアップ | 通常のウィンドウ（`ContentWindow`。タイトルバーは透明で、信号ボタンだけシステムが描く）。開くとアプリを前面に出してキー入力を受け取る（前面に出せなくても、ウィンドウは手前に出す） | 開いている間 |
-| 終了確認 | メニューバーより下の画面全体を暗くする、キー入力を受け取れるアクティブ化しないパネル（`.modalPanel`） | `QuitConfirmController.show` から答えが出るまで |
+| 終了確認 | メニューバーより下の画面全体を暗くする、キー入力を受け取れるアクティブ化しないパネル（`.modalPanel`。覆う面より手前） | `QuitConfirmController.show` から答えが出るまで |
 | メニュー | 標準の `NSStatusItem` と `NSMenu`（見出しだけカスタムビュー） | アイコンは常に。メニューは開いている間 |
 | メインメニュー | `NSApp.mainMenu`（LSUIElement なので画面には出ない）。`⌘Q`・`⌘,`・入力欄の編集のキーを効かせる | 常に |
+
+パネルの出し入れの決まり（前の中身が一瞬見えないように）:
+
+- 隠し終えたら（フェードの終わり）、中身を空に戻す。覆う面は赤枠も案内もない表示に、ほかのパネルは中身を見えない状態（`PanelPresentation.isPresented = false`）にする。
+- 出すときは、見えない状態のまま中身を描き終えてから前に出し、そのあとで出る動き（ばね）を始める。窓の不透明度は 1 のまま出し、動きは SwiftUI の中身が受け持つ。
+- 赤枠の出入りには動きを付けない（付けると前の枠が薄く残って見える）。動きを付けるのは上端の案内だけ。
+- `SessionWindows` の `fadeDuration` が 0 なら動きを付けない（テスト用）。システムの「視差効果を減らす」は SwiftUI の `accessibilityReduceMotion` で読み、拡大縮小とずらしをやめる。
 
 撮影は対象のウィンドウだけを指定して行うので、akapen 自身のパネルは写り込まない。
 
@@ -295,7 +323,7 @@ ashvally の「保存されたデータ」に当たるものは 3 つ。各シ�
 | 保存された画像 | `savedImage(at:)` — ファイルの有無、大きさ、赤枠の位置（赤い画素の外接矩形を、描いた枠と許容誤差つきで比べる） |
 | アプリが持っている状態 | `appState()` — `state.json` を型のある値（`AppState`）で返す。`phase`、注釈、書きかけの注釈、設定、いまの回のフォルダ、出ている画面、登録しているホットキー。変わるまで待つのは `waitForPhase(_:)` / `waitForState(_:_:)` |
 
-`appState()` は、テスト起動のときだけアプリが一時ディレクトリに書き出す `state.json`（v2。形は `docs/FOUNDATION.md`）を読む（状態が変わるたびに書き出す）。
+`appState()` は、テスト起動のときだけアプリが一時ディレクトリに書き出す `state.json`（v3。形は `docs/FOUNDATION.md`）を読む（状態が変わるたびに書き出す）。
 
 ### テスト用の切り口
 
@@ -317,12 +345,12 @@ E2E で必須の変数がない・値が読めない・seed が読めないと�
 ### 起点と前提づくり
 
 - `Support/AkapenUITestCase.swift` — すべてのテストの親。`setUp` で一時ディレクトリとテストごとのクリップボードの名前を用意し、`SampleTarget` を決まった位置と大きさ（等倍の `140,64,1000,660`）で起動する。**akapen は起動しない**（各テストが前提を選んで `launch(...)` で起動する）。`tearDown` で両方を終了し、一時ディレクトリを消し、クリップボードを手放す。失敗したときは画面の画像・要素ツリー・`state.json`・`AKAPEN_SEED`・クリップボード・画像の一覧を結果に添付する。要素は `element(_:)` / `sampleElement(_:)` で識別子から引く。
-- `Support/Launch.swift` — 前提の指定と起動。`launch(.setupDone)`、`launch(.firstRun)`、`launch(.setupDone, settings: LaunchSettings(…))`、`launch(.setupDone, annotations: SeedAnnotation.samples(2))`、`launch(.setupDone, open: .toolbar / .list)`、`launch(.setupDone, screenRecording: .denied)`、`relaunch()`（同じ置き場のまま起動し直す）、`placeOldSession(daysBeforeNow:)`（起動前に古い回を置く）。時刻は既定で固定する。注釈が既にある状態は UI を操作して作らず、`AKAPEN_SEED` で入れる。起動は `state.json` が書き出されるまで待つ。
-- `Support/Gestures.swift` — 識別子だけでは書きにくい操作。ホットキー（`pressHotkey`・`startDrawing`）、枠（`drawFrame(around:)`・`drawFrame(_:)`・`dragBarely(on:)`）、コメント（`startCommenting`・`typeComment`・`newLineInComment`・`confirmComment`・`writeComment`）、ボタン類・一覧・メニューバー・設定・セットアップ・終了の確認の操作、キーの記録欄（`recordShortcut`・`clearShortcut`）、ウィンドウを閉じる。
+- `Support/Launch.swift` — 前提の指定と起動。`launch(.setupDone)`、`launch(.firstRun)`、`launch(.setupDone, settings: LaunchSettings(…))`、`launch(.setupDone, annotations: SeedAnnotation.samples(2))`、`launch(.setupDone, open: .toolbar / .list)`（ボタン類が出ている状態・一覧を開いている状態。省くと注釈があっても何も出ていない状態）、`launch(.setupDone, screenRecording: .denied)`、`relaunch()`（同じ置き場のまま起動し直す）、`placeOldSession(daysBeforeNow:)`（起動前に古い回を置く）。時刻は既定で固定する。注釈が既にある状態は UI を操作して作らず、`AKAPEN_SEED` で入れる。起動は `state.json` が書き出されるまで待つ。
+- `Support/Gestures.swift` — 識別子だけでは書きにくい操作。ホットキー（`pressHotkey`・`startDrawing`）、枠（`drawFrame(around:)`・`drawFrame(_:)`・`dragBarely(on:)`）、コメント（`startCommenting`・`typeComment`・`newLineInComment`・`confirmComment`・`writeComment`）、ボタン類・一覧・メニューバー・設定・セットアップ・終了の確認の操作、ボタン類が出ているあいだのショートカット（`pressToolbarShortcut(.copyPrompt / .list)`）、キーの記録欄（`recordShortcut`）、ウィンドウを閉じる。
 - `Support/Verify.swift` — 検証点。`copiedPrompt()`・`putOnPasteboard(_:)`、`savedImage(at:)`・`imageFiles()`・`assertImage(at:showsFrame:)`、`appState()`・`waitForPhase(_:)`・`waitForState(_:_:)`・`assertStateStays(_:_:)`・`waitForAppToQuit()`。待ちは `state.json` を 0.1 秒おきに読み直す（`XCTNSPredicateExpectation` は使わない）。
 - `Seed.swift` — セットアップ済みで起動し、ホットキーを押してボタン類が出たところで終わるテスト。generator が書き方の見本として読み、`make e2e` では起動のスモークテストを兼ねる。
 
-`SampleTarget` は Paper の「Sample App」に合わせた小さなウィンドウ（入力欄 3 つと Cancel / Submit）。Submit を押した回数を表示するので、「確定したあと下のアプリを操作できる」を確かめられる。
+`SampleTarget` は Paper の「Sample App」に合わせた小さなウィンドウ（入力欄 3 つと Cancel / Submit）。Submit を押した回数を表示するので、「ボタン類を隠したあと下のアプリを操作できる」「ボタン類が出ているあいだは下のアプリに届かない」を確かめられる。
 
 ### エージェント
 
@@ -363,7 +391,7 @@ CI は当面置かない。置くときは `make test`・`make e2e-lint`・`make
 | --- | --- | --- |
 | 単体 | `AkapenCoreTests` | 状態の遷移、プロンプトの組み立て、ウィンドウの選び方、赤枠の描き込みと縮小、フォルダの掃除、確定キーの判定。依存はすべて偽物 |
 | 結合（実装 1 つずつ） | `AkapenPlatformTests` | 画像の保存と掃除（一時ディレクトリの実ファイル）、設定の読み書き（専用の UserDefaults）、クリップボード（名前つき）、偽の撮影の実装 |
-| 結合（画面と状態） | `AkapenUITests` | `phase` を変えたときにどのパネルが出て、どれが外れるか。入力欄でのキー入力が正しいイベントになるか。設定・セットアップ・終了確認・メニューの操作が、正しい `SessionEvent` とコールバックになるか。キーの記録欄。文言の表。見比べ用の PNG の書き出し（`build/ui-snapshots/`。画素の一致は確かめない） |
+| 結合（画面と状態） | `AkapenUITests` | `phase` を変えたときにどのパネルが出て、どれが外れるか。隠したパネルの中身が空に戻り、出し直した直後に前の中身が見えないか。`⌘C` / `⌘L` がどの状態で受け付けられるか。入力欄でのキー入力が正しいイベントになるか。設定・セットアップ・終了確認・メニューの操作が、正しい `SessionEvent` とコールバックになるか。キーの記録欄。文言の表。見比べ用の PNG の書き出し（`build/ui-snapshots/`。画素の一致は確かめない） |
 | 結合（一連の流れ） | `AkapenAppTests` | `AppEnvironment.make` で組んだ本物の依存に、イベントを順に送る。最後にクリップボードの文章と、ディスク上の画像と赤枠の位置を確かめる。環境変数ごとの依存の選び分けもここで見る |
 | E2E（生成） | XCUITest + 偽の撮影 | 実物のアプリで、操作が状態・画像・クリップボードまで正しくつながっているか |
 | E2E（手書き・手元だけ） | XCUITest + 実際の撮影 | ScreenCaptureKit で `SampleTarget` が写り、赤枠が正しい位置に入るか |
@@ -381,7 +409,7 @@ CI は当面置かない。置くときは `make test`・`make e2e-lint`・`make
 2026-11-18、macOS 26.2 / Xcode 26.2 / XcodeGen 2.47.0、2 画面の実機で検証。1〜6 は foundation の段階のスパイク（当時の `FoundationSpikeTests`）、7〜11 は組み立て（app-wiring）の段階（当時の `Spike/SmokeTests`）で確かめた。どちらのテストも、生成テスト（`Generated/`）に置き換えて消した。いまは `Seed` と `Generated/` が `make e2e` で走る。以下は検証したときの記録で、秒数や件数はその時点のもの。
 
 1. **Carbon ホットキー: 確認済み。** SampleTarget をアクティブにし、XCUITest の `typeKey(";", modifierFlags: .command)` を送ると `drawing` になった。E2E 専用の迂回入口は不要なので追加していない。`Seed` でも確認。
-2. **非アクティブパネルと LSUIElement: 確認済み。** Toolbar の 3 ボタンを AkapenAXID で取得できた。描画後に `toolbar.add` をクリックして `drawing` に戻ることも確認。
+2. **非アクティブパネルと LSUIElement: 確認済み。** Toolbar の 3 ボタンを AkapenAXID で取得できた。描画後に `toolbar.add` をクリックして `drawing` に戻ることも確認（当時。「+」はのちに ux-revise でなくした）。
 3. **座標ドラッグ: 確認済み。** SampleTarget のボタンの位置を基準に 180×110 pt を描き、state.json の x/y/width/height がそれぞれ 4 pt 以内で一致。描画面を外した後の下のボタンへのクリックで回数が 1 に増えた。Esc で hidden に戻った。最初の試行は下のアプリを宛先にドラッグし、XCTest の割り込み処理がアプリを再アクティブ化して失敗した。座標を描画面の要素へ変換して入力するよう修正。完全透明な面のヒットテストも避けるため、背景に 1% の alpha を設定した。
 4. **AXID のリンク: 確認済み。** UI テストはパッケージ製品のうち AkapenAXID だけをリンクし、`import AkapenAXID` でビルド・実行できた。
 5. **反復時間: 確認済み。** 当時の最終のテストコード 1 行編集後の `make e2e ONLY=FoundationSpikeTests` は 54.0 秒（テスト本体 24.8 秒）。その前の修正後の試行は 58.3 秒だった。60 秒を大きく超えないため build-for-testing / test-without-building の分離は現時点では追加しない。初回の全 2 件はコンパイルと失敗を含め 99.5 秒だった。
@@ -392,11 +420,13 @@ CI は当面置かない。置くときは `make test`・`make e2e-lint`・`make
 10. **アクティブにならない起動。** `make run`（`open`）で起動すると、ほかのアプリが使われている最中なので `NSApp.activate()` が断られ、セットアップのウィンドウがほかのウィンドウの後ろに出た。設定とセットアップのウィンドウは、開くときに `orderFrontRegardless()` で手前に出すようにした。
 11. **浮く部品は XCTest から「割り込みのダイアログ」に見える。** 枠を描く面へのドラッグの前に、XCTest がボタン類のパネルを割り込みとして扱い、akapen をアクティブにしてから続ける。ドラッグはそのまま通る。
 
-追加の検証: `make test` の `panelsFollowState` で NSApplication.shared を初期化し、AppKit の NSPanel を実際に生成して hidden / drawing / idle の表示・非表示と nonactivatingPanel を確認できた。テスト後はパネルを外す。画面のあるローカルセッションが必要で、ヘッドレス CI の保証はしていない。
+12. **十字のカーソルにならないことがある問題: 原因を確認し、解消済み（2026-11-18、ux-revise）。** akapen はアクティブにならないアプリ（LSUIElement + アクティブ化しないパネル）なので、macOS は `NSCursor.set()` とカーソル矩形を無視する。十字になるのは、マウスが動いて `.activeAlways` の追跡領域が `mouseMoved` を受けたときだけで、出した直後にマウスを動かさないと矢印のまま残る（本番で 12 回中 7 回、1.5 秒たっても矢印のまま）。同じ作りの実験アプリで、出し方を変えて `NSCursor.currentSystem` を 0.1 秒おきに読んで比べた。窓の不透明度を 1 にして出す・何度も `set()` し直す、はどれも効かなかった。アプリをアクティブにする（撮影対象のタイトルバーが非アクティブの色になる）か、接続に `SetsCursorInBackground` を立てると毎回すぐ十字になった。後者を `BackgroundCursor` として入れ、出した直後と少しあと（0.05・0.15・0.3 秒）に、カーソルが覆う面の上にあれば十字を当てる。直したあとの本番の組み立てで同じ測り方をすると、12 回中 12 回、最初の読み取り（0.0 秒）から十字になり、隠すと矢印に戻った。一覧を閉じた直後も 0.1 秒のうちに十字になった。
+
+追加の検証: `make test` の `PanelTests` で NSApplication.shared を初期化し、AppKit の NSPanel を実際に生成して、状態ごとの表示・非表示、覆う面がマウスを受けるか・キーになれるか、隠したあとに中身が空に戻ること、nonactivatingPanel を確認している。テスト後はパネルを外す。画面のあるローカルセッションが必要で、ヘッドレス CI の保証はしていない。
 
 ## 実装の境界
 
-- 公開 API と JSON の形（`state.json` v2、`AKAPEN_SEED`）は `docs/FOUNDATION.md` と各型の日本語ドキュメントコメントを参照。
+- 公開 API と JSON の形（`state.json` v3、`AKAPEN_SEED`）は `docs/FOUNDATION.md` と各型の日本語ドキュメントコメントを参照。
 - 本番の設定は `UserDefaults.standard` のキー `settings`（JSON）。書き出しは `StateWriting` → `AtomicStateWriter`。App が JSON を組み立て、Platform がファイルに原子的に保存する。
 - 注釈はメモリにだけ持つ（起動し直すと 0 件。画像ファイルは日数による掃除まで残る）。
 - Apple Development 証明書で署名。チーム G5564YSC93。プロファイル要求・認証ダイアログはなく、アドホックへの切り替えなし。

@@ -211,7 +211,7 @@ func currentSessionIDFollowsSession() async throws {
 
 @Test
 @MainActor
-func escapeWhileDrawing() async throws {
+func escapeWhileDrawingHidesAndKeepsAnnotations() async throws {
     let harness = try Harness()
     let model = harness.model
     await harness.send(.hotkeyPressed)
@@ -219,10 +219,12 @@ func escapeWhileDrawing() async throws {
     #expect(model.phase == .hidden)
     #expect(!model.isToolbarVisible)
     await harness.annotate("first")
-    await harness.send(.addTapped)
+    #expect(model.phase == .drawing)
     await harness.send(.escapePressed)
-    #expect(model.phase == .idle)
-    #expect(model.annotations.count == 1)
+    #expect(model.phase == .hidden)
+    #expect(!model.isToolbarVisible)
+    // 隠しても注釈は消えない（回は copy prompt まで続く）。
+    #expect(model.annotations.map(\.comment) == ["first"])
 }
 
 // MARK: - コメント
@@ -236,7 +238,8 @@ func confirmTrimsComment() async throws {
     await harness.drag()
     let draft = try #require(model.draft)
     await harness.send(.commentConfirmed(text: "  \n ボタンの余白\n2 行目 \n\t"))
-    #expect(model.phase == .idle)
+    // 確定したら、すぐ次の枠を描ける状態に戻る。
+    #expect(model.phase == .drawing)
     #expect(model.draft == nil)
     #expect(model.isToolbarVisible)
     #expect(model.annotations.count == 1)
@@ -263,7 +266,7 @@ func emptyCommentIsIgnored() async throws {
 
 @Test
 @MainActor
-func cancellingCommentDiscardsImage() async throws {
+func cancellingCommentDiscardsImageAndReturnsToDrawing() async throws {
     for event in [SessionEvent.commentCancelled, .escapePressed] {
         let harness = try Harness()
         let model = harness.model
@@ -271,7 +274,9 @@ func cancellingCommentDiscardsImage() async throws {
         await harness.drag()
         let path = try #require(model.draft?.imagePath)
         await harness.send(event)
-        #expect(model.phase == .hidden)
+        // 書きかけを捨てて、隠さずに枠を描ける状態へ戻る。
+        #expect(model.phase == .drawing)
+        #expect(model.isToolbarVisible)
         #expect(model.draft == nil)
         #expect(harness.images.removedPaths == [path])
         #expect(harness.images.files[path] == nil)
@@ -280,17 +285,16 @@ func cancellingCommentDiscardsImage() async throws {
 
 @Test
 @MainActor
-func cancellingCommentWithAnnotationsReturnsToIdle() async throws {
+func cancellingCommentKeepsConfirmedAnnotations() async throws {
     let harness = try Harness()
     let model = harness.model
     await harness.annotate("keep")
     let kept = try #require(model.annotations.first)
-    await harness.send(.addTapped)
     await harness.drag()
     let discarded = try #require(model.draft?.imagePath)
     #expect(discarded == "/akapen-test-cache/20261118-1432/02.png")
     await harness.send(.commentCancelled)
-    #expect(model.phase == .idle)
+    #expect(model.phase == .drawing)
     #expect(model.annotations == [kept])
     #expect(harness.images.removedPaths == [discarded])
     #expect(harness.images.files[kept.imagePath] != nil)
@@ -304,80 +308,136 @@ func cancelStillLeavesWhenImageRemovalFails() async throws {
     await harness.send(.hotkeyPressed)
     await harness.drag()
     await harness.send(.commentCancelled)
-    #expect(harness.model.phase == .hidden)
+    #expect(harness.model.phase == .drawing)
     #expect(harness.model.draft == nil)
 }
 
 @Test
 @MainActor
-func commentingIgnoresHotkeyAndAdd() async throws {
+func commentingIgnoresHotkeyListAndCopy() async throws {
     let harness = try Harness()
     let model = harness.model
-    await harness.send(.hotkeyPressed)
+    await harness.annotate("one")
     await harness.drag()
     let draft = model.draft
     let changes = harness.changeCount
-    for event in [SessionEvent.hotkeyPressed, .addTapped, .listToggled, .copyPromptTapped, .toolbarToggled] {
+    // ホットキーで隠すと書きかけを失うので、何もしない。
+    for event in [SessionEvent.hotkeyPressed, .listToggled, .copyPromptTapped] {
         await harness.send(event)
         #expect(model.phase == .commenting)
         #expect(model.draft == draft)
     }
     #expect(harness.changeCount == changes)
-}
-
-// MARK: - idle と一覧
-
-@Test
-@MainActor
-func hotkeyAndAddStartDrawingFromIdleAndList() async throws {
-    for event in [SessionEvent.hotkeyPressed, .addTapped] {
-        let harness = try Harness()
-        let model = harness.model
-        await harness.annotate("one")
-        await harness.send(event)
-        #expect(model.phase == .drawing)
-        await harness.send(.escapePressed)
-        await harness.send(.listToggled)
-        #expect(model.phase == .listOpen)
-        await harness.send(event)
-        #expect(model.phase == .drawing)
-        #expect(model.annotations.count == 1)
-    }
+    #expect(harness.pasteboard.writes.isEmpty)
 }
 
 @Test
 @MainActor
-func hotkeyShowsHiddenToolbar() async throws {
+func confirmedCommentLetsNextFrameBeDrawnRightAway() async throws {
+    let harness = try Harness()
+    let model = harness.model
+    await harness.send(.hotkeyPressed)
+    await harness.drag()
+    await harness.send(.commentConfirmed(text: "one"))
+    #expect(model.phase == .drawing)
+    // ホットキーを押し直さずに、続けて枠を描いてコメントを入れられる。
+    await harness.drag(ScreenRect(x: 300, y: 200, width: 80, height: 40))
+    #expect(model.phase == .commenting)
+    await harness.send(.commentConfirmed(text: "two"))
+    #expect(model.phase == .drawing)
+    #expect(model.annotations.map(\.comment) == ["one", "two"])
+    #expect(model.annotations.map(\.imagePath) == [
+        "/akapen-test-cache/20261118-1432/01.png",
+        "/akapen-test-cache/20261118-1432/02.png",
+    ])
+}
+
+// MARK: - ホットキーのトグルと一覧
+
+@Test
+@MainActor
+func hotkeyTogglesToolbarAndKeepsSession() async throws {
     let harness = try Harness()
     let model = harness.model
     await harness.annotate("one")
-    await harness.send(.toolbarToggled)
-    #expect(model.phase == .idle)
+    #expect(model.phase == .drawing)
+    await harness.send(.hotkeyPressed)
+    #expect(model.phase == .hidden)
     #expect(!model.isToolbarVisible)
+    #expect(model.annotations.count == 1)
+    // 時計が次の分に進んでも、注釈が残っていれば同じ回を続ける（回の ID と画像の番号を引き継ぐ）。
+    harness.clock.advance(by: .seconds(120))
     await harness.send(.hotkeyPressed)
     #expect(model.phase == .drawing)
     #expect(model.isToolbarVisible)
-    await harness.send(.escapePressed)
-    #expect(model.phase == .idle)
-    #expect(model.isToolbarVisible)
+    #expect(model.currentSessionID == Harness.sessionID)
+    await harness.drag()
+    #expect(model.draft?.imagePath == "/akapen-test-cache/20261118-1432/02.png")
+    await harness.send(.commentConfirmed(text: "two"))
+    #expect(model.annotations.map(\.comment) == ["one", "two"])
 }
 
 @Test
 @MainActor
-func listOpensAndCloses() async throws {
+func hotkeyFromHiddenWithoutAnnotationsStartsNewSession() async throws {
+    let harness = try Harness()
+    let model = harness.model
+    await harness.send(.hotkeyPressed)
+    await harness.send(.hotkeyPressed)
+    #expect(model.phase == .hidden)
+    harness.clock.advance(by: .seconds(60))
+    await harness.send(.hotkeyPressed)
+    #expect(model.phase == .drawing)
+    #expect(model.currentSessionID == "20261118-1433")
+}
+
+@Test
+@MainActor
+func hotkeyClosesListAndHides() async throws {
     let harness = try Harness()
     let model = harness.model
     await harness.annotate("one")
     await harness.send(.listToggled)
     #expect(model.phase == .listOpen)
+    await harness.send(.hotkeyPressed)
+    #expect(model.phase == .hidden)
+    #expect(model.annotations.count == 1)
+    await harness.send(.hotkeyPressed)
+    #expect(model.phase == .drawing)
+}
+
+@Test
+@MainActor
+func listOpensAndClosesBackToDrawing() async throws {
+    let harness = try Harness()
+    let model = harness.model
+    // 注釈が 0 件でも一覧は開ける（行の代わりに案内を出す）。
+    await harness.send(.hotkeyPressed)
     await harness.send(.listToggled)
-    #expect(model.phase == .idle)
+    #expect(model.phase == .listOpen)
+    #expect(model.isToolbarVisible)
+    await harness.send(.listToggled)
+    #expect(model.phase == .drawing)
     await harness.send(.listToggled)
     await harness.send(.escapePressed)
-    #expect(model.phase == .idle)
-    // idle の Esc は何もしない。
+    #expect(model.phase == .drawing)
+    // drawing の Esc は隠す。
     await harness.send(.escapePressed)
-    #expect(model.phase == .idle)
+    #expect(model.phase == .hidden)
+}
+
+@Test
+@MainActor
+func listIgnoresDrag() async throws {
+    let harness = try Harness()
+    let model = harness.model
+    await harness.annotate("one")
+    await harness.send(.listToggled)
+    let changes = harness.changeCount
+    await harness.drag()
+    #expect(model.phase == .listOpen)
+    #expect(model.draft == nil)
+    #expect(harness.changeCount == changes)
 }
 
 @Test
@@ -473,12 +533,28 @@ func copyFromListUsesCurrentLanguage() async throws {
 func copyWithoutAnnotationsDoesNothing() async throws {
     let harness = try Harness()
     let model = harness.model
-    await harness.send(.toolbarToggled)
-    #expect(model.phase == .idle)
+    await harness.send(.hotkeyPressed)
+    #expect(model.phase == .drawing)
     await harness.send(.copyPromptTapped)
-    #expect(model.phase == .idle)
+    #expect(model.phase == .drawing)
+    await harness.send(.listToggled)
+    await harness.send(.copyPromptTapped)
+    #expect(model.phase == .listOpen)
     #expect(harness.pasteboard.writes.isEmpty)
     #expect(model.lastFailure == nil)
+}
+
+@Test
+@MainActor
+func copyWhileHiddenDoesNothing() async throws {
+    let harness = try Harness()
+    let model = harness.model
+    await harness.annotate("one")
+    await harness.send(.escapePressed)
+    await harness.send(.copyPromptTapped)
+    #expect(model.phase == .hidden)
+    #expect(model.annotations.count == 1)
+    #expect(harness.pasteboard.writes.isEmpty)
 }
 
 @Test
@@ -520,7 +596,7 @@ func pasteboardFailureKeepsState() async throws {
     let annotations = model.annotations
     harness.pasteboard.writeError = TestError()
     await harness.send(.copyPromptTapped)
-    #expect(model.phase == .idle)
+    #expect(model.phase == .drawing)
     #expect(model.annotations == annotations)
     #expect(model.lastCopiedCount == 0)
     #expect(model.lastFailure == .pasteboardFailed)
@@ -547,7 +623,7 @@ func copyWithoutPasteboardFails() async throws {
     await model.send(.dragEnded(rect: Harness.frame, screen: Harness.screen)).value
     await model.send(.commentConfirmed(text: "one")).value
     await model.send(.copyPromptTapped).value
-    #expect(model.phase == .idle)
+    #expect(model.phase == .drawing)
     #expect(model.lastFailure == .pasteboardFailed)
     #expect(model.annotations.count == 1)
 }
@@ -661,61 +737,52 @@ func newSessionInSameMinuteDoesNotOverwriteImages() async throws {
     #expect(harness.images.files.count == 2)
 }
 
-// MARK: - ボタン類の表示
+// MARK: - 浮く部品を下げる
 
 @Test
 @MainActor
-func toolbarToggleFromHiddenShowsToolbarOnly() async throws {
-    let harness = try Harness()
-    let model = harness.model
-    await harness.send(.toolbarToggled)
-    #expect(model.phase == .idle)
-    #expect(model.isToolbarVisible)
-    await harness.send(.toolbarToggled)
-    #expect(model.phase == .idle)
-    #expect(!model.isToolbarVisible)
-    await harness.send(.toolbarToggled)
-    #expect(model.isToolbarVisible)
-    // 新しい回が始まっているので、そのまま撮影できる。
-    await harness.send(.addTapped)
-    await harness.drag()
-    #expect(model.draft?.imagePath == "/akapen-test-cache/20261118-1432/01.png")
+func dismissHidesAndKeepsConfirmedAnnotations() async throws {
+    for open in [Phase.drawing, .listOpen] {
+        let harness = try Harness()
+        let model = harness.model
+        await harness.annotate("one")
+        if open == .listOpen {
+            await harness.send(.listToggled)
+        }
+        #expect(model.phase == open)
+        await harness.send(.dismissRequested)
+        #expect(model.phase == .hidden)
+        #expect(model.annotations.count == 1)
+    }
 }
 
 @Test
 @MainActor
-func toolbarToggleFromListClosesListAndKeepsAnnotations() async throws {
+func dismissWhileCommentingDiscardsDraft() async throws {
     let harness = try Harness()
     let model = harness.model
     await harness.annotate("one")
-    await harness.send(.listToggled)
-    await harness.send(.toolbarToggled)
-    #expect(model.phase == .idle)
-    #expect(!model.isToolbarVisible)
+    await harness.drag()
+    let path = try #require(model.draft?.imagePath)
+    await harness.send(.dismissRequested)
+    #expect(model.phase == .hidden)
+    #expect(model.draft == nil)
     #expect(model.annotations.count == 1)
-    await harness.send(.toolbarToggled)
-    #expect(model.phase == .idle)
-    #expect(model.isToolbarVisible)
+    #expect(harness.images.removedPaths == [path])
 }
 
 @Test
 @MainActor
-func toolbarToggleIsIgnoredWhileDrawingCommentingOrCopied() async throws {
+func dismissIsIgnoredWhenNothingCoversTheScreen() async throws {
     let harness = try Harness()
     let model = harness.model
-    await harness.send(.hotkeyPressed)
-    await harness.send(.toolbarToggled)
-    #expect(model.phase == .drawing)
-    #expect(model.isToolbarVisible)
-    await harness.drag()
-    await harness.send(.toolbarToggled)
-    #expect(model.phase == .commenting)
-    #expect(model.isToolbarVisible)
-    await harness.send(.commentConfirmed(text: "one"))
+    await harness.send(.dismissRequested)
+    #expect(model.phase == .hidden)
+    #expect(harness.changeCount == 0)
+    await harness.annotate("one")
     await harness.send(.copyPromptTapped)
-    await harness.send(.toolbarToggled)
+    await harness.send(.dismissRequested)
     #expect(model.phase == .copied)
-    #expect(!model.isToolbarVisible)
 }
 
 // MARK: - 設定
@@ -773,8 +840,8 @@ func failureIsKeptWhileInputsAreIgnored() async throws {
     await harness.drag(ScreenRect(x: 900, y: 700, width: 50, height: 50))
     #expect(model.lastFailure == .noWindowUnderFrame)
     // 何もしない入力では消えない。
-    await harness.send(.hotkeyPressed)
-    await harness.send(.listToggled)
+    await harness.send(.copyPromptTapped)
+    await harness.send(.commentConfirmed(text: "x"))
     await harness.drag(ScreenRect(x: 150, y: 100, width: 2, height: 2))
     #expect(model.lastFailure == .noWindowUnderFrame)
     // 成功した入力で消える。
@@ -787,11 +854,10 @@ func failureIsKeptWhileInputsAreIgnored() async throws {
 
 @Test
 @MainActor
-func hiddenIgnoresEverythingButHotkeyToolbarAndSettings() async throws {
+func hiddenIgnoresEverythingButHotkeyAndSettings() async throws {
     let harness = try Harness()
     let model = harness.model
     let events: [SessionEvent] = [
-        .addTapped,
         .escapePressed,
         .dragEnded(rect: Harness.frame, screen: Harness.screen),
         .commentConfirmed(text: "x"),
@@ -801,6 +867,7 @@ func hiddenIgnoresEverythingButHotkeyToolbarAndSettings() async throws {
         .annotationDeleted(id: UUID()),
         .copyPromptTapped,
         .copiedExpired,
+        .dismissRequested,
     ]
     for event in events {
         await harness.send(event)
@@ -819,11 +886,10 @@ func drawingIgnoresUnrelatedInputs() async throws {
     await harness.send(.hotkeyPressed)
     let changes = harness.changeCount
     let events: [SessionEvent] = [
-        .hotkeyPressed,
-        .addTapped,
         .commentConfirmed(text: "x"),
         .commentCancelled,
-        .listToggled,
+        .annotationEdited(id: UUID(), text: "x"),
+        .annotationDeleted(id: UUID()),
         .copyPromptTapped,
         .copiedExpired,
     ]
@@ -840,7 +906,7 @@ func onChangeIsCalledOnlyWhenStateChanges() async throws {
     let harness = try Harness()
     await harness.send(.hotkeyPressed)
     #expect(harness.changeCount == 1)
-    await harness.send(.hotkeyPressed)
+    await harness.send(.copyPromptTapped)
     #expect(harness.changeCount == 1)
     // 撮影は、描いた枠の記録と、commenting への遷移で 2 回。
     await harness.drag()
@@ -858,19 +924,20 @@ func isToolbarVisibleFollowsPhase() async throws {
     let harness = try Harness()
     let model = harness.model
     #expect(!model.isToolbarVisible)
-    await harness.send(.toolbarToggled)
-    await harness.send(.toolbarToggled)
-    #expect(model.phase == .idle)
-    #expect(!model.isToolbarVisible)
-    // drawing と commenting では、隠していても出る。
     await harness.send(.hotkeyPressed)
     #expect(model.isToolbarVisible)
     await harness.drag()
     #expect(model.phase == .commenting)
     #expect(model.isToolbarVisible)
     await harness.send(.commentConfirmed(text: "x"))
+    #expect(model.phase == .drawing)
+    #expect(model.isToolbarVisible)
     await harness.send(.listToggled)
     #expect(model.isToolbarVisible)
+    await harness.send(.hotkeyPressed)
+    #expect(model.phase == .hidden)
+    #expect(!model.isToolbarVisible)
+    await harness.send(.hotkeyPressed)
     await harness.send(.copyPromptTapped)
     #expect(model.phase == .copied)
     #expect(!model.isToolbarVisible)
@@ -900,7 +967,7 @@ func inputsSentDuringCaptureAreProcessedInOrder() async throws {
     #expect(model.phase == .listOpen)
     // 待ち行列が空になれば、次の入力はその場で処理される。
     model.send(.listToggled)
-    #expect(model.phase == .idle)
+    #expect(model.phase == .drawing)
 }
 
 @Test
@@ -955,4 +1022,15 @@ func settingsDecodeWithoutSetupCompleted() throws {
     #expect(settings.language == .ja)
     #expect(settings.imageRetentionDays == 3)
     #expect(!settings.setupCompleted)
+}
+
+@Test
+func settingsDecodeIgnoresRemovedToolbarShortcut() throws {
+    // 古い版が保存した `toolbarShortcut` が残っていても、壊れた内容として扱わずに読む。
+    let json = Data(#"{"language":"ja","toolbarShortcut":{"keyCode":11,"modifiers":3},"confirmKey":"commandEnter"}"#.utf8)
+    let settings = try JSONDecoder().decode(Settings.self, from: json)
+    #expect(settings.language == .ja)
+    #expect(settings.confirmKey == .commandEnter)
+    let encoded = try #require(String(data: JSONEncoder().encode(settings), encoding: .utf8))
+    #expect(!encoded.contains("toolbarShortcut"))
 }

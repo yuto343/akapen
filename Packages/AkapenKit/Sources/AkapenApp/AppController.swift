@@ -1,5 +1,6 @@
 import AppKit
 import AkapenCore
+import AkapenPlatform
 import AkapenUI
 
 /// 依存一式（`AppEnvironment`）に画面をつなぐ。メニューバー・メインメニュー・画面の上に浮く部品・設定・セットアップ・終了の確認。
@@ -35,9 +36,6 @@ import AkapenUI
             model: model,
             canUseHotkey: { [weak hotkeys] shortcut in
                 hotkeys?.canUse(shortcut, for: .draw) ?? false
-            },
-            canUseToolbarShortcut: { [weak hotkeys] shortcut in
-                hotkeys?.canUse(shortcut, for: .toolbar) ?? false
             }
         )
         setupWindow = SetupController(
@@ -52,6 +50,8 @@ import AkapenUI
     /// 画面をつなぎ、ホットキーを登録し、いまの状態を映す。セットアップが済んでいなければセットアップを出す。
     /// 最後に `state.json` の書き出しを始める（書き出しが始まった時点で、起動が済んでいる）。
     func start() {
+        // アクティブでないままでも、枠を描く面の十字やボタンの指のカーソルが効くようにする（効かなくても続ける）。
+        BackgroundCursor.enable()
         connect()
         mainMenu.install()
         environment.hotkeys.apply(model.settings)
@@ -145,8 +145,8 @@ import AkapenUI
 
     /// 画面収録の許可がないために撮影できなかったら、セットアップの 2 ページ目（許可の案内）を開く。
     ///
-    /// 枠を描く面は画面全体を覆ってほかのウィンドウより手前に出るので、`Esc` と同じ入力を送って枠を描く状態から抜ける。
-    /// そのあとの状態（何も出ていないか、ボタン類だけか）は `SessionModel` が決める。
+    /// 枠を描く面は画面全体を覆ってほかのウィンドウより手前に出るので、浮く部品を下げる入力を送る。
+    /// そのあとの状態は `SessionModel` が決める（注釈は残る）。
     private func handleNewFailure() {
         let failure = model.lastFailure
         defer {
@@ -160,11 +160,13 @@ import AkapenUI
         }
         setupWindow.showPermission()
         Task { @MainActor [weak self] in
-            self?.model.send(.escapePressed)
+            self?.model.send(.dismissRequested)
         }
     }
 
+    /// 設定を開く。ボタン類が出ていれば、画面全体を覆う面が設定のウィンドウを隠さないように、先に浮く部品を下げる。
     private func openSettings() {
+        model.send(.dismissRequested)
         settingsWindow.show()
         environment.writeState()
     }
@@ -187,8 +189,6 @@ import AkapenUI
         switch slot {
         case .draw:
             settings.hotkey = restored
-        case .toolbar:
-            settings.toolbarShortcut = restored
         }
         Task { @MainActor [weak self] in
             self?.model.send(.settingsChanged(settings))
@@ -211,6 +211,7 @@ import AkapenUI
             isQuitApproved = true
             NSApp.terminate(nil)
         case .cancel:
+            windows.restoreFocus()
             environment.writeState()
         }
     }
@@ -230,3 +231,4 @@ import AkapenUI
         )
     }
 }
+

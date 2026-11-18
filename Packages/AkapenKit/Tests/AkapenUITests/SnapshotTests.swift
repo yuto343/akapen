@@ -55,7 +55,6 @@ struct SnapshotTests {
         ToolbarView(
             state: ToolbarState(annotationCount: count, isListOpen: listOpen),
             strings: strings,
-            onAdd: {},
             onList: {},
             onCopy: {}
         )

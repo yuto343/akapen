@@ -16,18 +16,13 @@ import Observation
     /// 直前の操作の失敗。次に何かの入力が成功したら nil に戻る。
     public private(set) var lastFailure: SessionFailure?
 
-    /// ボタン類を出すか。
-    ///
-    /// `hidden` と `copied` では常に false、`drawing` と `commenting` では常に true。
-    /// `idle` と `listOpen` では、`toolbarToggled` で隠していなければ true。
+    /// ボタン類を出すか。`drawing`・`commenting`・`listOpen` のあいだだけ true（出ているあいだは枠を描ける状態か、その途中）。
     public var isToolbarVisible: Bool {
         switch phase {
         case .hidden, .copied:
             false
-        case .drawing, .commenting:
+        case .drawing, .commenting, .listOpen:
             true
-        case .idle, .listOpen:
-            !isToolbarHidden
         }
     }
 
@@ -39,8 +34,6 @@ import Observation
 
     /// コピー完了の表示を出しておく時間。過ぎたら、まだ `copied` なら `hidden` に戻す。
     public static let copiedDisplayDuration = Duration.milliseconds(2500)
-
-    private var isToolbarHidden = false
 
     /// 状態が変わったときだけ同期で通知する。App の表示更新・診断書き出し用。
     @ObservationIgnored public var onChange: (@MainActor () -> Void)?
@@ -158,7 +151,6 @@ extension SessionModel {
         var draft: Annotation?
         var settings: Settings
         var lastDrawnRect: ScreenRect?
-        var isToolbarHidden: Bool
         var lastCopiedCount: Int
         var lastFailure: SessionFailure?
     }
@@ -170,7 +162,6 @@ extension SessionModel {
             draft: draft,
             settings: settings,
             lastDrawnRect: lastDrawnRect,
-            isToolbarHidden: isToolbarHidden,
             lastCopiedCount: lastCopiedCount,
             lastFailure: lastFailure
         )
@@ -252,8 +243,6 @@ extension SessionModel {
         switch event {
         case .hotkeyPressed:
             .done(hotkeyPressed())
-        case .addTapped:
-            .done(addTapped())
         case .escapePressed:
             .done(escapePressed())
         case let .dragEnded(rect, _):
@@ -272,8 +261,8 @@ extension SessionModel {
             .done(copyPromptTapped())
         case .copiedExpired:
             .done(copiedExpired())
-        case .toolbarToggled:
-            .done(toolbarToggled())
+        case .dismissRequested:
+            .done(dismissRequested())
         case let .settingsChanged(newSettings):
             .done(settingsChanged(newSettings))
         case .setupCompleted:
@@ -281,28 +270,26 @@ extension SessionModel {
         }
     }
 
+    /// ホットキーはボタン類の表示のトグルを兼ねる。コメントを書いている最中は、書きかけを失わないように何もしない。
     private func hotkeyPressed() -> Outcome {
         switch phase {
-        case .hidden, .copied:
+        case .hidden:
+            if annotations.isEmpty {
+                startNewSession()
+            } else {
+                // 回は `copy prompt` で終わるまで続く。回の ID と画像の番号を引き継ぐ。
+                draft = nil
+            }
+            phase = .drawing
+            return .succeeded
+        case .copied:
             startNewSession()
             phase = .drawing
             return .succeeded
-        case .idle, .listOpen:
-            isToolbarHidden = false
-            phase = .drawing
+        case .drawing, .listOpen:
+            phase = .hidden
             return .succeeded
-        case .drawing, .commenting:
-            return .ignored
-        }
-    }
-
-    private func addTapped() -> Outcome {
-        switch phase {
-        case .idle, .listOpen:
-            isToolbarHidden = false
-            phase = .drawing
-            return .succeeded
-        case .hidden, .drawing, .commenting, .copied:
+        case .commenting:
             return .ignored
         }
     }
@@ -310,16 +297,16 @@ extension SessionModel {
     private func escapePressed() -> Outcome {
         switch phase {
         case .drawing:
-            leaveEditing()
+            phase = .hidden
             return .succeeded
         case .commenting:
             discardDraft()
-            leaveEditing()
+            phase = .drawing
             return .succeeded
         case .listOpen:
-            phase = .idle
+            phase = .drawing
             return .succeeded
-        case .hidden, .idle, .copied:
+        case .hidden, .copied:
             return .ignored
         }
     }
@@ -408,7 +395,7 @@ extension SessionModel {
         confirmed.comment = comment
         annotations.append(confirmed)
         draft = nil
-        phase = .idle
+        phase = .drawing
         return .succeeded
     }
 
@@ -417,20 +404,19 @@ extension SessionModel {
             return .ignored
         }
         discardDraft()
-        leaveEditing()
+        phase = .drawing
         return .succeeded
     }
 
     private func listToggled() -> Outcome {
         switch phase {
-        case .idle:
-            isToolbarHidden = false
+        case .drawing:
             phase = .listOpen
             return .succeeded
         case .listOpen:
-            phase = .idle
+            phase = .drawing
             return .succeeded
-        case .hidden, .drawing, .commenting, .copied:
+        case .hidden, .commenting, .copied:
             return .ignored
         }
     }
@@ -457,7 +443,7 @@ extension SessionModel {
     }
 
     private func copyPromptTapped() -> Outcome {
-        guard phase == .idle || phase == .listOpen, !annotations.isEmpty else {
+        guard phase == .drawing || phase == .listOpen, !annotations.isEmpty else {
             return .ignored
         }
         guard let pasteboard else {
@@ -485,19 +471,17 @@ extension SessionModel {
         return .succeeded
     }
 
-    private func toolbarToggled() -> Outcome {
+    /// 浮く部品を下げる。書きかけの注釈は捨てる（確定済みの注釈は残す）。
+    private func dismissRequested() -> Outcome {
         switch phase {
-        case .hidden:
-            startNewSession()
-            phase = .idle
+        case .drawing, .listOpen:
+            phase = .hidden
             return .succeeded
-        case .idle, .listOpen:
-            isToolbarHidden.toggle()
-            if isToolbarHidden {
-                phase = .idle
-            }
+        case .commenting:
+            discardDraft()
+            phase = .hidden
             return .succeeded
-        case .drawing, .commenting, .copied:
+        case .hidden, .copied:
             return .ignored
         }
     }
@@ -521,7 +505,6 @@ extension SessionModel {
     private func startNewSession() {
         stopCopiedTimer()
         draft = nil
-        isToolbarHidden = false
         guard let clock else {
             sessionID = nil
             return
@@ -541,16 +524,6 @@ extension SessionModel {
         sessionID = id
         nextImageIndex = 1
         return id
-    }
-
-    /// 枠を描く・コメントを書く途中から抜ける。確定済みの注釈が 0 件なら hidden、あれば idle。
-    private func leaveEditing() {
-        if annotations.isEmpty {
-            phase = .hidden
-        } else {
-            isToolbarHidden = false
-            phase = .idle
-        }
     }
 
     /// 書きかけの注釈と、その画像を捨てる。

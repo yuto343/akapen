@@ -1,5 +1,5 @@
 // spec: e2e/specs/menu-bar/settings.md
-// spec-sha256: ddfbb2f3cb282b9dedf757735c59521e8411408d15b2e4752c74fc8e8da621a9
+// spec-sha256: 28f8e00c567c494f647ed15b15222fae632e8f5a5011750ae1322f607d8a197a
 // このファイルは生成物。直接編集しない。md を直して e2e-generator で作り直す。
 
 import XCTest
@@ -8,9 +8,9 @@ import AkapenAXID
 final class MenuBarSettingsTests: AkapenUITestCase {
     // scenario: メニューバーから設定を開き、変えた値がアプリに入る
     func testOpenSettingsFromMenuBarAndChangeValue() throws {
-        // 前提: セットアップ済み、画像を残す日数は既定の 7 日。確定済みの注釈が 2 件あり、ボタン類だけが出ている。
-        launch(.setupDone, annotations: SeedAnnotation.samples(2))
-        let start = waitForPhase(.idle)
+        // 前提: セットアップ済み、画像を残す日数は既定の 7 日。確定済みの注釈が 2 件あり、ボタン類が出ている（枠を描く状態）。
+        launch(.setupDone, annotations: SeedAnnotation.samples(2), open: .toolbar)
+        let start = waitForPhase(.drawing)
         XCTAssertEqual(start.settings.imageRetentionDays, 7)
         XCTAssertFalse(start.windows.settings)
 
@@ -32,36 +32,43 @@ final class MenuBarSettingsTests: AkapenUITestCase {
         XCTAssertEqual(element(AXID.Settings.imageRetentionDays).value as? String, "14")
     }
 
-    // scenario: 設定を開いても、注釈とボタン類はそのまま
-    func testOpeningSettingsKeepsAnnotationsAndToolbar() throws {
-        // 前提: セットアップ済み、画像を残す日数は既定の 7 日。確定済みの注釈が 2 件あり、ボタン類だけが出ている。
-        launch(.setupDone, annotations: SeedAnnotation.samples(2))
-        let start = waitForPhase(.idle)
+    // scenario: 設定を開くとボタン類は隠れるが、注釈は残っていて、ホットキーで続きから描ける
+    func testOpeningSettingsHidesToolbarAndKeepsAnnotations() throws {
+        // 前提: セットアップ済み、画像を残す日数は既定の 7 日。確定済みの注釈が 2 件あり、ボタン類が出ている（枠を描く状態）。
+        launch(.setupDone, annotations: SeedAnnotation.samples(2), open: .toolbar)
+        let start = waitForPhase(.drawing)
         XCTAssertTrue(start.isToolbarVisible)
         XCTAssertEqual(start.comments, Array(SeedAnnotation.sampleComments.prefix(2)))
 
         // 操作: メニューバーから設定を開く。
         openSettingsFromMenuBar()
-        waitForState("設定のウィンドウが開く") { $0.windows.settings }
 
-        // 期待される結果: 設定のウィンドウが開いている間も、ボタン類は出たまま。
-        // してはいけないこと: 設定を開いたことで、ボタン類が消える、または枠を描く状態になる。
-        waitForElement(AXID.Toolbar.add)
-        waitForElement(AXID.Toolbar.list)
-        waitForElement(AXID.Toolbar.copyPrompt)
-        XCTAssertFalse(isShown(AXID.Draw.surface), "設定を開いたら、枠を描く面が出た")
-
-        // 期待される結果: アプリの状態で、ボタン類だけが出ている状態のままで、注釈は 2 件（順番とコメントも変わらない）。
+        // 期待される結果: アプリの状態で、設定のウィンドウが出ていて、何も出ていない状態になっており、注釈は 2 件のまま（順番とコメントも変わらない）。
         // してはいけないこと: 設定を開いたことで、注釈が消える。
-        let opened = assertStateStays("設定を開いている間も、ボタン類だけが出ていて注釈が 2 件のまま") { state in
-            state.windows.settings && state.phase == .idle && state.isToolbarVisible && state.comments == start.comments
+        let opened = waitForState("設定のウィンドウが開き、何も出ていない状態になる") { state in
+            state.windows.settings && state.phase == .hidden
         }
-        XCTAssertEqual(opened.phase, .idle)
-        XCTAssertTrue(opened.isToolbarVisible)
-        XCTAssertEqual(opened.annotations.count, 2)
+        XCTAssertFalse(opened.isToolbarVisible)
+        XCTAssertEqual(opened.annotations, start.annotations)
         XCTAssertEqual(opened.comments, start.comments)
-        XCTAssertEqual(opened.imagePaths, start.imagePaths)
-        XCTAssertEqual(opened.storage.sessionID, start.storage.sessionID)
-        XCTAssertTrue(isShown(AXID.Settings.window))
+
+        // 期待される結果: 設定のウィンドウが開き、ボタン類は消える。
+        // してはいけないこと: 設定を開いても枠を描く状態のままで、設定のウィンドウの上を akapen の面が覆う。
+        waitForElement(AXID.Settings.window)
+        waitForElementToDisappear(AXID.Toolbar.list)
+        waitForElementToDisappear(AXID.Draw.surface)
+        // 設定のウィンドウを操作できる（面に覆われていれば、入力が届かない）。
+        enterRetentionDays("10")
+        waitForState("画像を残す日数が 10 日になる") { $0.settings.imageRetentionDays == 10 }
+
+        // 期待される結果: アプリの状態で、設定を閉じてホットキーを押すと、注釈は 2 件のまま枠を描く状態になる。
+        closeSettings()
+        bringSampleToFront()
+        pressHotkey()
+        let resumed = waitForPhase(.drawing)
+        XCTAssertTrue(resumed.isToolbarVisible)
+        XCTAssertEqual(resumed.annotations, start.annotations)
+        XCTAssertEqual(resumed.storage.sessionID, start.storage.sessionID)
+        waitForElement(AXID.Toolbar.list)
     }
 }

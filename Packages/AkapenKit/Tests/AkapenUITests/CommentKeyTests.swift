@@ -223,7 +223,6 @@ struct CommentPanelEventTests {
         )
         windows.render(SessionViewState(
             phase: .commenting,
-            isToolbarVisible: true,
             draftRect: ScreenRect(x: 910, y: 468, width: 204, height: 56),
             confirmKey: confirmKey
         ))
@@ -265,10 +264,9 @@ struct CommentPanelEventTests {
         let windows = render(confirmKey: .enter, log: log)
         defer { windows.hide() }
         windows.commentEditor.setText("left over")
-        windows.render(SessionViewState(phase: .idle, isToolbarVisible: true))
+        windows.render(SessionViewState(phase: .drawing))
         windows.render(SessionViewState(
             phase: .commenting,
-            isToolbarVisible: true,
             draftRect: ScreenRect(x: 10, y: 40, width: 20, height: 20)
         ))
         #expect(windows.commentEditor.text.isEmpty)

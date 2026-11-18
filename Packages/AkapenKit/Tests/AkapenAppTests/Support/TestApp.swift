@@ -97,12 +97,15 @@ import AkapenCore
         await model.send(event).value
     }
 
-    /// ホットキー（注釈があれば「+」）→ 枠 → コメントの確定。
+    /// 枠を描ける状態にして（何も出ていなければホットキー、一覧が開いていれば閉じる）→ 枠 → コメントの確定。確定すると `drawing` に戻る。
     func annotate(_ comment: String, rect: ScreenRect) async {
-        if model.phase == .idle || model.phase == .listOpen {
-            await send(.addTapped)
-        } else {
+        switch model.phase {
+        case .hidden, .copied:
             await send(.hotkeyPressed)
+        case .listOpen:
+            await send(.listToggled)
+        case .drawing, .commenting:
+            break
         }
         await send(.dragEnded(rect: rect, screen: ScreenDescriptor(id: 1, frame: rect)))
         await send(.commentConfirmed(text: comment))

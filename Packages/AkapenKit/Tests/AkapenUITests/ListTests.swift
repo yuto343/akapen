@@ -20,7 +20,6 @@ struct ListTests {
         )
         windows.render(SessionViewState(
             phase: .listOpen,
-            isToolbarVisible: true,
             annotations: Fixtures.twoAnnotations,
             confirmKey: confirmKey
         ))
@@ -80,7 +79,7 @@ struct ListTests {
         let windows = render(log)
         defer { windows.hide() }
         windows.listEditing.begin(Fixtures.twoAnnotations[0], index: 0)
-        windows.render(SessionViewState(phase: .idle, isToolbarVisible: true, annotations: Fixtures.twoAnnotations))
+        windows.render(SessionViewState(phase: .drawing, annotations: Fixtures.twoAnnotations))
         #expect(windows.listEditing.editingID == nil)
     }
 
@@ -92,7 +91,6 @@ struct ListTests {
         windows.listEditing.begin(Fixtures.twoAnnotations[0], index: 0)
         windows.render(SessionViewState(
             phase: .listOpen,
-            isToolbarVisible: true,
             annotations: [Fixtures.twoAnnotations[1]]
         ))
         #expect(windows.listEditing.editingID == nil)

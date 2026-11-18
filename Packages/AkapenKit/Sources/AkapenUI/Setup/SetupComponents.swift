@@ -74,6 +74,7 @@ struct SetupPageDots: View {
                     )
             }
         }
+        .animation(Tokens.Motion.panelSpring, value: current)
         .accessibilityHidden(true)
     }
 }

@@ -157,7 +157,11 @@ struct ConfigurationTests {
         #expect(QuitPolicy.pendingCount(app.model) == 0)
         await app.annotate("一つ目", rect: TestApp.firstRect)
         #expect(QuitPolicy.pendingCount(app.model) == 1)
-        await app.send(.addTapped)
+        // 隠しても注釈は残るので、件数は変わらない。
+        await app.send(.hotkeyPressed)
+        #expect(app.model.phase == .hidden)
+        #expect(QuitPolicy.pendingCount(app.model) == 1)
+        await app.send(.hotkeyPressed)
         await app.send(.dragEnded(rect: TestApp.secondRect, screen: ScreenDescriptor(id: 1, frame: TestApp.window)))
         #expect(QuitPolicy.pendingCount(app.model) == 2)
     }

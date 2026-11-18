@@ -18,8 +18,6 @@ import AkapenAXID
     private(set) var retentionText: String
     /// ホットキーの記録欄（未割り当てを許さない）。
     let hotkey: KeyRecorderModel
-    /// ボタン類の表示切り替えの記録欄（未割り当てを許す）。
-    let toolbarShortcut: KeyRecorderModel
     /// 定型文の入力欄。いま選んでいる言語の定型文を編集する。
     @ObservationIgnored let boilerplate: GrowingTextController
     /// キーの表示。
@@ -28,7 +26,7 @@ import AkapenAXID
     @ObservationIgnored var base: (@MainActor () -> Settings)?
     /// 設定を変えたとき。新しい設定全体を渡す。
     @ObservationIgnored var onChange: (@MainActor (Settings) -> Void)?
-    /// キーの記録を待ち始めた（true）・やめた（false）とき。2 つの欄のどちらかが待っている間は true。
+    /// キーの記録を待ち始めた（true）・やめた（false）とき。
     @ObservationIgnored var onRecordingChange: (@MainActor (Bool) -> Void)?
     @ObservationIgnored private var notifiedRecording = false
 
@@ -42,7 +40,6 @@ import AkapenAXID
         self.shortcutText = shortcutText
         retentionText = String(settings.imageRetentionDays)
         hotkey = KeyRecorderModel(shortcut: settings.hotkey, allowsNone: false)
-        toolbarShortcut = KeyRecorderModel(shortcut: settings.toolbarShortcut, allowsNone: true)
         boilerplate = GrowingTextController(
             style: Tokens.Typography.boilerplate,
             maxLines: Tokens.Settings.boilerplateMaxLines,
@@ -60,7 +57,6 @@ import AkapenAXID
         self.settings = settings
         retentionText = String(settings.imageRetentionDays)
         hotkey.load(settings.hotkey)
-        toolbarShortcut.load(settings.toolbarShortcut)
         let text = settings.boilerplate(for: settings.language)
         if boilerplate.text != text {
             boilerplate.setText(text)
@@ -81,9 +77,6 @@ import AkapenAXID
         }
         if latest.hotkey != previous.hotkey, !hotkey.isRecording {
             hotkey.load(latest.hotkey)
-        }
-        if latest.toolbarShortcut != previous.toolbarShortcut, !toolbarShortcut.isRecording {
-            toolbarShortcut.load(latest.toolbarShortcut)
         }
         let text = latest.boilerplate(for: latest.language)
         if text != previous.boilerplate(for: previous.language), boilerplate.text != text {
@@ -159,7 +152,6 @@ import AkapenAXID
     /// キーの記録をやめる（ウィンドウがキーでなくなったとき）。
     func cancelRecording() {
         hotkey.cancelRecording()
-        toolbarShortcut.cancelRecording()
     }
 
     // MARK: - 下請け
@@ -184,12 +176,6 @@ import AkapenAXID
     }
 
     private func configureRecorders() {
-        hotkey.isTaken = { [weak self] candidate in
-            self?.toolbarShortcut.shortcut == candidate
-        }
-        toolbarShortcut.isTaken = { [weak self] candidate in
-            self?.hotkey.shortcut == candidate
-        }
         hotkey.onCommit = { [weak self] value in
             guard let value else {
                 return
@@ -198,29 +184,13 @@ import AkapenAXID
                 settings.hotkey = value
             }
         }
-        toolbarShortcut.onCommit = { [weak self] value in
-            self?.apply { settings in
-                settings.toolbarShortcut = value
-            }
-        }
-        for recorder in [hotkey, toolbarShortcut] {
-            recorder.onRecordingChange = { [weak self, weak recorder] began in
-                guard let self, let recorder else {
-                    return
-                }
-                recordingChanged(recorder, began: began)
-            }
+        hotkey.onRecordingChange = { [weak self] began in
+            self?.recordingChanged(began)
         }
     }
 
-    /// 片方が記録を待ち始めたら、もう片方はやめる。2 つ合わせた状態が変わったときだけ知らせる。
-    private func recordingChanged(_ recorder: KeyRecorderModel, began: Bool) {
-        if began {
-            for other in [hotkey, toolbarShortcut] where other !== recorder {
-                other.cancelRecording()
-            }
-        }
-        let isRecording = hotkey.isRecording || toolbarShortcut.isRecording
+    /// 記録の状態が変わったときだけ知らせる。
+    private func recordingChanged(_ isRecording: Bool) {
         guard isRecording != notifiedRecording else {
             return
         }

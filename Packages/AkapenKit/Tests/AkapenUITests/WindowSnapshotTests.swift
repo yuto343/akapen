@@ -66,7 +66,6 @@ struct WindowSnapshotTests {
             },
             send: sink.send,
             canUseHotkey: canUseHotkey,
-            canUseToolbarShortcut: { _ in true },
             shortcutText: .ansi,
             activatesApp: false
         )
@@ -92,7 +91,7 @@ struct WindowSnapshotTests {
         try Snapshot.write(try await renderSettings(recording), to: "\(folder)/settings-recording.png")
 
         var assignedSettings = base
-        assignedSettings.toolbarShortcut = optionCommandK
+        assignedSettings.hotkey = optionCommandK
         assignedSettings.confirmKey = .commandEnter
         assignedSettings.imageRetentionDays = 365
         try Snapshot.write(try await renderSettings(settingsController(assignedSettings)), to: "\(folder)/settings-assigned.png")
@@ -103,11 +102,6 @@ struct WindowSnapshotTests {
         unavailable.form.hotkey.beginRecording()
         unavailable.form.hotkey.handle(keyCode: TestKey.k, flags: [.command, .option])
         try Snapshot.write(try await renderSettings(unavailable), to: "\(folder)/settings-unavailable.png")
-
-        let inUse = settingsController(base)
-        inUse.form.toolbarShortcut.beginRecording()
-        inUse.form.toolbarShortcut.handle(keyCode: TestKey.semicolon, flags: [.command])
-        try Snapshot.write(try await renderSettings(inUse), to: "\(folder)/settings-in-use.png")
     }
 
     // MARK: - セットアップ（App 07・08）

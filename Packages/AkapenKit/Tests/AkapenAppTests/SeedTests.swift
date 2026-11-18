@@ -19,7 +19,6 @@ struct SeedTests {
         #expect(settings.language == .ja)
         #expect(settings.setupCompleted)
         #expect(settings.hotkey == KeyboardShortcut())
-        #expect(settings.toolbarShortcut == nil)
         #expect(settings.confirmKey == .enter)
         #expect(settings.imageRetentionDays == 7)
         #expect(settings.boilerplate(for: .en) == Boilerplate.english)
@@ -32,7 +31,6 @@ struct SeedTests {
         var stored = Settings()
         stored.confirmKey = .commandEnter
         stored.setupCompleted = true
-        stored.toolbarShortcut = KeyboardShortcut(keyCode: 11, modifiers: [.command, .option])
         let seed = try LaunchSeed.parse(#"{"settings": {"boilerplates": {"en": "Look at these."}, "imageRetentionDays": 3}}"#)
         let app = try await TestApp.make(seed: seed) { directory in
             try FileSettingsStore(url: directory.appending(path: "settings.json")).save(stored)
@@ -41,22 +39,29 @@ struct SeedTests {
         let settings = app.model.settings
         #expect(settings.confirmKey == .commandEnter)
         #expect(settings.setupCompleted)
-        #expect(settings.toolbarShortcut == stored.toolbarShortcut)
         #expect(settings.imageRetentionDays == 3)
         #expect(settings.boilerplate(for: .en) == "Look at these.")
         #expect(settings.boilerplate(for: .ja) == Boilerplate.japanese)
     }
 
     @Test
-    func toolbarShortcutNullUnassignsAndMissingKeeps() throws {
-        var stored = Settings()
-        stored.toolbarShortcut = KeyboardShortcut(keyCode: 11, modifiers: .command)
-        let unassign = try LaunchSeed.parse(#"{"settings": {"toolbarShortcut": null}}"#)
-        #expect(unassign.settings?.applied(to: stored).toolbarShortcut == nil)
-        let keep = try LaunchSeed.parse(#"{"settings": {"language": "en"}}"#)
-        #expect(keep.settings?.applied(to: stored).toolbarShortcut == stored.toolbarShortcut)
-        let assign = try LaunchSeed.parse(#"{"settings": {"toolbarShortcut": {"keyCode": 4, "modifiers": 9}}}"#)
-        #expect(assign.settings?.applied(to: Settings()).toolbarShortcut == KeyboardShortcut(keyCode: 4, modifiers: [.command, .control]))
+    func removedToolbarShortcutIsRejected() {
+        // ボタン類の表示切り替えのショートカットはなくなった。書いた seed は書き間違いと同じく起動エラーにする。
+        #expect(throws: LaunchSeed.ParseError.self) {
+            try LaunchSeed.parse(#"{"settings": {"toolbarShortcut": null}}"#)
+        }
+    }
+
+    @Test
+    func oldSettingsFileWithToolbarShortcutStillLoads() async throws {
+        let app = try await TestApp.make(seed: LaunchSeed()) { directory in
+            let json = #"{"language":"ja","toolbarShortcut":{"keyCode":11,"modifiers":3},"setupCompleted":true}"#
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try Data(json.utf8).write(to: directory.appending(path: "settings.json"))
+        }
+        defer { app.cleanUp() }
+        #expect(app.model.settings.language == .ja)
+        #expect(app.model.settings.setupCompleted)
     }
 
     @Test(arguments: [(0, 1), (366, 365), (-3, 1), (30, 30)])
@@ -71,7 +76,6 @@ struct SeedTests {
     func seedRoundTripsThroughJSON() throws {
         var patch = LaunchSeed.SettingsPatch()
         patch.language = .ja
-        patch.toolbarShortcut = .some(nil)
         patch.boilerplates = ["en": "Hello"]
         let seed = LaunchSeed(
             settings: patch,
@@ -81,7 +85,6 @@ struct SeedTests {
             open: .list
         )
         #expect(try LaunchSeed.parse(seed.json()) == seed)
-        #expect(try seed.json().contains(#""toolbarShortcut":null"#))
     }
 
     // MARK: - 許可とウィンドウ
@@ -117,8 +120,9 @@ struct SeedTests {
         ])
         let app = try await TestApp.make(seed: seed)
         defer { app.cleanUp() }
-        #expect(app.model.phase == .idle)
-        #expect(app.model.isToolbarVisible)
+        // 作り終えたら隠す。注釈は残っている。
+        #expect(app.model.phase == .hidden)
+        #expect(!app.model.isToolbarVisible)
         #expect(app.model.draft == nil)
         #expect(app.model.annotations.map(\.comment) == ["一つ目", "二つ目\n二行目"])
         #expect(app.model.annotations.map(\.sourceAppName) == ["Sample App", "Sample App"])
@@ -179,7 +183,7 @@ struct SeedTests {
         let seed = try LaunchSeed.parse(#"{"settings": {"setupCompleted": true}, "open": "toolbar"}"#)
         let app = try await TestApp.make(seed: seed)
         defer { app.cleanUp() }
-        #expect(app.model.phase == .idle)
+        #expect(app.model.phase == .drawing)
         #expect(app.model.isToolbarVisible)
         #expect(app.model.annotations.isEmpty)
     }

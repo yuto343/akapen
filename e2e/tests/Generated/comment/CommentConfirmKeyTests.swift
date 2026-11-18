@@ -30,7 +30,7 @@ final class CommentConfirmKeyTests: AkapenUITestCase {
 
         // 期待される結果: Enter を押すと入力欄が消える。
         // してはいけないこと: Enter を押しても確定されず、改行が入る。
-        let state = waitForPhase(.idle)
+        let state = waitForPhase(.drawing)
         waitForElementToDisappear(AXID.Comment.field)
 
         // 期待される結果: アプリの状態で、注釈が 1 件でき、そのコメントは Shift+Enter を押した位置で改行された 2 行になっている。
@@ -61,7 +61,7 @@ final class CommentConfirmKeyTests: AkapenUITestCase {
 
         // 期待される結果: ⌘Enter を押すと入力欄が消える。
         // してはいけないこと: ⌘Enter で改行が入るだけで、確定されない。
-        let state = waitForPhase(.idle)
+        let state = waitForPhase(.drawing)
         waitForElementToDisappear(AXID.Comment.field)
 
         // 期待される結果: アプリの状態で、注釈が 1 件でき、そのコメントは Enter を押した位置で改行された 2 行になっている。
@@ -96,7 +96,7 @@ final class CommentConfirmKeyTests: AkapenUITestCase {
 
         // 期待される結果: アプリの状態で、切り替えたあとに描いた枠のコメントは、Enter で改行され、⌘Enter で確定した注釈になっている。
         // してはいけないこと: 切り替えが、アプリを起動し直すまで効かない。
-        let state = waitForPhase(.idle)
+        let state = waitForPhase(.drawing)
         XCTAssertEqual(state.comments, ["First line\nSecond line"])
         XCTAssertEqual(state.settings.confirmKey, .commandEnter)
     }

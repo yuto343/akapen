@@ -4,7 +4,7 @@ import AkapenCore
 /// Carbon の登録を所有する。終了時は unregister を呼んで解放する。
 ///
 /// インスタンスごとに別のホットキー ID を持ち、自分の ID のイベントだけに反応する。
-/// 複数のインスタンス（「枠を描き始める」と「ボタン類の表示切り替え」）を同時に登録できる。
+/// 複数のインスタンス（ホットキーと、使えるかを試す登録）を同時に登録できる。
 @MainActor public final class CarbonHotkey: HotkeyRegistering {
     /// ホットキー ID の署名（'AKPN'）。
     static let signature: OSType = 0x414b504e

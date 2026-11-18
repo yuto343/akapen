@@ -6,10 +6,9 @@ import AkapenAXID
 ///
 /// - `show()` で開く。開くと前面に出てキー入力を受け取る。既に開いていれば前面に出すだけ。
 /// - 変更は、その場で `model.send(.settingsChanged(新しい設定))` として送る（保存ボタンはない）。
-/// - 記録したキーを受け入れるかは、`canUseHotkey` / `canUseToolbarShortcut` に聞く。
+/// - 記録したキーを受け入れるかは、`canUseHotkey` に聞く。
 ///   組み立ての側が、そのキーを実際に登録できるかを確かめて返す（判定の中で登録し直してもよい）。
 ///   false なら元の値に戻し、`This shortcut is unavailable` を出す（`DECISIONS.md` A8）。
-/// - 2 つの欄に同じキーは割り当てられない（判定に聞く前に断る）。
 @MainActor public final class SettingsController {
     /// キーの記録を待ち始めた（true）・やめた（false）とき。
     ///
@@ -28,11 +27,9 @@ import AkapenAXID
     ///
     /// - Parameters:
     ///   - canUseHotkey: 記録したホットキーが使えるか。既定はいつも true。
-    ///   - canUseToolbarShortcut: 記録したボタン類の表示切り替えのキーが使えるか。既定はいつも true。
     public convenience init(
         model: SessionModel,
-        canUseHotkey: @escaping @MainActor (KeyboardShortcut) -> Bool = { _ in true },
-        canUseToolbarShortcut: @escaping @MainActor (KeyboardShortcut) -> Bool = { _ in true }
+        canUseHotkey: @escaping @MainActor (KeyboardShortcut) -> Bool = { _ in true }
     ) {
         self.init(
             settings: { [weak model] in
@@ -42,7 +39,6 @@ import AkapenAXID
                 model?.send(event)
             },
             canUseHotkey: canUseHotkey,
-            canUseToolbarShortcut: canUseToolbarShortcut,
             shortcutText: ShortcutText(),
             activatesApp: true
         )
@@ -53,7 +49,6 @@ import AkapenAXID
         settings: @escaping @MainActor () -> Settings,
         send: @escaping @MainActor (SessionEvent) -> Void,
         canUseHotkey: @escaping @MainActor (KeyboardShortcut) -> Bool,
-        canUseToolbarShortcut: @escaping @MainActor (KeyboardShortcut) -> Bool,
         shortcutText: ShortcutText,
         activatesApp: Bool
     ) {
@@ -68,7 +63,6 @@ import AkapenAXID
         )
         form.base = settings
         form.hotkey.isAvailable = canUseHotkey
-        form.toolbarShortcut.isAvailable = canUseToolbarShortcut
         form.onChange = { [weak self] newSettings in
             self?.send(.settingsChanged(newSettings))
             self?.updateTitle()

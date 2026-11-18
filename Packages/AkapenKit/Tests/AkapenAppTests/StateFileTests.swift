@@ -3,7 +3,7 @@ import Testing
 import AkapenApp
 import AkapenCore
 
-/// `state.json`（v2）の中身。spec の「アプリの状態で、〜」が確かめる項目が、各状態で入っていること。
+/// `state.json`（v3）の中身。spec の「アプリの状態で、〜」が確かめる項目が、各状態で入っていること。
 @MainActor
 @Suite
 struct StateFileTests {
@@ -17,9 +17,10 @@ struct StateFileTests {
         #expect(!app.hasStateFile)
         app.environment.startWritingState()
         var state = try app.stateJSON()
-        #expect(state["schemaVersion"] as? Int == 2)
-        #expect(state["phase"] as? String == "idle")
-        await app.send(.addTapped)
+        #expect(state["schemaVersion"] as? Int == 3)
+        #expect(state["phase"] as? String == "hidden")
+        #expect((state["annotations"] as? [Any])?.count == 1)
+        await app.send(.hotkeyPressed)
         state = try app.stateJSON()
         #expect(state["phase"] as? String == "drawing")
         #expect(app.environment.stateWriteError == nil)
@@ -43,7 +44,7 @@ struct StateFileTests {
         #expect(settings["confirmKey"] as? String == "enter")
         #expect(settings["imageRetentionDays"] as? Int == 7)
         #expect(settings["setupCompleted"] as? Bool == false)
-        #expect(settings["toolbarShortcut"] is NSNull)
+        #expect(settings.keys.contains("toolbarShortcut") == false)
         let hotkey = try #require(settings["hotkey"] as? [String: Any])
         #expect(hotkey["keyCode"] as? Int == 41)
         #expect(hotkey["modifiers"] as? Int == 1)
@@ -60,7 +61,7 @@ struct StateFileTests {
         #expect(windows["quitConfirm"] as? Bool == false)
         let hotkeys = try #require(state["hotkeys"] as? [String: Any])
         #expect(hotkeys["draw"] is NSNull)
-        #expect(hotkeys["toolbar"] is NSNull)
+        #expect(hotkeys.keys.contains("toolbar") == false)
         #expect(hotkeys["suspended"] as? Bool == false)
         #expect((hotkeys["failed"] as? [Any])?.isEmpty == true)
     }
@@ -94,14 +95,14 @@ struct StateFileTests {
     }
 
     @Test
-    func idleListAndCopiedState() async throws {
+    func drawingListHiddenAndCopiedState() async throws {
         let app = try await TestApp.make(seed: TestApp.setupDone())
         defer { app.cleanUp() }
         app.environment.startWritingState()
         await app.annotate("一つ目", rect: TestApp.firstRect)
         await app.annotate("二つ目", rect: TestApp.secondRect)
         var state = try app.stateJSON()
-        #expect(state["phase"] as? String == "idle")
+        #expect(state["phase"] as? String == "drawing")
         #expect(state["draft"] is NSNull)
         let annotations = try #require(state["annotations"] as? [[String: Any]])
         #expect(annotations.compactMap { $0["comment"] as? String } == ["一つ目", "二つ目"])
@@ -110,11 +111,12 @@ struct StateFileTests {
         await app.send(.listToggled)
         state = try app.stateJSON()
         #expect(state["phase"] as? String == "listOpen")
-        await app.send(.toolbarToggled)
+        await app.send(.hotkeyPressed)
         state = try app.stateJSON()
-        #expect(state["phase"] as? String == "idle")
+        #expect(state["phase"] as? String == "hidden")
         #expect(state["isToolbarVisible"] as? Bool == false)
-        await app.send(.toolbarToggled)
+        #expect((state["annotations"] as? [Any])?.count == 2)
+        await app.send(.hotkeyPressed)
         await app.send(.copyPromptTapped)
         state = try app.stateJSON()
         #expect(state["phase"] as? String == "copied")
@@ -135,7 +137,6 @@ struct StateFileTests {
         #expect(state["lastFailure"] as? String == "noWindowUnderFrame")
         var settings = app.model.settings
         settings.language = .ja
-        settings.toolbarShortcut = KeyboardShortcut(keyCode: 11, modifiers: [.command, .shift])
         settings.confirmKey = .commandEnter
         settings.setBoilerplate("書き換えた", for: .ja)
         await app.send(.settingsChanged(settings))
@@ -143,9 +144,6 @@ struct StateFileTests {
         let values = try #require(state["settings"] as? [String: Any])
         #expect(values["language"] as? String == "ja")
         #expect(values["confirmKey"] as? String == "commandEnter")
-        let toolbar = try #require(values["toolbarShortcut"] as? [String: Any])
-        #expect(toolbar["keyCode"] as? Int == 11)
-        #expect(toolbar["modifiers"] as? Int == 3)
         #expect(values["boilerplates"] as? [String: String] == ["en": Boilerplate.english, "ja": "書き換えた"])
         // 次の入力が成功したら、失敗は消える。
         await app.send(.escapePressed)

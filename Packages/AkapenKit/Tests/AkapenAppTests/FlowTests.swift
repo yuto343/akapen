@@ -19,8 +19,8 @@ struct FlowTests {
         await app.send(.dragEnded(rect: TestApp.firstRect, screen: ScreenDescriptor(id: 1, frame: TestApp.window)))
         #expect(app.model.phase == .commenting)
         await app.send(.commentConfirmed(text: "ボタンの余白が左右で違う"))
-        #expect(app.model.phase == .idle)
-        await app.send(.addTapped)
+        // 確定するとすぐ次の枠を描ける。
+        #expect(app.model.phase == .drawing)
         await app.send(.dragEnded(rect: TestApp.secondRect, screen: ScreenDescriptor(id: 1, frame: TestApp.window)))
         await app.send(.commentConfirmed(text: "ここの文言を「保存する」に\n2 行目も直す"))
         #expect(app.model.annotations.count == 2)
@@ -65,7 +65,7 @@ struct FlowTests {
         let draft = try #require(app.model.draft)
         #expect(FileManager.default.fileExists(atPath: draft.imagePath))
         await app.send(.commentCancelled)
-        #expect(app.model.phase == .hidden)
+        #expect(app.model.phase == .drawing)
         #expect(app.model.draft == nil)
         #expect(app.model.annotations.isEmpty)
         #expect(!FileManager.default.fileExists(atPath: draft.imagePath))
@@ -77,11 +77,10 @@ struct FlowTests {
         let app = try await TestApp.make(seed: TestApp.setupDone())
         defer { app.cleanUp() }
         await app.annotate("残す", rect: TestApp.firstRect)
-        await app.send(.addTapped)
         await app.send(.dragEnded(rect: TestApp.secondRect, screen: ScreenDescriptor(id: 1, frame: TestApp.window)))
         let draft = try #require(app.model.draft)
         await app.send(.commentCancelled)
-        #expect(app.model.phase == .idle)
+        #expect(app.model.phase == .drawing)
         #expect(app.model.isToolbarVisible)
         #expect(app.model.annotations.map(\.comment) == ["残す"])
         #expect(!FileManager.default.fileExists(atPath: draft.imagePath))
@@ -162,22 +161,44 @@ struct FlowTests {
     }
 
     @Test
-    func toolbarToggleKeepsAnnotations() async throws {
+    func hotkeyToggleKeepsAnnotationsAndSession() async throws {
         let app = try await TestApp.make(seed: TestApp.setupDone())
         defer { app.cleanUp() }
-        // 何も出ていないときは、ボタン類だけを出す（枠は描かない）。
-        await app.send(.toolbarToggled)
-        #expect(app.model.phase == .idle)
-        #expect(app.model.isToolbarVisible)
         await app.annotate("一つ目", rect: TestApp.firstRect)
-        await app.annotate("二つ目", rect: TestApp.secondRect)
-        await app.send(.toolbarToggled)
+        let session = try #require(app.sessionDirectory)
+        // ホットキーはトグル。隠しても注釈は残る。
+        await app.send(.hotkeyPressed)
+        #expect(app.model.phase == .hidden)
         #expect(!app.model.isToolbarVisible)
+        #expect(app.model.annotations.map(\.comment) == ["一つ目"])
+        // 出し直すと同じ回を続け、画像の番号も続ける。
+        await app.send(.hotkeyPressed)
+        #expect(app.model.phase == .drawing)
+        #expect(app.sessionDirectory == session)
+        await app.annotate("二つ目", rect: TestApp.secondRect)
         #expect(app.model.annotations.map(\.comment) == ["一つ目", "二つ目"])
-        await app.send(.toolbarToggled)
-        #expect(app.model.isToolbarVisible)
-        #expect(app.model.phase == .idle)
-        #expect(app.model.annotations.map(\.comment) == ["一つ目", "二つ目"])
+        #expect(app.model.annotations.map { URL(filePath: $0.imagePath).lastPathComponent } == ["01.png", "02.png"])
+        // 一覧を開いていてもホットキーで隠す。
+        await app.send(.listToggled)
+        await app.send(.hotkeyPressed)
+        #expect(app.model.phase == .hidden)
+        await app.send(.hotkeyPressed)
+        await app.send(.copyPromptTapped)
+        #expect(app.pasteboardText()?.contains("01.png") == true)
+        #expect(app.pasteboardText()?.contains("02.png") == true)
+    }
+
+    @Test
+    func dismissForSettingsKeepsAnnotations() async throws {
+        let app = try await TestApp.make(seed: TestApp.setupDone())
+        defer { app.cleanUp() }
+        await app.annotate("一つ目", rect: TestApp.firstRect)
+        await app.send(.dragEnded(rect: TestApp.secondRect, screen: ScreenDescriptor(id: 1, frame: TestApp.window)))
+        let draft = try #require(app.model.draft)
+        await app.send(.dismissRequested)
+        #expect(app.model.phase == .hidden)
+        #expect(app.model.annotations.map(\.comment) == ["一つ目"])
+        #expect(!FileManager.default.fileExists(atPath: draft.imagePath))
     }
 
     @Test
@@ -256,9 +277,9 @@ struct FlowTests {
         let app = try await TestApp.make(seed: TestApp.setupDone())
         defer { app.cleanUp() }
         app.putOnPasteboard("前の文章")
-        await app.send(.toolbarToggled)
+        await app.send(.hotkeyPressed)
         await app.send(.copyPromptTapped)
-        #expect(app.model.phase == .idle)
+        #expect(app.model.phase == .drawing)
         #expect(app.model.lastCopiedCount == 0)
         #expect(app.pasteboardText() == "前の文章")
     }

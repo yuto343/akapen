@@ -10,8 +10,9 @@ import AkapenAXID
 //   launch(.setupDone)                                            // セットアップ済み・注釈 0 件・何も出ていない
 //   launch(.firstRun)                                             // セットアップがまだ（セットアップのウィンドウが出る）
 //   launch(.setupDone, settings: LaunchSettings(language: .ja))   // 設定の一部を指定する
-//   launch(.setupDone, annotations: SeedAnnotation.samples(2))    // 確定済みの注釈 2 件。ボタン類だけが出ている
-//   launch(.setupDone, open: .toolbar)                            // 注釈 0 件で、ボタン類だけが出ている
+//   launch(.setupDone, annotations: SeedAnnotation.samples(2))    // 確定済みの注釈 2 件。何も出ていない（注釈は残っている）
+//   launch(.setupDone, open: .toolbar)                            // 注釈 0 件で、ボタン類が出ている（枠を描く状態）
+//   launch(.setupDone, annotations: SeedAnnotation.samples(2), open: .toolbar)  // 注釈 2 件で、ボタン類が出ている
 //   launch(.setupDone, annotations: SeedAnnotation.samples(2), open: .list)  // 一覧を開いている
 //   launch(.setupDone, screenRecording: .denied)                  // 画面収録の許可なし
 //   placeOldSession(daysBeforeNow: 5)                             // 置き場に古い回を置いてから
@@ -26,9 +27,9 @@ enum LaunchState {
     case firstRun
 }
 
-/// 起動後に出しておくもの（省くと、注釈が 0 件なら何も出ていない状態、注釈があればボタン類だけが出ている状態）。
+/// 起動後に出しておくもの（省くと、注釈があってもなくても何も出ていない状態）。
 enum OpenView: String {
-    /// ボタン類だけが出ている状態（注釈が 0 件でも）。
+    /// ボタン類が出ていて、枠を描ける状態（注釈が 0 件でも）。
     case toolbar
     /// 一覧を開いている状態。
     case list
@@ -171,8 +172,6 @@ struct Shortcut: Codable, Equatable, CustomStringConvertible {
 struct LaunchSettings {
     var language: AppLanguage?
     var hotkey: Shortcut?
-    /// ボタン類の表示を切り替えるキー。`.some(nil)` で未割り当て（既定も未割り当て）。
-    var toolbarShortcut: Shortcut??
     var confirmKey: ConfirmKeySetting?
     /// 書き換えておく定型文（言語ごと）。書いていない言語は既定文のまま。
     var boilerplates: [AppLanguage: String]
@@ -182,14 +181,12 @@ struct LaunchSettings {
     init(
         language: AppLanguage? = nil,
         hotkey: Shortcut? = nil,
-        toolbarShortcut: Shortcut?? = nil,
         confirmKey: ConfirmKeySetting? = nil,
         boilerplates: [AppLanguage: String] = [:],
         imageRetentionDays: Int? = nil
     ) {
         self.language = language
         self.hotkey = hotkey
-        self.toolbarShortcut = toolbarShortcut
         self.confirmKey = confirmKey
         self.boilerplates = boilerplates
         self.imageRetentionDays = imageRetentionDays
@@ -203,9 +200,6 @@ struct LaunchSettings {
         }
         if let hotkey {
             json["hotkey"] = Self.json(hotkey)
-        }
-        if let toolbarShortcut {
-            json["toolbarShortcut"] = toolbarShortcut.map(Self.json) ?? NSNull()
         }
         if let confirmKey {
             json["confirmKey"] = confirmKey.rawValue
@@ -272,7 +266,7 @@ extension AkapenUITestCase {
     ///
     /// - Parameters:
     ///   - state: セットアップを終えているか。
-    ///   - settings: 設定の一部（言語・ホットキー・ボタン類の表示を切り替えるキー・確定キー・定型文・日数）。
+    ///   - settings: 設定の一部（言語・ホットキー・確定キー・定型文・日数）。
     ///   - annotations: 確定済みの注釈（確定した順）。画像は起動時に撮って置き場に保存される。
     ///   - open: 起動後に出しておくもの。
     ///   - screenRecording: 画面収録の許可。

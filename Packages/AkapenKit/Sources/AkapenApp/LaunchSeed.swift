@@ -15,15 +15,16 @@ import AkapenCore
 ///
 /// - どのキーも省ける。知らないキー・型の違う値・範囲の外の値（言語や確定キーの綴りなど）は起動エラーにする（書き間違いで前提が黙って変わらないように）。
 /// - `settings`: 設定の一部。キーと値の形は保存する設定の JSON（`state.json` の `settings`）と同じ。保存済みの設定に、書いた項目だけを重ねる。
-///   `toolbarShortcut` は `null` で未割り当て。`boilerplates` は書いた言語（`en` / `ja`）だけを書き換える。
+///   `boilerplates` は書いた言語（`en` / `ja`）だけを書き換える。
 ///   日数は `SessionModel` が 1〜365 に丸める。
 /// - `screenRecording`: 画面収録の許可。`granted`（既定）か `denied`。偽の撮影（`AKAPEN_CAPTURE=fixture`）のときだけ効く。
 /// - `windows`: 偽の撮影が返すウィンドウ（手前から順）。省くと `LaunchSeed.defaultWindows`（SampleTarget と同じ位置・大きさ）。
 /// - `annotations`: 確定済みの注釈。起動時に、ホットキー → 枠 → コメントの確定を `SessionModel` に順に送って作る
-///   （画像は本来と同じ経路で撮って、赤枠を描き込み、置き場に保存する）。起動後はボタン類だけが出ている状態になる。
-/// - `open`: 起動後に出しておくもの。`toolbar` でボタン類だけが出ている状態（注釈が 0 件でも）、`list` で一覧を開いた状態。
-///   省くと、注釈が 0 件なら何も出ていない状態、注釈があればボタン類だけが出ている状態。
-///   どちらも `SessionModel` に入力（`toolbarToggled` / `listToggled`）を送って作る。
+///   （画像は本来と同じ経路で撮って、赤枠を描き込み、置き場に保存する）。作り終えたら `Esc` で隠すので、`open` を省くと
+///   何も出ていない状態（注釈は残っている）になる。
+/// - `open`: 起動後に出しておくもの。`toolbar` でボタン類が出ている状態（枠を描ける `drawing`。注釈が 0 件でも）、
+///   `list` で一覧を開いた状態（`listOpen`）。省くと何も出ていない状態（`hidden`）。
+///   どちらも `SessionModel` に入力（`hotkeyPressed` / `listToggled`）を送って作る。注釈があれば同じ回を続ける。
 public struct LaunchSeed: Equatable, Sendable {
     /// 画面収録の許可の有無。
     public enum ScreenRecording: String, Codable, Equatable, Sendable {
@@ -64,7 +65,7 @@ public struct LaunchSeed: Equatable, Sendable {
 
     /// 起動後に出しておくもの。
     public enum OpenView: String, Codable, Equatable, Sendable {
-        /// ボタン類だけが出ている状態（`idle`）。
+        /// ボタン類が出ていて、枠を描ける状態（`drawing`）。
         case toolbar
         /// 一覧を開いた状態（`listOpen`）。
         case list
@@ -100,8 +101,6 @@ public struct LaunchSeed: Equatable, Sendable {
     public struct SettingsPatch: Codable, Equatable, Sendable {
         public var language: Language?
         public var hotkey: KeyboardShortcut?
-        /// `.some(nil)` で未割り当てにする。nil なら保存済みの値のまま。
-        public var toolbarShortcut: KeyboardShortcut??
         public var confirmKey: ConfirmKey?
         /// 書き換える言語ごとの定型文。キーは `en` / `ja`。書いていない言語は保存済みの値のまま。
         public var boilerplates: [String: String]?
@@ -114,7 +113,6 @@ public struct LaunchSeed: Equatable, Sendable {
         private enum CodingKeys: String, CodingKey, CaseIterable {
             case language
             case hotkey
-            case toolbarShortcut
             case confirmKey
             case boilerplates
             case imageRetentionDays
@@ -126,9 +124,6 @@ public struct LaunchSeed: Equatable, Sendable {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             language = try container.decodeIfPresent(Language.self, forKey: .language)
             hotkey = try container.decodeIfPresent(KeyboardShortcut.self, forKey: .hotkey)
-            if container.contains(.toolbarShortcut) {
-                toolbarShortcut = .some(try container.decodeIfPresent(KeyboardShortcut.self, forKey: .toolbarShortcut))
-            }
             confirmKey = try container.decodeIfPresent(ConfirmKey.self, forKey: .confirmKey)
             boilerplates = try container.decodeIfPresent([String: String].self, forKey: .boilerplates)
             if let boilerplates {
@@ -149,9 +144,6 @@ public struct LaunchSeed: Equatable, Sendable {
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encodeIfPresent(language, forKey: .language)
             try container.encodeIfPresent(hotkey, forKey: .hotkey)
-            if let toolbarShortcut {
-                try container.encode(toolbarShortcut, forKey: .toolbarShortcut)
-            }
             try container.encodeIfPresent(confirmKey, forKey: .confirmKey)
             try container.encodeIfPresent(boilerplates, forKey: .boilerplates)
             try container.encodeIfPresent(imageRetentionDays, forKey: .imageRetentionDays)
@@ -166,9 +158,6 @@ public struct LaunchSeed: Equatable, Sendable {
             }
             if let hotkey {
                 result.hotkey = hotkey
-            }
-            if let toolbarShortcut {
-                result.toolbarShortcut = toolbarShortcut
             }
             if let confirmKey {
                 result.confirmKey = confirmKey

@@ -1,8 +1,11 @@
+import AppKit
 import SwiftUI
 
-/// akapen のボタンの見た目の変化（`DECISIONS.md` 19）。
+/// akapen のボタンの共通の振る舞い（`DECISIONS.md` 19）。
 ///
-/// ホバーは地をわずかに濃くし、押している最中は不透明度 0.8、使えない状態は 0.4。地や形はラベルの側で描く。
+/// - ホバー中は地をわずかに濃くする（`Tokens.Motion.hover` の ease-out で変える）。カーソルは指の形にする（アクティブでないときも）。
+/// - 押している最中は不透明度を下げ、わずかに縮める。
+/// - 使えない状態は不透明度を下げ、カーソルは矢印のまま。
 struct ControlButtonStyle: ButtonStyle {
     let cornerRadius: CGFloat
 
@@ -15,19 +18,23 @@ private struct ControlButtonBody: View {
     let configuration: ButtonStyleConfiguration
     let cornerRadius: CGFloat
     @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isHovering = false
 
     var body: some View {
         configuration.label
             .overlay {
-                if isHovering && isEnabled {
-                    RoundedBox(cornerRadius: cornerRadius)
-                        .fill(Tokens.Motion.hoverOverlay.color)
-                        .allowsHitTesting(false)
-                }
+                RoundedBox(cornerRadius: cornerRadius)
+                    .fill(Tokens.Motion.hoverOverlay.color)
+                    .opacity(isHovering && isEnabled ? 1 : 0)
+                    .allowsHitTesting(false)
             }
             .contentShape(RoundedBox(cornerRadius: cornerRadius))
             .opacity(opacity)
+            .scaleEffect(scale)
+            .animation(Tokens.Motion.hoverAnimation, value: isHovering)
+            .animation(Tokens.Motion.hoverAnimation, value: configuration.isPressed)
+            .hoverCursor(.pointingHand, isEnabled: isEnabled)
             .onHover { hovering in
                 isHovering = hovering
             }
@@ -38,5 +45,12 @@ private struct ControlButtonBody: View {
             return Tokens.Motion.disabledOpacity
         }
         return configuration.isPressed ? Tokens.Motion.pressedOpacity : 1
+    }
+
+    private var scale: CGFloat {
+        guard isEnabled, configuration.isPressed, !reduceMotion else {
+            return 1
+        }
+        return Tokens.Motion.pressedScale
     }
 }

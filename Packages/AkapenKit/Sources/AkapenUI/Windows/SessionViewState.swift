@@ -5,8 +5,6 @@ import AkapenCore
 /// テストは `SessionModel` に入力を送らずに、この値を直接作って `SessionWindows.render(_:)` に渡す。
 public struct SessionViewState: Equatable, Sendable {
     public var phase: Phase
-    /// ボタン類を出すか（`SessionModel.isToolbarVisible`）。
-    public var isToolbarVisible: Bool
     /// 確定済みの注釈。
     public var annotations: [Annotation]
     /// コメントを書いている間に出しておく赤枠。
@@ -23,7 +21,6 @@ public struct SessionViewState: Equatable, Sendable {
     /// 値をそのまま持つ。設定の値の既定は `Settings()` と同じ。
     public init(
         phase: Phase,
-        isToolbarVisible: Bool,
         annotations: [Annotation] = [],
         draftRect: ScreenRect? = nil,
         lastCopiedCount: Int = 0,
@@ -33,7 +30,6 @@ public struct SessionViewState: Equatable, Sendable {
         failure: SessionFailure? = nil
     ) {
         self.phase = phase
-        self.isToolbarVisible = isToolbarVisible
         self.annotations = annotations
         self.draftRect = draftRect
         self.lastCopiedCount = lastCopiedCount
@@ -47,7 +43,6 @@ public struct SessionViewState: Equatable, Sendable {
     @MainActor public init(model: SessionModel) {
         self.init(
             phase: model.phase,
-            isToolbarVisible: model.isToolbarVisible,
             annotations: model.annotations,
             draftRect: model.phase == .commenting ? (model.draft?.rect ?? model.lastDrawnRect) : nil,
             lastCopiedCount: model.lastCopiedCount,
@@ -60,25 +55,31 @@ public struct SessionViewState: Equatable, Sendable {
 }
 
 /// どのパネルを出すか。`SessionViewState` から作る純粋な値。
+///
+/// ボタン類が出ているあいだ（`drawing`・`commenting`・`listOpen`）は、画面全体を覆う面も出してマウスを受ける。
+/// 面が枠を描くのは `drawing` のときだけで、`commenting` と `listOpen` では面のクリックは何もしない。
 struct PanelPlan: Equatable {
-    /// 枠を描く面がマウスを受け取るか（`drawing` のときだけ）。
+    /// 画面全体を覆う面を出して、マウスを受けるか（下のアプリを操作させない）。
+    var coversScreen: Bool
+    /// 面が枠を描くか（`drawing` のときだけ）。
     var acceptsDrawing: Bool
-    /// コメントを書いている間に出しておく赤枠。面はマウスを受け取らない。
+    /// コメントを書いている間に出しておく赤枠。
     var pinnedFrame: ScreenRect?
     var toolbar: Bool
     var comment: Bool
     var list: Bool
     var copied: Bool
-    /// 案内の表示で知らせる失敗。`drawing` では撮影の失敗、`idle` と `listOpen` ではコピーと設定の保存の失敗。
+    /// 案内の表示で知らせる失敗。`drawing` ではすべて、`listOpen` ではコピーと設定の保存の失敗。
     var notice: SessionFailure?
 
     /// 面（赤枠や案内を描く全画面のパネル）を出すか。
     var showsOverlay: Bool {
-        acceptsDrawing || pinnedFrame != nil || notice != nil
+        coversScreen
     }
 
     /// 何も出さない。
     static let none = PanelPlan(
+        coversScreen: false,
         acceptsDrawing: false,
         pinnedFrame: nil,
         toolbar: false,
@@ -88,30 +89,34 @@ struct PanelPlan: Equatable {
         notice: nil
     )
 
-    /// `phase` と `isToolbarVisible` から決める。次の状態は判断しない。
+    /// `phase` から決める。次の状態は判断しない。
     init(_ state: SessionViewState) {
         self = .none
-        toolbar = state.isToolbarVisible
         switch state.phase {
         case .hidden:
-            toolbar = false
+            break
         case .drawing:
+            coversScreen = true
             acceptsDrawing = true
-            notice = Self.drawingNotice(state.failure)
+            toolbar = true
+            notice = state.failure
         case .commenting:
+            coversScreen = true
+            toolbar = true
             pinnedFrame = state.draftRect
             comment = true
-        case .idle:
-            notice = Self.toolbarNotice(state.failure)
         case .listOpen:
+            coversScreen = true
+            toolbar = true
             list = true
-            notice = Self.toolbarNotice(state.failure)
+            notice = Self.listNotice(state.failure)
         case .copied:
             copied = true
         }
     }
 
     private init(
+        coversScreen: Bool,
         acceptsDrawing: Bool,
         pinnedFrame: ScreenRect?,
         toolbar: Bool,
@@ -120,6 +125,7 @@ struct PanelPlan: Equatable {
         copied: Bool,
         notice: SessionFailure?
     ) {
+        self.coversScreen = coversScreen
         self.acceptsDrawing = acceptsDrawing
         self.pinnedFrame = pinnedFrame
         self.toolbar = toolbar
@@ -129,18 +135,8 @@ struct PanelPlan: Equatable {
         self.notice = notice
     }
 
-    /// 枠を描く状態で知らせる失敗（撮影まわり）。`DECISIONS.md` A9。
-    private static func drawingNotice(_ failure: SessionFailure?) -> SessionFailure? {
-        switch failure {
-        case .noWindowUnderFrame, .captureFailed, .imageSaveFailed:
-            failure
-        case .pasteboardFailed, .settingsSaveFailed, nil:
-            nil
-        }
-    }
-
-    /// ボタン類だけが出ている状態と一覧で知らせる失敗（コピーと設定の保存）。
-    private static func toolbarNotice(_ failure: SessionFailure?) -> SessionFailure? {
+    /// 一覧で知らせる失敗（コピーと設定の保存）。撮影の失敗は一覧を開く前の話なので出さない。
+    private static func listNotice(_ failure: SessionFailure?) -> SessionFailure? {
         switch failure {
         case .pasteboardFailed, .settingsSaveFailed:
             failure

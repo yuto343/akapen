@@ -63,8 +63,6 @@ import AkapenCore
             switch event {
             case .hotkeyPressed:
                 "hotkeyPressed"
-            case .addTapped:
-                "addTapped"
             case .escapePressed:
                 "escapePressed"
             case .dragEnded:
@@ -83,8 +81,8 @@ import AkapenCore
                 "copyPromptTapped"
             case .copiedExpired:
                 "copiedExpired"
-            case .toolbarToggled:
-                "toolbarToggled"
+            case .dismissRequested:
+                "dismissRequested"
             case .settingsChanged:
                 "settingsChanged"
             case .setupCompleted:

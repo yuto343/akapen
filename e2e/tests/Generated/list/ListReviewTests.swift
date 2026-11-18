@@ -1,5 +1,5 @@
 // spec: e2e/specs/list/review.md
-// spec-sha256: cb7c81f0fa4cad8e28b4132f80e965900c6f4e41a4b8f70d93d7835a2bb46ad8
+// spec-sha256: 20753e10b7ae737c37b7b6b06f145f58b0ca15e370c56f13108aae76129ca268
 // このファイルは生成物。直接編集しない。md を直して e2e-generator で作り直す。
 
 import XCTest
@@ -8,9 +8,9 @@ import AkapenAXID
 final class ListReviewTests: AkapenUITestCase {
     // scenario: 一覧を開くと、すべての注釈を確定した順に見返せる
     func testOpeningListShowsAnnotationsInOrder() throws {
-        // 前提: 確定済みの注釈が 2 件あり（コメントはそれぞれ別の文）、ボタン類だけが出ている。
-        launch(.setupDone, annotations: SeedAnnotation.samples(2))
-        let before = waitForPhase(.idle)
+        // 前提: 確定済みの注釈が 2 件あり（コメントはそれぞれ別の文）、ボタン類が出ている（枠を描く状態）。
+        launch(.setupDone, annotations: SeedAnnotation.samples(2), open: .toolbar)
+        let before = waitForPhase(.drawing)
         XCTAssertEqual(before.annotations.count, 2)
         XCTAssertNotEqual(before.comments[0], before.comments[1])
 
@@ -34,8 +34,8 @@ final class ListReviewTests: AkapenUITestCase {
         XCTAssertEqual(appState().annotations, before.annotations)
     }
 
-    // scenario: 一覧を閉じると、注釈を保ったままボタン類だけの状態に戻る
-    func testClosingListReturnsToToolbar() throws {
+    // scenario: 一覧を閉じると、注釈を保ったまま枠を描く状態に戻る
+    func testClosingListReturnsToDrawing() throws {
         // 前提: 確定済みの注釈が 2 件あり、一覧を開いている。
         launch(.setupDone, annotations: SeedAnnotation.samples(2), open: .list)
         let before = waitForPhase(.listOpen)
@@ -45,15 +45,16 @@ final class ListReviewTests: AkapenUITestCase {
         // 操作: 一覧を閉じる。
         tapList()
 
-        // 期待される結果: アプリの状態で、ボタン類だけが出ている状態になっており、注釈は 2 件のまま。
-        let state = waitForPhase(.idle)
+        // 期待される結果: アプリの状態で、枠を描く状態になっており、注釈は 2 件のまま。
+        let state = waitForPhase(.drawing)
         XCTAssertTrue(state.isToolbarVisible)
         XCTAssertEqual(state.annotations, before.annotations)
 
-        // 期待される結果: 一覧が消え、ボタン類は出たまま。
+        // 期待される結果: 一覧が消え、ボタン類は出たままで、マウスが枠を描く操作に戻る。
         // してはいけないこと: 一覧と一緒にボタン類まで消える。
         waitForElementToDisappear(AXID.List.panel)
-        XCTAssertTrue(isShown(AXID.Toolbar.add))
+        XCTAssertTrue(isShown(AXID.Toolbar.list))
+        XCTAssertTrue(isShown(AXID.Draw.surface))
 
         // 期待される結果: 保存された画像で、2 件の注釈の画像が残っている。
         // してはいけないこと: 開いて閉じただけで、注釈や画像ファイルが消える。

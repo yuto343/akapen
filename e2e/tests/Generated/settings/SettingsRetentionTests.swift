@@ -8,9 +8,9 @@ import AkapenAXID
 final class SettingsRetentionTests: AkapenUITestCase {
     // scenario: 日数を変えると、設定に入り、一覧の保存期間の案内も変わる
     func testChangingDaysUpdatesSettingsAndListNote() throws {
-        // 前提: セットアップ済み。時刻は固定。画像を残す日数は既定の 7 日。確定済みの注釈が 1 件あり、ボタン類だけが出ている。
+        // 前提: セットアップ済み。時刻は固定。画像を残す日数は既定の 7 日。確定済みの注釈が 1 件あり、akapen は何も出していない。
         launch(.setupDone, annotations: SeedAnnotation.samples(1))
-        let start = waitForPhase(.idle)
+        let start = waitForPhase(.hidden)
         XCTAssertEqual(start.settings.imageRetentionDays, 7)
 
         // 操作: 設定で、画像を残す日数を 14 日に変える。
@@ -23,8 +23,10 @@ final class SettingsRetentionTests: AkapenUITestCase {
         XCTAssertEqual(changed.settings.imageRetentionDays, 14)
         closeSettings()
 
-        // 操作: 一覧を開く。
+        // 操作: ホットキーでボタン類を出し、一覧を開く。
         bringSampleToFront()
+        pressHotkey()
+        waitForPhase(.drawing)
         openList()
 
         // 期待される結果: 一覧に出る、画像を残す期間の案内が新しい日数になる。
@@ -69,7 +71,7 @@ final class SettingsRetentionTests: AkapenUITestCase {
         // 前提: セットアップ済み。時刻は固定。画像を残す日数は既定の 7 日。
         // 次の起動で画像が残るかを見るため、確定済みの注釈を 1 件入れておく（画像はいまの回のフォルダに保存される）。
         launch(.setupDone, annotations: SeedAnnotation.samples(1))
-        let start = waitForPhase(.idle)
+        let start = waitForPhase(.hidden)
         XCTAssertEqual(start.settings.imageRetentionDays, 7)
         let imagePath = try XCTUnwrap(start.annotations.first?.imagePath)
         let sessionDirectory = try XCTUnwrap(start.storage.sessionDirectory)

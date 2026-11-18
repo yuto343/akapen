@@ -26,6 +26,7 @@ public enum QuitConfirmResult: Equatable, Sendable {
     private let language: @MainActor () -> Language
     private let screens: any ScreenProviding
     private let fadeDuration: TimeInterval
+    private let presentation = PanelPresentation()
     /// 出している画面。出ているあいだは変えない。
     private(set) var screen: ScreenInfo?
     /// いま出している件数。
@@ -70,6 +71,7 @@ public enum QuitConfirmResult: Equatable, Sendable {
         panel.onCancel = { [weak self] in
             self?.answer(.cancel)
         }
+        connectPresentation()
     }
 
     /// 確認が出ているか。
@@ -96,7 +98,8 @@ public enum QuitConfirmResult: Equatable, Sendable {
             },
             onCancel: { [weak self] in
                 self?.answer(.cancel)
-            }
+            },
+            presentation: presentation
         )
         let area = PanelPlacement.dimmedArea(screen: screen)
         panel.setFrame(ScreenCoordinates.nsRect(area, primaryTop: screens.primaryTop), display: true)
@@ -109,6 +112,45 @@ public enum QuitConfirmResult: Equatable, Sendable {
     public func hide() {
         panel.hideNow()
         screen = nil
+    }
+
+    /// 出しはじめは見えない状態で描き、前に出してから、ばねで出す（暗転は不透明度だけ）。
+    private func connectPresentation() {
+        panel.onWillPresent = { [weak self] in
+            guard let self, fadeDuration > 0 else {
+                return
+            }
+            setPresented(false, animation: nil)
+        }
+        panel.onDidPresent = { [weak self] in
+            guard let self else {
+                return
+            }
+            guard fadeDuration > 0 else {
+                setPresented(true, animation: nil)
+                return
+            }
+            Task { @MainActor [weak self] in
+                self?.setPresented(true, animation: Tokens.Motion.panelSpring)
+            }
+        }
+        panel.onDidHide = { [weak self] in
+            guard let self, fadeDuration > 0 else {
+                return
+            }
+            setPresented(false, animation: nil)
+        }
+    }
+
+    private func setPresented(_ presented: Bool, animation: Animation?) {
+        var transaction = Transaction(animation: animation)
+        transaction.disablesAnimations = animation == nil
+        withTransaction(transaction) {
+            presentation.isPresented = presented
+        }
+        if animation == nil {
+            hostingView.layoutSubtreeIfNeeded()
+        }
     }
 
     /// 答えを出す。出ていなければ何もしない（`Return` の連打などで 2 回呼ばない）。

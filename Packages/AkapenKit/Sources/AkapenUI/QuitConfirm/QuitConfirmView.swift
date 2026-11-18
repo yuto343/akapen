@@ -88,11 +88,15 @@ struct QuitConfirmOverlay: View {
     let strings: UIStrings
     let onQuit: () -> Void
     let onCancel: () -> Void
+    /// 出ているか。nil なら出ている見た目で描く（見比べ用の画像）。
+    var presentation: PanelPresentation?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         QuitConfirmLayout(screen: screen) {
             Rectangle()
                 .fill(Tokens.QuitAlert.dim.color)
+                .opacity(isPresented ? 1 : 0)
                 .layoutValue(key: QuitConfirmRole.self, value: .dim)
                 .accessibilityHidden(true)
             QuitConfirmView(
@@ -101,9 +105,15 @@ struct QuitConfirmOverlay: View {
                 onQuit: onQuit,
                 onCancel: onCancel
             )
+            .opacity(isPresented ? 1 : 0)
+            .scaleEffect(isPresented || reduceMotion ? 1 : Tokens.Motion.panelEntranceScale)
             .layoutValue(key: QuitConfirmRole.self, value: .alert)
         }
         .lightAppearance()
+    }
+
+    private var isPresented: Bool {
+        presentation?.isPresented ?? true
     }
 }
 

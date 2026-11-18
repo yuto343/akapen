@@ -116,10 +116,15 @@ public struct OverlayState: Equatable, Sendable {
 }
 
 /// 枠を描く面の上の表示（案内・赤枠・大きさの表示）。画面全体の大きさで描き、置き場所は `PanelPlacement` で決める。
+///
+/// 動きを付けるのは案内の出入りだけ（出るときはばねで、わずかに小さい大きさから）。赤枠と大きさの表示は動かさない
+/// （赤枠の出入りに動きを付けると、前の枠が薄く残って見える）。
 public struct OverlayView: View {
-    private let state: OverlayState
+    /// 映している値。
+    let state: OverlayState
     private let strings: UIStrings
     private let animated: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// `animated` が false なら、案内の出入りをアニメーションしない（テスト用）。
     public init(state: OverlayState, strings: UIStrings, animated: Bool = true) {
@@ -141,15 +146,26 @@ public struct OverlayView: View {
                     .layoutValue(key: OverlayRole.self, value: .sizeLabel)
                 }
             }
-            if state.showsHint {
-                DrawHintView(strings: strings, notice: state.notice, showsCancel: state.showsCancel)
-                    .transition(.opacity)
-                    .layoutValue(key: OverlayRole.self, value: .hint)
-            }
+            DrawHintView(strings: strings, notice: state.notice, showsCancel: state.showsCancel)
+                .opacity(state.showsHint ? 1 : 0)
+                .scaleEffect(hintScale, anchor: .top)
+                .animation(hintAnimation, value: state.showsHint)
+                .accessibilityHidden(!state.showsHint)
+                .layoutValue(key: OverlayRole.self, value: .hint)
         }
         .frame(width: state.screen.frame.width, height: state.screen.frame.height)
-        .animation(animated ? .easeInOut(duration: Tokens.Motion.fade) : nil, value: state.showsHint)
         .lightAppearance()
+    }
+
+    private var hintScale: CGFloat {
+        state.showsHint || reduceMotion ? 1 : Tokens.Motion.panelEntranceScale
+    }
+
+    private var hintAnimation: Animation? {
+        guard animated else {
+            return nil
+        }
+        return state.showsHint ? Tokens.Motion.panelSpring : Tokens.Motion.exitAnimation
     }
 }
 

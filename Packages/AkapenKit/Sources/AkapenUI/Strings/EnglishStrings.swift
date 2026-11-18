@@ -2,12 +2,18 @@
 struct EnglishStrings: StringTable {
     func text(_ key: StringKey) -> String {
         switch key {
-        case .add:
-            "Add"
         case .list:
             "List"
         case .copyPrompt:
             "Copy prompt"
+        case .listShortcut:
+            "⌘L"
+        case .copyPromptShortcut:
+            "⌘C"
+        case .listHelp:
+            "Show or hide the list (⌘L)"
+        case .copyPromptHelp:
+            "Copy the prompt (⌘C)"
         case .quit:
             "Quit"
         case .drawHint:
@@ -60,10 +66,6 @@ struct EnglishStrings: StringTable {
             "日本語"
         case .settingsHotkey:
             "Hotkey"
-        case .settingsToolbarShortcut:
-            "Show / hide buttons"
-        case .settingsToolbarShortcutCaption:
-            "Optional shortcut"
         case .settingsConfirmKey:
             "Confirm comment with"
         case .confirmKeyEnter:

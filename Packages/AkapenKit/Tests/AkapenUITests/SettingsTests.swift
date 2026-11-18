@@ -10,12 +10,10 @@ import AkapenAXID
 struct SettingsTests {
     private let commandSemicolon = KeyboardShortcut()
     private let optionCommandK = KeyboardShortcut(keyCode: UInt32(TestKey.k), modifiers: [.option, .command])
-    private let controlCommandJ = KeyboardShortcut(keyCode: UInt32(TestKey.j), modifiers: [.control, .command])
 
     private func makeController(
         _ sink: SettingsSink,
-        canUseHotkey: @escaping @MainActor (KeyboardShortcut) -> Bool = { _ in true },
-        canUseToolbarShortcut: @escaping @MainActor (KeyboardShortcut) -> Bool = { _ in true }
+        canUseHotkey: @escaping @MainActor (KeyboardShortcut) -> Bool = { _ in true }
     ) -> SettingsController {
         _ = NSApplication.shared
         return SettingsController(
@@ -24,7 +22,6 @@ struct SettingsTests {
             },
             send: sink.send,
             canUseHotkey: canUseHotkey,
-            canUseToolbarShortcut: canUseToolbarShortcut,
             shortcutText: .ansi,
             activatesApp: false
         )
@@ -62,8 +59,8 @@ struct SettingsTests {
         defer { controller.close() }
         controller.show()
         #expect(controller.window.frame.width == Tokens.Settings.width)
-        // Paper の App 06 は 620×512（定型文が 3 行のとき）。
-        #expect(abs(controller.window.frame.height - 512) <= 1)
+        // Paper の App 06 は 620×512（定型文が 3 行のとき）。「ボタン類の表示・非表示」の行（48pt）をなくしたので 464。
+        #expect(abs(controller.window.frame.height - (512 - Tokens.Settings.rowHeight)) <= 1)
     }
 
     @Test
@@ -74,12 +71,12 @@ struct SettingsTests {
         var changed = Settings()
         changed.language = .ja
         changed.imageRetentionDays = 30
-        changed.toolbarShortcut = optionCommandK
+        changed.hotkey = optionCommandK
         sink.settings = changed
         controller.show()
         #expect(controller.form.settings == changed)
         #expect(controller.form.retentionText == "30")
-        #expect(controller.form.toolbarShortcut.shortcut == optionCommandK)
+        #expect(controller.form.hotkey.shortcut == optionCommandK)
         #expect(controller.form.boilerplate.text == Boilerplate.japanese)
         #expect(controller.window.title == "akapen の設定")
     }
@@ -177,7 +174,6 @@ struct SettingsTests {
         controller.form.hotkey.handle(keyCode: TestKey.k, flags: [.command, .option])
         #expect(asked == [optionCommandK])
         #expect(sink.sentSettings.map(\.hotkey) == [optionCommandK])
-        #expect(sink.settings.toolbarShortcut == nil)
     }
 
     @Test
@@ -198,48 +194,7 @@ struct SettingsTests {
     }
 
     @Test
-    func toolbarShortcutCanBeAssignedAndRemoved() {
-        let sink = SettingsSink()
-        var asked: [KeyboardShortcut] = []
-        let controller = makeController(sink, canUseToolbarShortcut: { candidate in
-            asked.append(candidate)
-            return true
-        })
-        defer { controller.close() }
-        controller.show()
-        #expect(controller.form.toolbarShortcut.shortcut == nil)
-        controller.form.toolbarShortcut.beginRecording()
-        controller.form.toolbarShortcut.handle(keyCode: TestKey.j, flags: [.control, .command])
-        #expect(asked == [controlCommandJ])
-        #expect(sink.settings.toolbarShortcut == controlCommandJ)
-        controller.form.toolbarShortcut.beginRecording()
-        controller.form.toolbarShortcut.handle(keyCode: KeyCode.delete, flags: [])
-        #expect(sink.sentSettings.map(\.toolbarShortcut) == [controlCommandJ, nil])
-        #expect(sink.settings.hotkey == commandSemicolon)
-    }
-
-    @Test
-    func theSameKeyCannotBeUsedInBothFields() {
-        let sink = SettingsSink()
-        let controller = makeController(sink)
-        defer { controller.close() }
-        controller.show()
-        controller.form.toolbarShortcut.beginRecording()
-        controller.form.toolbarShortcut.handle(keyCode: TestKey.semicolon, flags: [.command])
-        #expect(controller.form.toolbarShortcut.problem == .inUse)
-        #expect(controller.form.toolbarShortcut.shortcut == nil)
-        controller.form.toolbarShortcut.beginRecording()
-        controller.form.toolbarShortcut.handle(keyCode: TestKey.k, flags: [.command, .option])
-        controller.form.hotkey.beginRecording()
-        controller.form.hotkey.handle(keyCode: TestKey.k, flags: [.command, .option])
-        #expect(controller.form.hotkey.problem == .inUse)
-        #expect(sink.settings.hotkey == commandSemicolon)
-        #expect(sink.settings.toolbarShortcut == optionCommandK)
-        #expect(sink.sentSettings.count == 1)
-    }
-
-    @Test
-    func onlyOneFieldRecordsAtATime() {
+    func recordingChangesAreReported() {
         let sink = SettingsSink()
         let controller = makeController(sink)
         defer { controller.close() }
@@ -249,11 +204,9 @@ struct SettingsTests {
         }
         controller.show()
         controller.form.hotkey.beginRecording()
-        controller.form.toolbarShortcut.beginRecording()
-        #expect(!controller.form.hotkey.isRecording)
-        #expect(controller.form.toolbarShortcut.isRecording)
+        #expect(controller.form.hotkey.isRecording)
         #expect(recording == [true])
-        controller.form.toolbarShortcut.cancelRecording()
+        controller.form.hotkey.cancelRecording()
         #expect(recording == [true, false])
     }
 

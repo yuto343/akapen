@@ -93,7 +93,7 @@ import AkapenPlatform
     public let clock: any Clock
     public let permission: any ScreenRecordingPermission
     public let loginItem: any LoginItem
-    /// グローバルなホットキー。押されたら `model` に `hotkeyPressed` / `toolbarToggled` を送る。登録は `apply(_:)` を呼んでから。
+    /// グローバルなホットキー。押されたら `model` に `hotkeyPressed` を送る。登録は `apply(_:)` を呼んでから。
     public let hotkeys: HotkeyCoordinator
     /// 起動時の掃除（古い回のフォルダの削除）の失敗。起動は止めない。
     public private(set) var startupCleanupError: String?
@@ -125,13 +125,9 @@ import AkapenPlatform
         stateWriter = choice.stateFile.map { AtomicStateWriter(url: $0) }
         hotkeys = HotkeyCoordinator(
             draw: CarbonHotkey(),
-            toolbar: CarbonHotkey(),
             probe: CarbonHotkey(),
             onDraw: { [weak model] in
                 model?.send(.hotkeyPressed)
-            },
-            onToolbar: { [weak model] in
-                model?.send(.toolbarToggled)
             }
         )
         model.onChange = { [weak self] in
@@ -227,10 +223,14 @@ import AkapenPlatform
         try? AtomicStateWriter(url: url).write(Data(String(describing: error).utf8))
     }
 
-    /// 注釈を、ホットキー（2 件目からは「+」）→ 枠 → コメントの確定の順に送って作る。画像は本来の撮影の経路で保存される。
+    /// 注釈を、ホットキー → 枠 → コメントの確定の順に送って作る。画像は本来の撮影の経路で保存される。
+    ///
+    /// 確定すると枠を描ける状態に戻るので、2 件目からはそのまま枠を送る。作り終えたら `Esc` で隠す（注釈は残る）。
     private static func seedAnnotations(_ annotations: [LaunchSeed.Annotation], into model: SessionModel) async throws {
         for (index, annotation) in annotations.enumerated() {
-            await model.send(model.phase == .idle ? .addTapped : .hotkeyPressed).value
+            if model.phase == .hidden {
+                await model.send(.hotkeyPressed).value
+            }
             guard model.phase == .drawing else {
                 throw StartupError.seedAnnotationFailed(index, "枠を描く状態に入れない（\(model.phase.rawValue)）")
             }
@@ -241,21 +241,24 @@ import AkapenPlatform
                 throw StartupError.seedAnnotationFailed(index, reason)
             }
             await model.send(.commentConfirmed(text: annotation.comment)).value
-            guard model.phase == .idle else {
+            guard model.phase == .drawing else {
                 throw StartupError.seedAnnotationFailed(index, "コメントが空")
             }
         }
+        if model.phase == .drawing {
+            await model.send(.escapePressed).value
+        }
     }
 
-    /// 起動後に出しておくものを、`toolbarToggled`（何も出ていなければボタン類を出す）と `listToggled` を送って作る。
+    /// 起動後に出しておくものを、`hotkeyPressed`（ボタン類を出す。注釈があれば同じ回を続ける）と `listToggled` を送って作る。
     private static func seedOpenView(_ open: LaunchSeed.OpenView, into model: SessionModel) async throws {
         if model.phase == .hidden {
-            await model.send(.toolbarToggled).value
+            await model.send(.hotkeyPressed).value
         }
-        if open == .list, model.phase == .idle {
+        if open == .list, model.phase == .drawing {
             await model.send(.listToggled).value
         }
-        let expected: Phase = open == .list ? .listOpen : .idle
+        let expected: Phase = open == .list ? .listOpen : .drawing
         guard model.phase == expected, model.isToolbarVisible else {
             throw StartupError.seedOpenFailed(open.rawValue, model.phase.rawValue)
         }

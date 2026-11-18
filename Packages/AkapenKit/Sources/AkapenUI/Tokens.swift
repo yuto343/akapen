@@ -290,8 +290,6 @@ extension Tokens {
         public static let outline: CGFloat = 0.5
         /// 一覧が開いているときの「List」の輪郭、編集中の入力欄の赤い輪郭。
         public static let emphasis: CGFloat = 1.5
-        /// 「+」のアイコンの線。
-        public static let addIcon: CGFloat = 1.6
         /// 「List」のアイコンの線。
         public static let listIcon: CGFloat = 1.5
         /// 右上・右向きの矢印のアイコンの線。
@@ -300,16 +298,44 @@ extension Tokens {
         public static let rowIcon: CGFloat = 1.3
     }
 
-    /// 動き（`DECISIONS.md` 19・26）。
+    /// 動き（`DECISIONS.md` 19・26）。macOS の標準の動き（コントロールセンター・Spotlight）に寄せる。
+    ///
+    /// システムの「視差効果を減らす」がオンのときは、拡大縮小とずらしをやめて不透明度だけにする。
     public enum Motion {
-        /// パネルの出入りのフェード（秒）。
+        /// パネルが消えるときのフェード（秒）。出るときより速くする。
         public static let fade: TimeInterval = 0.15
+        /// パネルが出るときのばねの応答（秒）。
+        public static let panelSpringResponse: Double = 0.3
+        /// パネルが出るときのばねの減衰。
+        public static let panelSpringDamping: Double = 0.85
+        /// パネルが出始めるときの大きさ（1 が等倍）。
+        public static let panelEntranceScale: CGFloat = 0.96
+        /// コピー完了の表示が出始めるときに、下へずらしておく量（pt）。
+        public static let toastRise: CGFloat = 10
+        /// ホバーの地の色の変化（秒、ease-out）。
+        public static let hover: TimeInterval = 0.12
+        /// 押した瞬間の大きさ。
+        public static let pressedScale: CGFloat = 0.97
         /// 押している最中の不透明度。
         public static let pressedOpacity: Double = 0.8
         /// 使えない状態の不透明度。
         public static let disabledOpacity: Double = 0.4
         /// ホバーのときに地へ重ねる色（地をわずかに濃くする）。
         public static let hoverOverlay = ExtraColor.ink6
+        /// セットアップのページを切り替えるときに、横へずらす量（pt）。
+        public static let pageShift: CGFloat = 28
+        /// 出るときのばね。
+        public static var panelSpring: Animation {
+            .spring(response: panelSpringResponse, dampingFraction: panelSpringDamping)
+        }
+        /// ホバーの動き。
+        public static var hoverAnimation: Animation {
+            .easeOut(duration: hover)
+        }
+        /// 消えるときの動き。
+        public static var exitAnimation: Animation {
+            .easeOut(duration: fade)
+        }
     }
 }
 
@@ -497,7 +523,7 @@ extension Tokens {
         public static let padding: CGFloat = 6
         public static let gap: CGFloat = 6
         public static let shadows = Shadows.toolbar
-        /// 「+」「List」「Copy prompt」の高さ。「+」は正円。
+        /// 「List」「Copy prompt」の高さ。
         public static let controlHeight: CGFloat = 36
         public static let controlBackground = Palette.cleanSurface
         public static let iconSize: CGFloat = 14
@@ -520,6 +546,12 @@ extension Tokens {
         public static let copyCircle = Palette.accent
         public static let copyIconSize: CGFloat = 12
         public static let copyIconColor = Palette.cleanBackground
+        /// 「List」の中に小さく出すショートカット（`⌘L`）の文字の色。
+        public static let listShortcutText = Palette.steel
+        /// 「Copy prompt」の中に小さく出すショートカット（`⌘C`）の文字の色。
+        public static let copyShortcutText = Palette.darkSteel
+        /// ショートカットの表示と、その前の文言との間（ボタンの中の間隔より詰める）。
+        public static let shortcutGap: CGFloat = 6
     }
 
     /// 案内の表示（App 01）。

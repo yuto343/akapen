@@ -9,6 +9,18 @@ struct StringsTests {
     let japanese = UIStrings(language: .ja)
 
     @Test
+    func toolbarShortcutsAreShown() {
+        #expect(english[.listShortcut] == "⌘L")
+        #expect(english[.copyPromptShortcut] == "⌘C")
+        #expect(english[.listHelp] == "Show or hide the list (⌘L)")
+        #expect(english[.copyPromptHelp] == "Copy the prompt (⌘C)")
+        #expect(japanese[.listShortcut] == "⌘L")
+        #expect(japanese[.copyPromptShortcut] == "⌘C")
+        #expect(japanese[.listHelp] == "一覧を開く・閉じる（⌘L）")
+        #expect(japanese[.copyPromptHelp] == "プロンプトをコピー（⌘C）")
+    }
+
+    @Test
     func englishMatchesPaper() {
         #expect(english[.list] == "List")
         #expect(english[.copyPrompt] == "Copy prompt")
@@ -113,8 +125,6 @@ struct StringsTests {
         #expect(english[.languageEnglish] == "English")
         #expect(english[.languageJapanese] == "日本語")
         #expect(english[.settingsHotkey] == "Hotkey")
-        #expect(english[.settingsToolbarShortcut] == "Show / hide buttons")
-        #expect(english[.settingsToolbarShortcutCaption] == "Optional shortcut")
         #expect(english[.settingsConfirmKey] == "Confirm comment with")
         #expect(english[.confirmKeyEnter] == "↵ Enter")
         #expect(english[.confirmKeyCommandEnter] == "⌘ ↵ Enter")
@@ -137,8 +147,6 @@ struct StringsTests {
         #expect(japanese[.languageEnglish] == "English")
         #expect(japanese[.languageJapanese] == "日本語")
         #expect(japanese[.settingsHotkey] == "ホットキー")
-        #expect(japanese[.settingsToolbarShortcut] == "ボタン類の表示・非表示")
-        #expect(japanese[.settingsToolbarShortcutCaption] == "割り当ては任意")
         #expect(japanese[.settingsConfirmKey] == "コメントの確定キー")
         #expect(japanese[.confirmKeyEnter] == "↵ Enter")
         #expect(japanese[.confirmKeyCommandEnter] == "⌘ ↵ Enter")

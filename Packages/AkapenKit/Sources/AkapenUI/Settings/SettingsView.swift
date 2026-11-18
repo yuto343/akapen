@@ -2,7 +2,7 @@ import SwiftUI
 import AkapenCore
 import AkapenAXID
 
-/// 設定のウィンドウの中身（App 06）。タイトルバー、General の箱（言語・ホットキー・ボタン類の表示切り替え・確定キー）、
+/// 設定のウィンドウの中身（App 06）。タイトルバー、General の箱（言語・ホットキー・確定キー）、
 /// 定型文、画像を残す日数。
 ///
 /// 表示に要る値と変更の受け口は `SettingsForm` が持つ。`SessionModel` には触らない。
@@ -56,21 +56,6 @@ struct SettingsView: View {
                     label: strings[.settingsHotkey],
                     identifier: AXID.Settings.hotkey,
                     messageIdentifier: AXID.Settings.hotkeyMessage
-                )
-            }
-            SettingsRow(showsDivider: true, expanded: form.toolbarShortcut.problem != nil) {
-                SettingsRowLabel(
-                    title: strings[.settingsToolbarShortcut],
-                    caption: strings[.settingsToolbarShortcutCaption]
-                )
-            } trailing: {
-                ShortcutChip(
-                    recorder: form.toolbarShortcut,
-                    shortcutText: form.shortcutText,
-                    strings: strings,
-                    label: strings[.settingsToolbarShortcut],
-                    identifier: AXID.Settings.toolbarShortcut,
-                    messageIdentifier: AXID.Settings.toolbarShortcutMessage
                 )
             }
             SettingsRow(showsDivider: false) {

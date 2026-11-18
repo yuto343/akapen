@@ -1,5 +1,5 @@
 // spec: e2e/specs/menu-bar/quit.md
-// spec-sha256: 9bc82c13dba033b7d36121215fe0946507befe0957f359d6eeae67e0d4e91a22
+// spec-sha256: 8fd5244b6a43904813203cd6bfe00e83b0443faf02542da0b4d9f5f512bfcd2a
 // このファイルは生成物。直接編集しない。md を直して e2e-generator で作り直す。
 
 import XCTest
@@ -29,9 +29,9 @@ final class MenuBarQuitTests: AkapenUITestCase {
 
     // scenario: 注釈が残っているときに終了しようとすると確認が出て、取りやめると注釈を保ったまま動き続ける
     func testCancelQuitKeepsAnnotations() throws {
-        // 前提: セットアップ済み。確定済みの注釈が 2 件あり、ボタン類だけが出ている。
-        launch(.setupDone, annotations: SeedAnnotation.samples(2))
-        let start = waitForPhase(.idle)
+        // 前提: セットアップ済み。確定済みの注釈が 2 件あり、ボタン類が出ている（枠を描く状態）。
+        launch(.setupDone, annotations: SeedAnnotation.samples(2), open: .toolbar)
+        let start = waitForPhase(.drawing)
         XCTAssertTrue(start.isToolbarVisible)
         XCTAssertEqual(start.annotations.count, 2)
 
@@ -52,20 +52,20 @@ final class MenuBarQuitTests: AkapenUITestCase {
         // 期待される結果: 取りやめると確認が消え、ボタン類は出たまま。
         let cancelled = waitForState("終了の確認が消える") { !$0.windows.quitConfirm }
         waitForElementToDisappear(AXID.QuitConfirm.panel)
-        waitForElement(AXID.Toolbar.add)
+        waitForElement(AXID.Toolbar.list)
         waitForElement(AXID.Toolbar.copyPrompt)
 
-        // 期待される結果: アプリの状態で、akapen のプロセスは動いていて、ボタン類だけが出ている状態のままで、注釈は 2 件（コメントも変わらない）。
+        // 期待される結果: アプリの状態で、akapen のプロセスは動いていて、枠を描く状態のままで、注釈は 2 件（コメントも変わらない）。
         // してはいけないこと: 取りやめたのに終了する。
         // してはいけないこと: 取りやめたのに、注釈が消える。
         XCTAssertTrue(isAppRunning)
-        XCTAssertEqual(cancelled.phase, .idle)
+        XCTAssertEqual(cancelled.phase, .drawing)
         XCTAssertTrue(cancelled.isToolbarVisible)
         XCTAssertEqual(cancelled.annotations.count, 2)
         XCTAssertEqual(cancelled.comments, start.comments)
         XCTAssertEqual(cancelled.imagePaths, start.imagePaths)
-        let settled = assertStateStays("取りやめたあとも、ボタン類だけが出ている状態で注釈が 2 件のまま") { state in
-            state.phase == .idle && state.isToolbarVisible && state.comments == start.comments && !state.windows.quitConfirm
+        let settled = assertStateStays("取りやめたあとも、枠を描く状態で注釈が 2 件のまま") { state in
+            state.phase == .drawing && state.isToolbarVisible && state.comments == start.comments && !state.windows.quitConfirm
         }
         XCTAssertEqual(settled.annotations, start.annotations)
         XCTAssertTrue(isAppRunning)
@@ -73,9 +73,9 @@ final class MenuBarQuitTests: AkapenUITestCase {
 
     // scenario: 注釈が残っているときに確認で終了を選ぶと、終了する
     func testConfirmQuitQuits() throws {
-        // 前提: セットアップ済み。確定済みの注釈が 2 件あり、ボタン類だけが出ている。
-        launch(.setupDone, annotations: SeedAnnotation.samples(2))
-        let start = waitForPhase(.idle)
+        // 前提: セットアップ済み。確定済みの注釈が 2 件あり、ボタン類が出ている（枠を描く状態）。
+        launch(.setupDone, annotations: SeedAnnotation.samples(2), open: .toolbar)
+        let start = waitForPhase(.drawing)
         XCTAssertEqual(start.annotations.count, 2)
 
         // 操作: メニューバーから終了を選ぶ。

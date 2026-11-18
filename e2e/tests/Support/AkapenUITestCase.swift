@@ -47,6 +47,12 @@ import AkapenAXID
         stateDirectory.appending(path: "images", directoryHint: .isDirectory)
     }
 
+    /// テストで起動するアプリに渡す起動引数。入力欄にフォーカスが移るたびに macOS がキャレットの横に出す
+    /// 入力ソースの表示（`InputSource` の小さな窓）を、そのプロセスでだけ出さない。
+    /// この窓はアプリのプロセスの窓として出るので、XCTest が割り込みのダイアログとみなし、閉じるボタンを探して失敗する。
+    /// 起動引数は NSArgumentDomain に入るだけで、手元の設定（ユーザーのデフォルト）には触らない。
+    static let quietInputArguments = ["-TSMLanguageIndicatorEnabled", "NO"]
+
     @MainActor override func setUp() async throws {
         continueAfterFailure = false
         stateDirectory = FileManager.default.temporaryDirectory
@@ -57,6 +63,8 @@ import AkapenAXID
         sample = XCUIApplication(bundleIdentifier: "com.yuto343.akapen.SampleTarget")
         let frame = Self.sampleFrame
         sample.launchEnvironment["SAMPLE_FRAME"] = "\(Int(frame.minX)),\(Int(frame.minY)),\(Int(frame.width)),\(Int(frame.height))"
+        sample.launchArguments = Self.quietInputArguments
+        app.launchArguments = Self.quietInputArguments
         sample.launch()
         XCTAssertTrue(
             sample.buttons[AXID.Sample.button].waitForExistence(timeout: 10),

@@ -14,7 +14,7 @@ final class Seed: AkapenUITestCase {
         // 前提: セットアップ済みで起動している。注釈は 0 件で、何も出ていない。
         launch(.setupDone)
         XCTAssertEqual(appState().phase, .hidden)
-        XCTAssertFalse(isShown(AXID.Toolbar.add))
+        XCTAssertFalse(isShown(AXID.Toolbar.list))
 
         // 操作: ホットキー（⌘;）を押す。
         pressHotkey()
@@ -24,7 +24,6 @@ final class Seed: AkapenUITestCase {
         XCTAssertTrue(state.isToolbarVisible)
         XCTAssertTrue(state.annotations.isEmpty)
         XCTAssertNil(state.draft)
-        waitForElement(AXID.Toolbar.add)
         waitForElement(AXID.Toolbar.list)
         waitForElement(AXID.Toolbar.copyPrompt)
         waitForElement(AXID.Draw.surface)

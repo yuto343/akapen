@@ -6,6 +6,7 @@ import AkapenAXID
 /// 表示に要る値と操作の受け口は `SetupFlow` が持つ。`SessionModel` にも OS にも触らない。
 struct SetupView: View {
     let flow: SetupFlow
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         let strings = UIStrings(language: flow.language)
@@ -14,12 +15,13 @@ struct SetupView: View {
                 .frame(height: Tokens.Setup.titleBarHeight)
             VStack(spacing: Tokens.Setup.gap) {
                 AppIconView(size: Tokens.Setup.iconSize)
-                switch flow.page {
-                case .hotkey:
-                    hotkeyPage(strings)
-                case .permission:
-                    permissionPage(strings)
+                // 2 つのページは重ねて置き、切り替えのあいだだけ両方を出す（縦に並べてウィンドウが伸びないように）。
+                ZStack(alignment: .top) {
+                    page(strings)
+                        .id(flow.page)
+                        .transition(pageTransition)
                 }
+                .animation(Tokens.Motion.panelSpring, value: flow.page)
             }
             .padding(.top, Tokens.Setup.bodyPaddingTop)
             .padding(.horizontal, Tokens.Setup.bodyPaddingX)
@@ -28,6 +30,26 @@ struct SetupView: View {
         .frame(width: Tokens.Setup.width)
         .background(Tokens.Window.background.color)
         .lightAppearance()
+    }
+
+    @ViewBuilder private func page(_ strings: UIStrings) -> some View {
+        VStack(spacing: Tokens.Setup.gap) {
+            switch flow.page {
+            case .hotkey:
+                hotkeyPage(strings)
+            case .permission:
+                permissionPage(strings)
+            }
+        }
+    }
+
+    /// ページの切り替え。進むときは右から、戻るときは左から、ずらしながら出す。消えるページは不透明度だけで消す。
+    private var pageTransition: AnyTransition {
+        let shift = reduceMotion ? 0 : (flow.movedForward ? Tokens.Motion.pageShift : -Tokens.Motion.pageShift)
+        return .asymmetric(
+            insertion: .offset(x: shift).combined(with: .opacity),
+            removal: .opacity.animation(Tokens.Motion.exitAnimation)
+        )
     }
 
     private func step(_ strings: UIStrings) -> String {

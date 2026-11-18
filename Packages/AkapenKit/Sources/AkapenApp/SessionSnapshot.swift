@@ -1,18 +1,17 @@
 import Foundation
 import AkapenCore
 
-/// `state.json`（v2）の中身。E2E のときだけ、状態が変わるたびに書き出す。形は `docs/FOUNDATION.md`「state.json v2」。
+/// `state.json`（v3）の中身。E2E のときだけ、状態が変わるたびに書き出す。形は `docs/FOUNDATION.md`「state.json v3」。
 ///
 /// 矩形は画面全体を通した、左上が原点の pt。日付は ISO 8601 の文字列。値がないものは `null` として書く（キーを省かない）。
 public struct SessionSnapshot: Encodable, Equatable {
     /// 形の版。キーを足したり意味を変えたりしたら上げる。
-    public static let schemaVersion = 2
+    public static let schemaVersion = 3
 
     /// 設定の写し。定型文は、書き換えていない言語も既定文を入れて、すべての言語を書く。
     public struct SettingsValues: Encodable, Equatable {
         public var language: Language
         public var hotkey: KeyboardShortcut
-        public var toolbarShortcut: KeyboardShortcut?
         public var confirmKey: ConfirmKey
         public var boilerplates: [String: String]
         public var imageRetentionDays: Int
@@ -22,7 +21,6 @@ public struct SessionSnapshot: Encodable, Equatable {
         public init(_ settings: Settings) {
             language = settings.language
             hotkey = settings.hotkey
-            toolbarShortcut = settings.toolbarShortcut
             confirmKey = settings.confirmKey
             boilerplates = Dictionary(uniqueKeysWithValues: [Language.en, Language.ja].map { language in
                 (language.rawValue, settings.boilerplate(for: language))
@@ -34,7 +32,6 @@ public struct SessionSnapshot: Encodable, Equatable {
         private enum CodingKeys: String, CodingKey {
             case language
             case hotkey
-            case toolbarShortcut
             case confirmKey
             case boilerplates
             case imageRetentionDays
@@ -45,7 +42,6 @@ public struct SessionSnapshot: Encodable, Equatable {
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(language, forKey: .language)
             try container.encode(hotkey, forKey: .hotkey)
-            try container.encode(toolbarShortcut, forKey: .toolbarShortcut)
             try container.encode(confirmKey, forKey: .confirmKey)
             try container.encode(boilerplates, forKey: .boilerplates)
             try container.encode(imageRetentionDays, forKey: .imageRetentionDays)
@@ -131,23 +127,20 @@ public struct SessionSnapshot: Encodable, Equatable {
     /// 実際に登録しているグローバルなホットキー。
     public struct Hotkeys: Encodable, Equatable {
         public var draw: KeyboardShortcut?
-        public var toolbar: KeyboardShortcut?
         /// キーの記録欄のために、登録を外しているか。
         public var suspended: Bool
-        /// 直前の登録に失敗した役（`draw` / `toolbar`）。
+        /// 直前の登録に失敗した役（`draw`）。
         public var failed: [String]
 
         /// 登録の様子から作る。
         public init(_ status: HotkeyCoordinator.Status) {
             draw = status.draw
-            toolbar = status.toolbar
             suspended = status.isSuspended
             failed = status.failed.map(\.rawValue)
         }
 
         private enum CodingKeys: String, CodingKey {
             case draw
-            case toolbar
             case suspended
             case failed
         }
@@ -155,7 +148,6 @@ public struct SessionSnapshot: Encodable, Equatable {
         public func encode(to encoder: any Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(draw, forKey: .draw)
-            try container.encode(toolbar, forKey: .toolbar)
             try container.encode(suspended, forKey: .suspended)
             try container.encode(failed, forKey: .failed)
         }

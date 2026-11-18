@@ -20,7 +20,7 @@ extension AkapenUITestCase {
     /// 登録しているはずなのに効かない（akapen にふつうのキーとして届く）場合は、状態が変わらないのでテストが落ちる。
     func pressHotkey(_ shortcut: Shortcut = .commandSemicolon) {
         let hotkeys = appState().hotkeys
-        let isRegistered = !hotkeys.suspended && (hotkeys.draw == shortcut || hotkeys.toolbar == shortcut)
+        let isRegistered = !hotkeys.suspended && hotkeys.draw == shortcut
         if isRegistered {
             app.typeKey(shortcut.key, modifierFlags: shortcut.flags)
         } else {
@@ -36,14 +36,17 @@ extension AkapenUITestCase {
     }
 
     /// 枠を描き終えて、コメントの入力欄が出ているところまで進める（「コメントの入力欄が出ているところから始める」前提。
-    /// 起動時の前提では作れないので、ホットキー（注釈があってボタン類が出ていれば「+」）と枠のドラッグで作る）。
+    /// 起動時の前提では作れないので、ホットキー（ボタン類が出ていれば押さない。一覧が開いていれば閉じる）と枠のドラッグで作る）。
     /// SampleTarget の要素を囲む枠を描き、描いた枠を返す。
     @discardableResult
     func startCommenting(around sampleIdentifier: String = AXID.Sample.button) -> CGRect {
-        if appState().isToolbarVisible {
-            tapAdd()
+        switch appState().phase {
+        case .drawing:
+            waitForElement(AXID.Draw.surface)
+        case .listOpen:
+            tapList()
             waitForPhase(.drawing)
-        } else {
+        default:
             startDrawing()
         }
         let rect = drawFrame(around: sampleIdentifier)
@@ -150,7 +153,7 @@ extension AkapenUITestCase {
         app.typeKey(.escape, modifierFlags: [])
     }
 
-    /// 枠を描き（SampleTarget の要素を囲む）、コメントを書いて確定し、ボタン類だけの状態になるまで待つ。
+    /// 枠を描き（SampleTarget の要素を囲む）、コメントを書いて確定し、枠を描く状態に戻るまで待つ。
     /// 枠を描く状態になっていること。
     @discardableResult
     func annotate(around sampleIdentifier: String, comment: String, confirmKey: ConfirmKeySetting = .enter) -> CGRect {
@@ -158,16 +161,11 @@ extension AkapenUITestCase {
         waitForPhase(.commenting)
         typeComment(comment)
         confirmComment(confirmKey)
-        waitForPhase(.idle)
+        waitForPhase(.drawing)
         return rect
     }
 
     // MARK: - ボタン類
-
-    /// 「+」（次の枠を描き始める）を押す。
-    func tapAdd() {
-        waitForElement(AXID.Toolbar.add).click()
-    }
 
     /// 「一覧」を押す（開いていれば閉じる）。
     func tapList() {
@@ -177,6 +175,11 @@ extension AkapenUITestCase {
     /// 「copy prompt」を押す。
     func tapCopyPrompt() {
         waitForElement(AXID.Toolbar.copyPrompt).click()
+    }
+
+    /// ボタン類が出ているあいだのショートカットを押す（akapen を送り先にする。押したあとの状態の変化は待たない）。
+    func pressToolbarShortcut(_ shortcut: ToolbarShortcut) {
+        app.typeKey(shortcut.rawValue, modifierFlags: .command)
     }
 
     // MARK: - 一覧
@@ -284,22 +287,13 @@ extension AkapenUITestCase {
 
     // MARK: - キーの記録欄（設定とセットアップで共通）
 
-    /// キーの記録欄（`AXID.Settings.hotkey`・`AXID.Settings.toolbarShortcut`・`AXID.Setup.hotkey`）を押して、
+    /// キーの記録欄（`AXID.Settings.hotkey`・`AXID.Setup.hotkey`）を押して、
     /// `shortcut` を記録させる。記録を待っているあいだ、akapen はグローバルなホットキーの登録を外している。
     func recordShortcut(_ shortcut: Shortcut, in recorderIdentifier: String) {
         let recorder = waitForElement(recorderIdentifier)
         recorder.click()
         waitForState("記録を待ち始める") { $0.hotkeys.suspended }
         app.typeKey(shortcut.key, modifierFlags: shortcut.flags)
-        waitForState("記録を終える") { !$0.hotkeys.suspended }
-    }
-
-    /// キーの記録欄を押して `Delete` を押し、割り当てを外す（外せる欄だけ）。
-    func clearShortcut(in recorderIdentifier: String) {
-        let recorder = waitForElement(recorderIdentifier)
-        recorder.click()
-        waitForState("記録を待ち始める") { $0.hotkeys.suspended }
-        app.typeKey(.delete, modifierFlags: [])
         waitForState("記録を終える") { !$0.hotkeys.suspended }
     }
 
@@ -438,4 +432,12 @@ extension AkapenUITestCase {
     func sampleText(_ sampleIdentifier: String) -> String {
         (sampleElement(sampleIdentifier).value as? String) ?? ""
     }
+}
+
+/// ボタン類が出ているあいだに使えるショートカット（`Command` と一緒に押す）。
+enum ToolbarShortcut: String {
+    /// `⌘C`: プロンプトをコピーする。
+    case copyPrompt = "c"
+    /// `⌘L`: 一覧を開く・閉じる。
+    case list = "l"
 }
