@@ -95,9 +95,14 @@ import AkapenAXID
     }
 
     /// akapen の要素が出るまで待つ。出なければテストを落とす。
+    ///
+    /// 既に出ていれば待たずに返す（`waitForExistence` は、出ていても 1 回目の確認まで約 1 秒待つため）。
     @discardableResult
     func waitForElement(_ identifier: String, timeout: TimeInterval = 5) -> XCUIElement {
         let found = element(identifier)
+        if found.exists {
+            return found
+        }
         XCTAssertTrue(found.waitForExistence(timeout: timeout), "要素が出ない: \(identifier)")
         return found
     }
@@ -105,9 +110,10 @@ import AkapenAXID
     /// akapen の要素が消えるまで待つ。消えなければテストを落とす。
     func waitForElementToDisappear(_ identifier: String, timeout: TimeInterval = 5) {
         let target = element(identifier)
-        let predicate = NSPredicate(format: "exists == false")
-        let expectation = XCTNSPredicateExpectation(predicate: predicate, object: target)
-        XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: timeout), .completed, "要素が消えない: \(identifier)")
+        let gone = poll(timeout: timeout, interval: 0.2) {
+            !target.exists
+        }
+        XCTAssertTrue(gone, "要素が消えない: \(identifier)")
     }
 
     /// akapen の要素が出ているか（待たない）。

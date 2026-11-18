@@ -164,6 +164,28 @@ struct SetupTests {
         #expect(dismissed == 1)
     }
 
+    /// ページが変わるたびに知らせる（組み立ての側が `state.json` の `windows.setupPage` を書き直すため）。
+    @Test
+    func pageChangesAreReported() {
+        let sink = SettingsSink()
+        let controller = makeController(sink, permission: FakePermission(isGranted: false))
+        defer { controller.close() }
+        var pages: [Bool] = []
+        controller.onPageChanged = { [controller] in
+            pages.append(controller.isShowingPermission)
+        }
+        controller.show()
+        #expect(pages.isEmpty)
+        controller.flow.goNext()
+        #expect(pages == [true])
+        controller.flow.goNext()
+        #expect(pages == [true])
+        controller.flow.goBack()
+        #expect(pages == [true, false])
+        controller.showPermission()
+        #expect(pages == [true, false, true])
+    }
+
     @Test
     func reopeningStartsFromTheFirstPage() {
         let sink = SettingsSink()

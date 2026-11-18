@@ -128,6 +128,9 @@ import AkapenUI
         setupWindow.onDismissed = { [weak self] in
             self?.environment.writeState()
         }
+        setupWindow.onPageChanged = { [weak self] in
+            self?.environment.writeState()
+        }
     }
 
     /// `model` の状態が変わったとき。ホットキーの登録を設定に合わせ、画面に映す（`state.json` はこのあとに書き出される）。

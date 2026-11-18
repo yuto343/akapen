@@ -31,7 +31,6 @@ e2e/
 │   ├── Seed.swift            # 手で書く：generator / healer の起点、起動のスモークテスト
 │   ├── Support/              # 手で書く：起動・前提づくり・操作・検証のヘルパー
 │   ├── Generated/            # generator / healer が書く：直接編集しない
-│   ├── Spike/                # 手で書く：組み立ての確認（SmokeTests）。生成テストに置き換えるまで make e2e に含める
 │   └── Live/                 # 手で書く：実際の画面収録を通す確認（手元だけ）
 └── sample-target/            # 撮影対象にする小さなアプリ「Sample App」（ターゲット SampleTarget）
 ```
@@ -43,7 +42,7 @@ e2e/
 | `e2e/tests/Generated/**` | **直接編集しない。** generator / healer 経由のみ |
 | `Packages/AkapenKit/Sources/AkapenAXID/**` | 直接編集。識別子の追加はアプリ側の変更と同時に行う |
 | `.claude/agents/e2e-*.md` | 直接編集 |
-| `e2e/tests/Spike/**`、`e2e/sample-target/**`、`e2e/check-specs.mjs` | 直接編集 |
+| `e2e/sample-target/**`、`e2e/check-specs.mjs` | 直接編集 |
 
 ## spec と生成物の対応
 
@@ -197,15 +196,19 @@ Paper の「Sample App」（`.director/design/sample-app.md`）に近い構成�
 
 | コマンド | 内容 |
 | --- | --- |
-| `make e2e` | `make gen` → `xcodebuild test`。`Live/` 以外（`Seed`、`Spike/`、`Generated/`）を、偽の撮影で走らせる |
+| `make e2e` | `make gen` → `xcodebuild test`。`Live/` 以外（`Seed`、`Generated/`）を、偽の撮影で走らせる |
 | `make e2e ONLY=<クラス名>` | 1 クラスだけ走らせる（例: `make e2e ONLY=DrawCaptureTests`）。generator / healer が使う |
 | `make e2e-lint` | `node e2e/check-specs.mjs`。md の書式・検証点と、生成物との対応を確かめる |
 | `make e2e-live` | `Live/` だけを、実際の画面収録で走らせる（手元だけ。画面収録の許可が要る） |
 
 - **実行中は、この Mac のマウスとキーボードがテストに取られる。** 走らせている間は触らない。
-- **ホットキーを 1 回押すたびに、XCTest が約 10 秒待つ**（キーがグローバルなホットキーとして横取りされ、SampleTarget に届かないため）。動作は正しい。
+- **走らせる前に、画面にシステムのダイアログ（「〜が予期しない理由で終了しました」など）が残っていないことを確かめる。** 設定とセットアップのウィンドウは主画面の中央に出るので、ダイアログが重なると XCTest のクリックがダイアログに当たり、テストが「状態が変わらない」で落ちる（ログに `Found 1 interrupting element` と出る）。
+- **ホットキーは、akapen を送り先にして押す**（`pressHotkey(_:)`）。XCTest の `typeKey` は送り先のアプリがキーを受け取るまで待ち、受け取らなければ約 10 秒待つ。グローバルなホットキーは OS が横取りして akapen に届けるので、SampleTarget を送り先にすると毎回 10 秒待たされる。`pressHotkey(_:)` は、akapen がそのキーをホットキーとして登録しているとき（アプリの状態の `hotkeys`）は akapen を、登録していないときは SampleTarget を送り先にする。akapen を送り先にすると XCTest が akapen を前面にするが、ホットキーの働きは変わらない。
+- `waitForElement(_:)` は、要素が既に出ていれば待たずに返す（`waitForExistence` は、出ていても 1 回目の確認まで約 1 秒待つ）。
+- メニューバーから設定を開いた直後は、まれに XCTest のキー（`Enter`）が akapen に届かない（`typeKey` が約 5 秒待ってあきらめる。2 回目は届く）。`enterRetentionDays(_:)` は、その待ちに当たったときだけ `Enter` を送り直す。ほかの入力で同じ落ち方（キーを送る所で約 5 秒止まり、状態が変わらない）をしたら、アプリの不具合と決める前にこれを疑う。
 - **`make e2e` / `make e2e-live` は排他ロックを取る。** ほかの担当（人・エージェント）が走らせている間は `Waiting for E2E lock...` のまま待たされる。待たされても異常ではない。E2E を `make` を通さずに（`xcodebuild` を直接）走らせない。ロックが効かなくなり、2 つのテストが同じマウスを取り合って両方壊れる。
 - 結果: ログは `build/logs/test.log`、まとめは `build/logs/e2e-summary.json`、結果バンドルは `build/e2e.xcresult`。失敗したテストの画面の画像と要素ツリーは、結果バンドルの添付から取り出す。
+  - これらは走らせるたびに上書きされる。**ほかの担当が続けて走らせると、自分の結果はすぐ消える。** `make e2e` の出力の最後（`Passed:` / `Failed:` の行と、落ちたテストごとの失敗の内容）は自分の出力に残るので、まずそれを読む。ログや添付が要るときは、走り終えた直後に自分の一時ディレクトリへ写してから読む。
 
 ```bash
 xcrun xcresulttool get test-results tests --path build/e2e.xcresult                     # テストの一覧と失敗の内容
@@ -283,4 +286,4 @@ node e2e/check-specs.mjs --hash <md>     # その md の SHA-256（生成ファ�
 | `settings/retention.md` | 3 |
 | `setup/first-run.md` | 7 |
 
-2026-11-18 時点で 18 本・54 件。`Support/` のヘルパーは揃った（上の「Support のヘルパー」）。生成テスト（`tests/Generated/`）はまだ無い（あとの作業で generator が作る）。
+2026-11-18 時点で 18 本・54 件。すべての spec に生成テスト（`tests/Generated/`）があり、`make e2e`（`Seed` を含めて 55 件）が通る。組み立ての確認に使っていた `tests/Spike/`（`SmokeTests`）は、生成テストで置き換えたので消した。

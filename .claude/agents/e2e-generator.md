@@ -86,6 +86,7 @@ final class <Dir><Name>Tests: <Support にある親クラス> {
 4. `make e2e ONLY=<クラス名>` を流す。
    - **実行中はこの Mac のマウスとキーボードがテストに取られる。** `make` を通さずに走らせない（排他ロックが効かなくなる）。ほかの担当が走らせている間は待たされるが、異常ではない。
 5. 落ちたら、`build/logs/test.log`（`make e2e` が出すログ）と `build/logs/e2e-summary.json`、結果バンドル `build/e2e.xcresult` を読む。失敗したテストには画面の画像と要素ツリーが添付されている。
+   - これらは走らせるたびに上書きされる（ほかの担当が続けて走らせると消える）。まず `make e2e` の出力の最後（落ちたテストごとの失敗の内容）を読み、ログや添付が要るときは、走り終えた直後に自分の一時ディレクトリへ写す（`cp build/logs/test.log <一時ディレクトリ>/` など）。
    - 添付の取り出し: `xcrun xcresulttool get test-results tests --path build/e2e.xcresult`（テストの一覧と失敗の内容）、`xcrun xcresulttool export attachments --path build/e2e.xcresult --output-path <一時ディレクトリ>`（画像と要素ツリー）。
    - 要素ツリーで、識別子が付いているか、要素が出るまでの待ちが足りているかを見る。
 6. 直して 4 に戻る。通るまで繰り返す。

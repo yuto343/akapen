@@ -24,6 +24,8 @@ import AkapenAXID
     public var onCompleted: (@MainActor () -> Void)?
     /// 終えずに閉じたとき（閉じるボタン・`⌘W`・`close()`）。`setupCompleted` は送っていない。
     public var onDismissed: (@MainActor () -> Void)?
+    /// ページが変わったとき（`Continue`・`Back`・`showPermission()`）。組み立ての側は、出ているページを `state.json` に映す。
+    public var onPageChanged: (@MainActor () -> Void)?
 
     let flow: SetupFlow
     private let host: ContentWindowHost<SetupView>
@@ -153,6 +155,7 @@ import AkapenAXID
             case .permission:
                 self?.startPolling()
             }
+            self?.onPageChanged?()
         }
         flow.onOpenSystemSettings = { [weak self] in
             self?.openSystemSettings()

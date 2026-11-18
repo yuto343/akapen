@@ -15,6 +15,7 @@ model: sonnet
   - `xcrun xcresulttool get test-results tests --path build/e2e.xcresult`（テストの一覧と失敗の内容）
   - `xcrun xcresulttool export attachments --path build/e2e.xcresult --output-path <一時ディレクトリ>`（失敗時に添付される画面の画像と要素ツリー）
   - `build/logs/test.log`、`build/logs/e2e-summary.json`
+  - これらは走らせるたびに上書きされる（ほかの担当が続けて走らせると消える）。自分で走らせたときは、走り終えた直後に自分の一時ディレクトリへ写してから読む。
 
 ## 先に読むもの
 

@@ -10,9 +10,22 @@ import AkapenAXID
 extension AkapenUITestCase {
     // MARK: - ホットキー
 
-    /// グローバルなホットキーを押す（既定は `⌘;`）。SampleTarget にキーを送り、akapen は前面にしない。
+    /// グローバルなホットキーを押す（既定は `⌘;`）。押したあとの状態の変化は待たない（`waitForPhase(_:)` などで待つ）。
+    ///
+    /// XCTest の `typeKey` は、送り先のアプリがキーを受け取るまで待つ（受け取らなければ約 10 秒）。
+    /// グローバルなホットキーとして登録されているキーは OS が横取りして akapen に届けるので、
+    /// - akapen がそのキーをホットキーとして登録している（アプリの状態の `hotkeys`）ときは、akapen を送り先にする。
+    ///   XCTest は送る前に akapen を前面にするが、ホットキーの働きは変わらない。
+    /// - 登録していないときは、ふつうのキーとして前面のアプリに届くはずなので、SampleTarget を送り先にする。
+    /// 登録しているはずなのに効かない（akapen にふつうのキーとして届く）場合は、状態が変わらないのでテストが落ちる。
     func pressHotkey(_ shortcut: Shortcut = .commandSemicolon) {
-        sample.typeKey(shortcut.key, modifierFlags: shortcut.flags)
+        let hotkeys = appState().hotkeys
+        let isRegistered = !hotkeys.suspended && (hotkeys.draw == shortcut || hotkeys.toolbar == shortcut)
+        if isRegistered {
+            app.typeKey(shortcut.key, modifierFlags: shortcut.flags)
+        } else {
+            sample.typeKey(shortcut.key, modifierFlags: shortcut.flags)
+        }
     }
 
     /// ホットキーで枠を描き始め、枠を描く状態になるまで待つ。
@@ -330,12 +343,33 @@ extension AkapenUITestCase {
     }
 
     /// 設定の画像を残す日数の欄に `text` を入れて `Enter` で確定する（範囲の外の値も入れられる）。
+    ///
+    /// 打った文字が欄に入ったのを確かめてから `Enter` を押す。
+    ///
+    /// メニューバーから設定を開いた直後は、まれに（10 回に 1 回ほど）XCTest の `Enter` が akapen に届かない
+    /// （`typeKey` が届くのを約 5 秒待ってあきらめる。入力ソースも前面のアプリも変わっていない。2 回目の `Enter` は届く）。
+    /// 道具の側の取りこぼしなので、`typeKey` がその待ちに当たったとき（`undeliveredKeyThreshold` 秒以上かかったとき）に限って、
+    /// `Enter` をもう 1 回送る。akapen が `Enter` を受け取ったうえで確定しない不具合は、送り直さないので隠れない。
     func enterRetentionDays(_ text: String) {
         let field = waitForElement(AXID.Settings.imageRetentionDays)
         field.click()
         field.typeKey("a", modifierFlags: .command)
         field.typeText(text)
+        // 欄は数字だけを受け取る（数字以外は捨てる）ので、数字だけにしたものと比べる。
+        let digits = text.filter { ("0"..."9").contains($0) }
+        _ = poll(timeout: 2) {
+            (field.value as? String) == digits
+        }
+        let started = ProcessInfo.processInfo.systemUptime
         field.typeKey(.return, modifierFlags: [])
+        if ProcessInfo.processInfo.systemUptime - started >= Self.undeliveredKeyThreshold {
+            field.typeKey(.return, modifierFlags: [])
+        }
+    }
+
+    /// `typeKey` がこの秒数以上かかったら、キーが送り先に届かなかったとみなす（届かないと、XCTest は約 5 秒待ってあきらめる）。
+    static var undeliveredKeyThreshold: TimeInterval {
+        3
     }
 
     /// 設定の定型文の入力欄（いま選んでいる言語の定型文）を、`text` に書き換える。`text` の改行はそのまま改行になる。
