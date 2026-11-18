@@ -162,8 +162,38 @@ struct SnapshotTests {
     func copiedStates(language: Language) async throws {
         let strings = UIStrings(language: language)
         let folder = language.rawValue
-        try Snapshot.write(try await Snapshot.render(framed(CopiedView(count: 2, strings: strings))), to: "\(folder)/copied-2.png")
-        try Snapshot.write(try await Snapshot.render(framed(CopiedView(count: 1, strings: strings))), to: "\(folder)/copied-1.png")
+        try Snapshot.write(try await Snapshot.render(framed(CopiedView(count: 2, strings: strings))), to: "\(folder)/copied.png")
+    }
+
+    /// コピー完了の表示の動きの途中のコマを、時刻の順に横に並べて書き出す（左から右へ）。
+    @Test
+    func copiedMotionFrames() async throws {
+        let strings = UIStrings(language: .en)
+        let entering: [Double] = [0, 0.04, 0.08, 0.12, 0.16, 0.2, 0.26, 0.34, 0.45, 0.7]
+        let leaving: [Double] = [0, 0.05, 0.1, 0.15, 0.2]
+        try Snapshot.write(
+            try await Snapshot.render(motionStrip(entering.map(ToastTimeline.entering(at:)), times: entering, strings: strings)),
+            to: "motion/copied-in.png"
+        )
+        try Snapshot.write(
+            try await Snapshot.render(motionStrip(leaving.map(ToastTimeline.leaving(at:)), times: leaving, strings: strings)),
+            to: "motion/copied-out.png"
+        )
+    }
+
+    private func motionStrip(_ frames: [ToastAppearance], times: [Double], strings: UIStrings) -> some View {
+        HStack(spacing: Tokens.Spacing.s3) {
+            ForEach(Array(frames.enumerated()), id: \.offset) { index, frame in
+                VStack(spacing: Tokens.Spacing.s2) {
+                    CopiedView(count: 2, strings: strings, frozen: frame)
+                        .frame(width: 200, height: 60)
+                    Text(String(format: "%.2fs", times[index]))
+                        .font(.system(size: 11, design: .monospaced))
+                }
+            }
+        }
+        .padding(Tokens.Spacing.s6)
+        .background(Color(red: 0.90, green: 0.91, blue: 0.93))
     }
 
     /// Paper の App 01〜04 と同じ配置の画面。

@@ -29,6 +29,9 @@ final class LiveCaptureTests: AkapenUITestCase {
         // 実際の画面の倍率（Retina なら 2 倍）で撮ったうえで、長辺の上限（1568px）に収まるように縮む。
         XCTAssertLessThanOrEqual(max(image.pixelWidth, image.pixelHeight), 1568)
         assertImage(at: draft.imagePath, showsFrame: drawn, window: draft.windowFrame.cgRect)
+        // 後片づけ。コメント入力中の Esc は書きかけを捨てて枠を描く状態へ戻り、もう一度の Esc で隠れる（ARCHITECTURE.md「状態」）。
+        pressEscape()
+        waitForPhase(.drawing)
         pressEscape()
         waitForPhase(.hidden)
     }

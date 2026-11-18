@@ -286,9 +286,7 @@ struct ListRowView: View {
                 .padding(.horizontal, Tokens.List.fieldPaddingX)
                 .background(RoundedBox(cornerRadius: Tokens.Radius.field).fill(Tokens.List.fieldBackground.color))
                 .insetOutline(Tokens.List.fieldOutline, width: Tokens.Stroke.emphasis, cornerRadius: Tokens.Radius.field)
-            Text(strings.listEditHint(for: confirmKey))
-                .textStyle(Tokens.Typography.meta)
-                .foregroundStyle(Tokens.List.meta.color)
+            KeyHintRow(hints: strings.listEditHints(for: confirmKey), spacing: Tokens.List.editHintGap)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

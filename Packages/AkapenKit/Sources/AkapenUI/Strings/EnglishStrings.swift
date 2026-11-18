@@ -6,10 +6,26 @@ struct EnglishStrings: StringTable {
             "List"
         case .copyPrompt:
             "Copy prompt"
-        case .listShortcut:
-            "⌘L"
-        case .copyPromptShortcut:
-            "⌘C"
+        case .listShortcutKey:
+            "L"
+        case .copyPromptShortcutKey:
+            "C"
+        case .keyCommand:
+            "⌘"
+        case .keyShift:
+            "⇧"
+        case .keyReturn:
+            "↵"
+        case .keyEscape:
+            "esc"
+        case .hintDone:
+            "Done"
+        case .hintNewLine:
+            "New line"
+        case .hintSave:
+            "Save"
+        case .hintCancel:
+            "Cancel"
         case .listHelp:
             "Show or hide the list (⌘L)"
         case .copyPromptHelp:
@@ -22,28 +38,16 @@ struct EnglishStrings: StringTable {
             "esc to cancel"
         case .commentPlaceholder:
             "Add a comment…"
-        case .commentHintEnter:
-            "↵ Done · ⇧↵ New line"
-        case .commentHintCommandEnter:
-            "⌘↵ Done · ↵ New line"
-        case .commentCancel:
-            "esc"
         case .listTitle:
             "Annotations"
         case .listEmpty:
             "No annotations yet"
-        case .listEditHintEnter:
-            "↵ Save · esc Cancel"
-        case .listEditHintCommandEnter:
-            "⌘↵ Save · esc Cancel"
         case .listEdit:
             "Edit"
         case .listDelete:
             "Delete"
         case .copiedTitle:
-            "Prompt copied"
-        case .copiedShortcut:
-            "⌘ V"
+            "Prompt copied!"
         case .appName:
             "akapen"
         case .menuSettings:

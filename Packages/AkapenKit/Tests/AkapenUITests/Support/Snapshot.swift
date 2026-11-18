@@ -15,11 +15,11 @@ import AkapenCore
         .deletingLastPathComponent()
         .appendingPathComponent("build/ui-snapshots")
 
-    /// Paper から書き出した画像（`.director/design/img/`）。ないときは並べ比べを作らない。
+    /// Paper から書き出した画像（2026-11-19 に読み直した `.director/design-v2/img/`）。ないときは並べ比べを作らない。
     static let paperDirectory: URL = directory
         .deletingLastPathComponent()
         .deletingLastPathComponent()
-        .appendingPathComponent(".director/design/img")
+        .appendingPathComponent(".director/design-v2/img")
 
     /// SwiftUI の部品を画面外のウィンドウに置いて描き、ビットマップにする。
     static func render<V: View>(_ view: V, size: CGSize? = nil) async throws -> NSBitmapImageRep {
@@ -265,5 +265,70 @@ struct WindowSnapshot: View {
         let image = NSImage(size: rep.size)
         image.addRepresentation(rep)
         return image
+    }
+}
+
+/// コピー完了の表示の動きを、時刻ごとの見た目に直す（動きの途中のコマを PNG に書き出すため）。
+///
+/// アプリの動きは SwiftUI のばねと ease で付けている。ここでは同じ値（`Tokens.Motion`）から、その動きの式をなぞって見た目を求める。
+enum ToastTimeline {
+    /// 出始めてから `time` 秒後の見た目。
+    static func entering(at time: Double) -> ToastAppearance {
+        let box = spring(time)
+        let check = easeOut((time - Tokens.Motion.toastCheckDelay) / Tokens.Motion.toastCheckDuration)
+        let label = easeOut((time - Tokens.Motion.toastLabelDelay) / Tokens.Motion.toastLabelDuration)
+        let from = ToastAppearance.entering
+        let to = ToastAppearance.shown
+        return ToastAppearance(
+            scale: mix(from.scale, to.scale, box),
+            blur: max(0, mix(from.blur, to.blur, box)),
+            offsetY: mix(from.offsetY, to.offsetY, box),
+            opacity: Double(min(1, max(0, mix(CGFloat(from.opacity), CGFloat(to.opacity), box)))),
+            checkTrim: mix(from.checkTrim, to.checkTrim, check),
+            labelOpacity: Double(mix(CGFloat(from.labelOpacity), CGFloat(to.labelOpacity), label)),
+            labelOffsetX: mix(from.labelOffsetX, to.labelOffsetX, label)
+        )
+    }
+
+    /// 消え始めてから `time` 秒後の見た目。
+    static func leaving(at time: Double) -> ToastAppearance {
+        let progress = CGFloat(easeIn(time / Tokens.Motion.toastExit))
+        let from = ToastAppearance.shown
+        let to = ToastAppearance.leaving
+        return ToastAppearance(
+            scale: mix(from.scale, to.scale, progress),
+            blur: mix(from.blur, to.blur, progress),
+            offsetY: 0,
+            opacity: Double(mix(1, 0, progress)),
+            checkTrim: 1,
+            labelOpacity: 1,
+            labelOffsetX: 0
+        )
+    }
+
+    /// `spring(response:dampingFraction:)` の、0 から 1 へのステップ応答。
+    private static func spring(_ time: Double) -> CGFloat {
+        guard time > 0 else {
+            return 0
+        }
+        let omega = 2 * Double.pi / Tokens.Motion.toastSpringResponse
+        let zeta = Tokens.Motion.toastSpringDamping
+        let damped = omega * (1 - zeta * zeta).squareRoot()
+        let envelope = exp(-zeta * omega * time)
+        return CGFloat(1 - envelope * (cos(damped * time) + zeta * omega / damped * sin(damped * time)))
+    }
+
+    private static func easeOut(_ progress: Double) -> CGFloat {
+        let value = min(1, max(0, progress))
+        return CGFloat(1 - (1 - value) * (1 - value))
+    }
+
+    private static func easeIn(_ progress: Double) -> Double {
+        let value = min(1, max(0, progress))
+        return value * value
+    }
+
+    private static func mix(_ from: CGFloat, _ to: CGFloat, _ progress: CGFloat) -> CGFloat {
+        from + (to - from) * progress
     }
 }

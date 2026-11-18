@@ -1,3 +1,5 @@
+import AppKit
+import ApplicationServices
 import XCTest
 import AkapenAXID
 
@@ -245,10 +247,16 @@ extension AkapenUITestCase {
     // MARK: - メニューバー
 
     /// メニューバーの akapen のアイコンを押して、メニューを開く。
+    ///
+    /// 座標でクリックすると、内蔵ディスプレイのノッチの裏にアイコンが隠れているとき（メニューバーの項目が多いとき）に押せない。
+    /// そこで、テストの実行役（AkapenE2E-Runner）にアクセシビリティの許可があれば、「押す」操作（`AXPress`）をアイコンへ直接送る。
+    /// 許可がない（既定）ときや押せなかったときは、これまでどおりクリックする。
     func openMenuBarMenu() {
         let icon = app.statusItems.matching(identifier: AXID.MenuBar.icon).firstMatch
         XCTAssertTrue(icon.waitForExistence(timeout: 5), "メニューバーのアイコンがない")
-        icon.click()
+        if !MenuBarIconPress.press(bundleIdentifier: "com.yuto343.akapen", identifier: AXID.MenuBar.icon) {
+            icon.click()
+        }
         waitForElement(AXID.MenuBar.settings)
     }
 
@@ -442,4 +450,53 @@ enum ToolbarShortcut: String {
     case copyPrompt = "c"
     /// `⌘L`: 一覧を開く・閉じる。
     case list = "l"
+}
+
+/// メニューバーのアイコンへ、アクセシビリティの「押す」操作を送る（`openMenuBarMenu()` が使う）。
+///
+/// ほかのアプリの要素へ操作を送るには、テストの実行役にアクセシビリティの許可が要る（システム設定 → プライバシーとセキュリティ →
+/// アクセシビリティ）。XCUITest の操作はこの許可なしで動くので、既定では許可はなく、この操作は送れない（false を返す）。
+enum MenuBarIconPress {
+    /// 押せたら true。許可がない、アプリやアイコンが見つからない、操作が送れないときは false。
+    static func press(bundleIdentifier: String, identifier: String) -> Bool {
+        guard AXIsProcessTrusted() else {
+            return false
+        }
+        guard let running = NSRunningApplication.runningApplications(withBundleIdentifier: bundleIdentifier).first else {
+            return false
+        }
+        let application = AXUIElementCreateApplication(running.processIdentifier)
+        guard let extras = attribute(application, "AXExtrasMenuBar") else {
+            return false
+        }
+        let items = children(of: extras as! AXUIElement)
+        guard let item = items.first(where: { matches($0, identifier: identifier) }) else {
+            return false
+        }
+        // メニューを開くとメニューの操作が終わるまで返らないことがあるので、待つのは短くする。
+        AXUIElementSetMessagingTimeout(item, 1)
+        let result = AXUIElementPerformAction(item, kAXPressAction as CFString)
+        // メニューが開いて返りが遅れたとき（`cannotComplete`）も、押せたことにする（メニューが出たかは呼び出し側が待つ）。
+        return result == .success || result == .cannotComplete
+    }
+
+    private static func attribute(_ element: AXUIElement, _ name: String) -> CFTypeRef? {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, name as CFString, &value) == .success else {
+            return nil
+        }
+        return value
+    }
+
+    private static func children(of element: AXUIElement) -> [AXUIElement] {
+        (attribute(element, kAXChildrenAttribute) as? [AXUIElement]) ?? []
+    }
+
+    /// 自分か子の識別子が一致するか（識別子はステータス項目のボタンに付いている）。
+    private static func matches(_ element: AXUIElement, identifier: String) -> Bool {
+        if (attribute(element, kAXIdentifierAttribute) as? String) == identifier {
+            return true
+        }
+        return children(of: element).contains { (attribute($0, kAXIdentifierAttribute) as? String) == identifier }
+    }
 }

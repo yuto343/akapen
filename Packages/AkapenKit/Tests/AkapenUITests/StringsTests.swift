@@ -10,12 +10,12 @@ struct StringsTests {
 
     @Test
     func toolbarShortcutsAreShown() {
-        #expect(english[.listShortcut] == "⌘L")
-        #expect(english[.copyPromptShortcut] == "⌘C")
+        #expect(english.listShortcutKeys == ["⌘", "L"])
+        #expect(english.copyPromptShortcutKeys == ["⌘", "C"])
         #expect(english[.listHelp] == "Show or hide the list (⌘L)")
         #expect(english[.copyPromptHelp] == "Copy the prompt (⌘C)")
-        #expect(japanese[.listShortcut] == "⌘L")
-        #expect(japanese[.copyPromptShortcut] == "⌘C")
+        #expect(japanese.listShortcutKeys == ["⌘", "L"])
+        #expect(japanese.copyPromptShortcutKeys == ["⌘", "C"])
         #expect(japanese[.listHelp] == "一覧を開く・閉じる（⌘L）")
         #expect(japanese[.copyPromptHelp] == "プロンプトをコピー（⌘C）")
     }
@@ -29,8 +29,7 @@ struct StringsTests {
         #expect(english[.commentPlaceholder] == "Add a comment…")
         #expect(english[.listTitle] == "Annotations")
         #expect(english[.listEmpty] == "No annotations yet")
-        #expect(english[.copiedTitle] == "Prompt copied")
-        #expect(english[.copiedShortcut] == "⌘ V")
+        #expect(english[.copiedTitle] == "Prompt copied!")
         #expect(english.sizeLabel(width: 332, height: 88) == "332 × 88")
         #expect(english.annotationMeta(appName: "Sample App", time: "14:32") == "Sample App · 14:32")
     }
@@ -79,12 +78,20 @@ struct StringsTests {
 
     @Test
     func hintFollowsConfirmKey() {
-        #expect(english.commentHint(for: .enter) == "↵ Done · ⇧↵ New line")
-        #expect(english.commentHint(for: .commandEnter) == "⌘↵ Done · ↵ New line")
-        #expect(english.listEditHint(for: .enter) == "↵ Save · esc Cancel")
-        #expect(english.listEditHint(for: .commandEnter) == "⌘↵ Save · esc Cancel")
-        #expect(japanese.commentHint(for: .enter) == "↵ 確定 · ⇧↵ 改行")
-        #expect(japanese.commentHint(for: .commandEnter) == "⌘↵ 確定 · ↵ 改行")
+        #expect(english.commentHints(for: .enter) == [
+            KeyHint(keys: ["↵"], label: "Done"),
+            KeyHint(keys: ["⇧", "↵"], label: "New line"),
+        ])
+        #expect(english.commentHints(for: .commandEnter) == [
+            KeyHint(keys: ["⌘", "↵"], label: "Done"),
+            KeyHint(keys: ["↵"], label: "New line"),
+        ])
+        #expect(english.cancelHint == KeyHint(keys: ["esc"], label: "Cancel"))
+        #expect(english.listEditHints(for: .enter).map(\.spoken) == ["↵ Save", "esc Cancel"])
+        #expect(english.listEditHints(for: .commandEnter).map(\.spoken) == ["⌘↵ Save", "esc Cancel"])
+        #expect(japanese.commentHints(for: .enter).map(\.spoken) == ["↵ 確定", "⇧↵ 改行"])
+        #expect(japanese.commentHints(for: .commandEnter).map(\.spoken) == ["⌘↵ 確定", "↵ 改行"])
+        #expect(japanese.cancelHint.spoken == "esc キャンセル")
     }
 
     @Test

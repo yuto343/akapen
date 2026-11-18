@@ -6,10 +6,26 @@ public enum StringKey: String, CaseIterable, Sendable {
     case list
     /// 「Copy prompt」ボタン。
     case copyPrompt
-    /// 「List」ボタンのショートカットの小さな表示 `⌘L`。
-    case listShortcut
-    /// 「Copy prompt」ボタンのショートカットの小さな表示 `⌘C`。
-    case copyPromptShortcut
+    /// 「List」ボタンのショートカットのキー `L`（`⌘` と並べてチップで出す）。
+    case listShortcutKey
+    /// 「Copy prompt」ボタンのショートカットのキー `C`。
+    case copyPromptShortcutKey
+    /// キーのチップの `⌘`。
+    case keyCommand
+    /// キーのチップの `⇧`。
+    case keyShift
+    /// キーのチップの `↵`。
+    case keyReturn
+    /// キーのチップの `esc`。
+    case keyEscape
+    /// キーのチップに添える `Done`（コメントの確定）。
+    case hintDone
+    /// キーのチップに添える `New line`（改行）。
+    case hintNewLine
+    /// キーのチップに添える `Save`（一覧の編集の保存）。
+    case hintSave
+    /// キーのチップに添える `Cancel`（取りやめ）。
+    case hintCancel
     /// 「List」ボタンのツールチップ。
     case listHelp
     /// 「Copy prompt」ボタンのツールチップ。
@@ -22,28 +38,16 @@ public enum StringKey: String, CaseIterable, Sendable {
     case drawCancel
     /// コメント入力のプレースホルダー。
     case commentPlaceholder
-    /// コメント入力の下の案内（`Enter` で確定の設定）。
-    case commentHintEnter
-    /// コメント入力の下の案内（`⌘Enter` で確定の設定）。
-    case commentHintCommandEnter
-    /// コメント入力の下の `esc`。
-    case commentCancel
     /// 一覧の見出し。
     case listTitle
     /// 一覧が 0 件のときの表示。
     case listEmpty
-    /// 一覧の編集中の行の下の案内（`Enter` で確定の設定）。
-    case listEditHintEnter
-    /// 一覧の編集中の行の下の案内（`⌘Enter` で確定の設定）。
-    case listEditHintCommandEnter
     /// 一覧の鉛筆のボタンの読み上げ用の名前。
     case listEdit
     /// 一覧のゴミ箱のボタンの読み上げ用の名前。
     case listDelete
-    /// コピー完了の表示の 1 行目。
+    /// コピー完了の表示の文言 `Prompt copied!`。
     case copiedTitle
-    /// コピー完了の表示のキー表示。
-    case copiedShortcut
     /// アプリの名前（メニューの見出しの 1 行目）。言語によらず `akapen`。
     case appName
     /// メニューの `Settings…`。
@@ -148,7 +152,7 @@ public enum PluralKey: String, CaseIterable, Sendable {
     case listItems
     /// 一覧のフッター（`Images are kept for 7 days`）。数は設定の日数。
     case listRetention
-    /// コピー完了の表示の 2 行目（`2 annotations · paste it into your AI agent`）。
+    /// コピー完了の表示の読み上げの文言の後半（`2 annotations · paste it into your AI agent`）。画面には出さない。
     case copiedSummary
     /// メニューの見出しの 2 行目（`2 annotations waiting`）。0 件のときは `UIStrings.menuStatus(count:)` が `menuNoAnnotations` を返す。
     case menuWaiting
@@ -156,6 +160,25 @@ public enum PluralKey: String, CaseIterable, Sendable {
     case quitMessage
     /// 画像を残す日数の単位（`days`）。数は設定の日数。
     case retentionUnit
+}
+
+/// キーのチップと、それに添える文言の組（`↵` `Done`）。
+public struct KeyHint: Equatable, Sendable {
+    /// チップで並べるキー。
+    public var keys: [String]
+    /// 添える文言。
+    public var label: String
+
+    /// キーと文言から作る。
+    public init(keys: [String], label: String) {
+        self.keys = keys
+        self.label = label
+    }
+
+    /// 読み上げと、テストで見比べるための 1 行の書き方（`⇧↵ New line`）。
+    public var spoken: String {
+        keys.joined() + " " + label
+    }
 }
 
 /// 1 つの言語の文言の表。
@@ -212,24 +235,55 @@ public struct UIStrings: Sendable {
         table.annotationMeta(appName: appName, time: time)
     }
 
-    /// コメント入力の下の案内。確定キーの設定で文言が変わる（`DECISIONS.md` 22）。
-    public func commentHint(for confirmKey: ConfirmKey) -> String {
+    /// 「List」ボタンに添えるショートカットのキー（`⌘` `L`）。
+    public var listShortcutKeys: [String] {
+        [self[.keyCommand], self[.listShortcutKey]]
+    }
+
+    /// 「Copy prompt」ボタンに添えるショートカットのキー（`⌘` `C`）。
+    public var copyPromptShortcutKeys: [String] {
+        [self[.keyCommand], self[.copyPromptShortcutKey]]
+    }
+
+    /// 確定のキー。確定キーの設定で変わる（`Enter` なら `↵`、`⌘Enter` なら `⌘` `↵`）。
+    private func confirmKeys(_ confirmKey: ConfirmKey) -> [String] {
         switch confirmKey {
         case .enter:
-            self[.commentHintEnter]
+            [self[.keyReturn]]
         case .commandEnter:
-            self[.commentHintCommandEnter]
+            [self[.keyCommand], self[.keyReturn]]
         }
     }
 
-    /// 一覧の編集中の行の下の案内。確定キーの設定で文言が変わる。
-    public func listEditHint(for confirmKey: ConfirmKey) -> String {
+    /// 改行のキー。確定キーの設定で変わる（`Enter` で確定なら `⇧` `↵`、`⌘Enter` で確定なら `↵`）。
+    private func newLineKeys(_ confirmKey: ConfirmKey) -> [String] {
         switch confirmKey {
         case .enter:
-            self[.listEditHintEnter]
+            [self[.keyShift], self[.keyReturn]]
         case .commandEnter:
-            self[.listEditHintCommandEnter]
+            [self[.keyReturn]]
         }
+    }
+
+    /// 取りやめの案内（`esc` `Cancel`）。
+    public var cancelHint: KeyHint {
+        KeyHint(keys: [self[.keyEscape]], label: self[.hintCancel])
+    }
+
+    /// コメント入力の下の左側の案内（`↵ Done`・`⇧↵ New line`）。確定キーの設定で変わる（`DECISIONS.md` 22）。
+    public func commentHints(for confirmKey: ConfirmKey) -> [KeyHint] {
+        [
+            KeyHint(keys: confirmKeys(confirmKey), label: self[.hintDone]),
+            KeyHint(keys: newLineKeys(confirmKey), label: self[.hintNewLine]),
+        ]
+    }
+
+    /// 一覧の編集中の行の下の案内（`↵ Save`・`esc Cancel`）。確定キーの設定で変わる。
+    public func listEditHints(for confirmKey: ConfirmKey) -> [KeyHint] {
+        [
+            KeyHint(keys: confirmKeys(confirmKey), label: self[.hintSave]),
+            cancelHint,
+        ]
     }
 
     /// 直前の操作の失敗を知らせる文言（案内の表示に出す）。

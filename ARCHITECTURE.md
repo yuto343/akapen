@@ -166,16 +166,16 @@ Paper の画面と 1 対 1 で対応させる。色・文字サイズ・角丸�
 
 | ディレクトリ・ファイル | 中身 | Paper |
 | --- | --- | --- |
-| `Toolbar/` | 画面端のボタン類（「一覧」「copy prompt」。それぞれに `⌘L` / `⌘C` を小さく添え、ツールチップでも示す）。`ToolbarView` | App 01〜04 |
+| `Toolbar/` | 画面端のボタン類（「一覧」「copy prompt」。それぞれに `⌘` `L` / `⌘` `C` をキーのチップで添え、ツールチップでも示す。件数のバッジは「一覧」の右上の角に重ねる）。`ToolbarView` | App 01〜03 |
 | `Draw/` | 案内の表示、赤枠、大きさの表示。`DrawHintView`・`RedFrameView`・`SizeLabelView`・`OverlayView` | App 01 |
 | `Comment/` | 枠の横の入力欄。`CommentView`、複数行の入力欄 `GrowingTextController`（一覧と設定の定型文でも使う） | App 02 |
 | `List/` | 注釈の一覧。`ListView`、サムネイルの切り抜き | App 03 |
-| `Copied/` | コピー完了の表示。`CopiedView` | App 04 |
+| `Copied/` | コピー完了の表示（緑のチェックと `Prompt copied!`。件数は読み上げの文言にだけ入れる）。出入りの動き（ばねで出て、チェックの印を描き、文言が続く。消えるときは縮んでぼける）はこの部品が付け、パネルは動きが終わってから外す。`CopiedView` | App 04 |
 | `MenuBar/` | メニューバーのアイコンとメニュー。制御役 `MenuBarController`、見出し `MenuHeaderView`。画面には出ないメインメニュー `MainMenuController`（`⌘Q`・`⌘,`・入力欄の編集のキー） | App 05 |
 | `QuitConfirm/` | 終了の確認。制御役 `QuitConfirmController`、確認の箱 `QuitConfirmView` | App 09 |
 | `Settings/` | 設定のウィンドウ。制御役 `SettingsController`、状態 `SettingsForm`、画面 `SettingsView` | App 06 |
 | `Setup/` | 初回のセットアップ。制御役 `SetupController`、状態 `SetupFlow`、画面 `SetupView` | App 07・08 |
-| `Common/` | 共通の部品。ボタンの見た目（`ControlButtonStyle`。ホバーの地の変化・押したときの縮み・指のカーソル）、ホバー中のカーソル（`hoverCursor(_:)`。`.activeAlways` の追跡領域で `NSCursor.set()` するので、アクティブでないパネルの上でも効く）、アイコン、文字のスタイルと影、キーの記録欄（`KeyRecorderModel` と、キー入力を受け取る `KeyCaptureView`。設定とセットアップで共通）、キーの表示（`ShortcutText`。キーボードの配列に従う） | — |
+| `Common/` | 共通の部品。ボタンの見た目（`ControlButtonStyle`。ホバーの地の変化・押したときの縮み・指のカーソル）、ホバー中のカーソル（`hoverCursor(_:)`。`.activeAlways` の追跡領域で `NSCursor.set()` するので、アクティブでないパネルの上でも効く）、アイコン、文字のスタイルと影、キーの記録欄（`KeyRecorderModel` と、キー入力を受け取る `KeyCaptureView`。設定とセットアップで共通）、キーの表示（`ShortcutText`。キーボードの配列に従う）、小さなキーのチップと案内（`KeyChipsView` / `KeyHintView`。ボタン類・コメント入力・一覧の案内）、Paper の SVG のパスを描く `SVGPath` | — |
 | `Windows/` | AppKit のパネルと通常のウィンドウ（下の「ウィンドウ」）。`SessionWindows`、`ContentWindow`、置き場所の計算 `PanelPlacement`、座標の変換 `ScreenCoordinates` | — |
 | `Strings/` | 表示の文言の表（`EnglishStrings` / `JapaneseStrings`）と、引き方の `UIStrings`。言語はシステムではなく `Settings.language` で選ぶ。単数・複数は `PluralKey` で出し分ける | — |
 | `Tokens.swift` | デザイントークン。動きは `Tokens.Motion`（出るときのばね、出始めの大きさ 0.96、消えるときの 0.15 秒、ホバーの 0.12 秒、押したときの 0.97、ページ送りのずらし） | — |

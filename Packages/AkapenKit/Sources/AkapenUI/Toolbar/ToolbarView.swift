@@ -28,7 +28,8 @@ public struct ToolbarState: Equatable, Sendable {
 /// 画面下のボタン類（「List」「Copy prompt」。Paper の App 01〜03）。
 ///
 /// ボタン類が出ているあいだは、いつでも枠を描ける状態なので「+」は置かない。
-/// ボタンには、出ているあいだに使えるショートカット（`⌘L` / `⌘C`）を小さく添え、ツールチップでも示す。
+/// ボタンには、出ているあいだに使えるショートカット（`⌘` `L` / `⌘` `C`）をキーのチップで添え、ツールチップでも示す。
+/// 件数のバッジは「List」の右上の角に重ねる。
 public struct ToolbarView: View {
     private let state: ToolbarState
     private let strings: UIStrings
@@ -73,11 +74,7 @@ public struct ToolbarView: View {
                     Text(strings[.list])
                         .textStyle(Tokens.Typography.control)
                         .foregroundStyle(Tokens.Toolbar.labelColor.color)
-                    shortcut(strings[.listShortcut], color: Tokens.Toolbar.listShortcutText)
-                }
-                if state.showsBadge {
-                    badge
-                        .transition(.scale(scale: Tokens.Motion.panelEntranceScale).combined(with: .opacity))
+                    KeyChipsView(keys: strings.listShortcutKeys, tone: .light)
                 }
             }
             .padding(.horizontal, Tokens.Toolbar.listPaddingX)
@@ -89,9 +86,19 @@ public struct ToolbarView: View {
                 cornerRadius: Tokens.Radius.pill
             )
             .animation(Tokens.Motion.hoverAnimation, value: state.isListOpen)
-            .animation(Tokens.Motion.panelSpring, value: state.annotationCount)
         }
         .buttonStyle(ControlButtonStyle(cornerRadius: Tokens.Radius.pill))
+        .overlay(alignment: .topTrailing) {
+            ZStack {
+                if state.showsBadge {
+                    badge
+                        .transition(.scale(scale: Tokens.Motion.panelEntranceScale).combined(with: .opacity))
+                }
+            }
+            .offset(x: Tokens.Toolbar.badgeOverhang, y: -Tokens.Toolbar.badgeOverhang)
+            .allowsHitTesting(false)
+            .animation(Tokens.Motion.panelSpring, value: state.annotationCount)
+        }
         .help(strings[.listHelp])
         .accessibilityLabel(strings[.list])
         .accessibilityValue(state.showsBadge ? String(state.annotationCount) : "")
@@ -109,7 +116,16 @@ public struct ToolbarView: View {
             .foregroundStyle(Tokens.Toolbar.badgeText.color)
             .contentTransition(.numericText(value: Double(state.annotationCount)))
             .padding(.horizontal, Tokens.Toolbar.badgePaddingX)
+            .frame(minWidth: Tokens.Toolbar.badgeSize)
+            .frame(height: Tokens.Toolbar.badgeSize)
             .background(Capsule().fill(Tokens.Toolbar.badgeBackground.color))
+            .background(
+                Capsule()
+                    .fill(Tokens.Toolbar.badgeRing.color)
+                    .padding(-Tokens.Toolbar.badgeRingWidth)
+            )
+            .fixedSize()
+            .accessibilityHidden(true)
     }
 
     private var copyButton: some View {
@@ -119,13 +135,13 @@ public struct ToolbarView: View {
                     Text(strings[.copyPrompt])
                         .textStyle(Tokens.Typography.control)
                         .foregroundStyle(Tokens.Toolbar.copyText.color)
-                    shortcut(strings[.copyPromptShortcut], color: Tokens.Toolbar.copyShortcutText)
+                    KeyChipsView(keys: strings.copyPromptShortcutKeys, tone: .dark)
                 }
                 IconView(
-                    glyph: .arrowUpRight,
+                    glyph: .copy,
                     size: Tokens.Toolbar.copyIconSize,
                     color: Tokens.Toolbar.copyIconColor,
-                    lineWidth: Tokens.Stroke.arrowIcon
+                    lineWidth: Tokens.Stroke.copyIcon
                 )
                 .frame(width: Tokens.Toolbar.copyCircleSize, height: Tokens.Toolbar.copyCircleSize)
                 .background(Circle().fill(Tokens.Toolbar.copyCircle.color))
@@ -140,13 +156,5 @@ public struct ToolbarView: View {
         .help(strings[.copyPromptHelp])
         .accessibilityLabel(strings[.copyPrompt])
         .accessibilityIdentifier(AXID.Toolbar.copyPrompt)
-    }
-
-    /// ボタンの中に小さく添えるショートカットの表示。読み上げはツールチップに任せる。
-    private func shortcut(_ text: String, color: ColorToken) -> some View {
-        Text(text)
-            .textStyle(Tokens.Typography.meta)
-            .foregroundStyle(color.color)
-            .accessibilityHidden(true)
     }
 }

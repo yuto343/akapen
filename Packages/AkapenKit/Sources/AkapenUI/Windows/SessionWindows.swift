@@ -132,7 +132,7 @@ import AkapenCore
             level: Self.panelLevel,
             allowsKey: false,
             screens: screens,
-            entrance: .rise,
+            entrance: .content,
             animatesEntrance: animated
         )
         copied.panel.ignoresMouseEvents = true

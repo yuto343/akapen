@@ -228,6 +228,52 @@ struct PanelTests {
         #expect(windows.overlayViewState.frame == nil)
     }
 
+    /// コピー完了の表示は、`hidden` になっても消える動き（`Tokens.Motion.toastExit`）を終えてからパネルを外す。
+    @Test
+    func copiedToastFinishesItsExitBeforeHiding() async {
+        let windows = makeWindows(fadeDuration: Tokens.Motion.fade)
+        defer { windows.hide() }
+        windows.render(SessionViewState(phase: .copied, lastCopiedCount: 2))
+        #expect(await waitUntil { windows.copied.contentPhase == .shown })
+        windows.render(SessionViewState(phase: .hidden))
+        // 消える動きの途中は、パネルを出したまま。
+        #expect(windows.copied.contentPhase == .leaving)
+        #expect(windows.copied.panel.isVisible)
+        #expect(await waitUntil { !windows.copied.panel.isVisible })
+        // 隠し終えたら、次に出すときのために出しはじめの見た目へ戻っている。
+        #expect(windows.copied.contentPhase == .hidden)
+    }
+
+    /// 消える動きの途中で出し直したら、出ている見た目に戻り、パネルは外さない。
+    @Test
+    func copiedToastReturnsWhenShownDuringExit() async {
+        let windows = makeWindows(fadeDuration: Tokens.Motion.fade)
+        defer { windows.hide() }
+        windows.copied.placement = { size in
+            ScreenRect(x: 0, y: 0, width: size.width, height: size.height)
+        }
+        windows.copied.layout()
+        windows.copied.panel.fadeIn(duration: Tokens.Motion.fade, makeKey: false)
+        #expect(await waitUntil { windows.copied.contentPhase == .shown })
+        windows.copied.panel.fadeOut(duration: Tokens.Motion.fade)
+        #expect(windows.copied.contentPhase == .leaving)
+        windows.copied.panel.fadeIn(duration: Tokens.Motion.fade, makeKey: false)
+        #expect(windows.copied.contentPhase == .shown)
+        try? await Task.sleep(for: .seconds(Tokens.Motion.toastExit * 2))
+        #expect(windows.copied.panel.isVisible)
+    }
+
+    /// 動きを止めたとき（`fadeDuration` が 0。E2E と同じ）は、すぐに出してすぐに外す。
+    @Test
+    func copiedToastHidesAtOnceWithoutMotion() {
+        let windows = makeWindows()
+        defer { windows.hide() }
+        windows.render(SessionViewState(phase: .copied, lastCopiedCount: 2))
+        #expect(windows.copied.contentPhase == .shown)
+        windows.render(SessionViewState(phase: .hidden))
+        #expect(!windows.copied.panel.isVisible)
+    }
+
     // MARK: - ショートカット
 
     @Test
@@ -311,7 +357,8 @@ struct PanelTests {
         #expect(comment.x + comment.width == frame.x + frame.width)
         #expect(comment.y == frame.y + frame.height + 12)
         #expect(comment.width == 300)
-        #expect(comment.height == 76)
+        // Paper の App 02（2026-11-19）: 入力部 45 ＋ 区切り 1 ＋ 下の案内 34（チップの高さ 18 ＋ 上下 8）。
+        #expect(comment.height == 80)
     }
 
     @Test

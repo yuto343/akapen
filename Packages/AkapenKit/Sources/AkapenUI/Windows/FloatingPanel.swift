@@ -71,6 +71,11 @@ final class FloatingPanel: NSPanel {
     var onDidPresent: (() -> Void)?
     /// 隠し終えたとき。前の中身が次に出したときに一瞬見えないように、中身を空にする。
     var onDidHide: (() -> Void)?
+    /// 消える動きを中身（SwiftUI）が受け持つとき、その動きを始めて、長さ（秒）を返す。
+    /// nil なら、窓の不透明度を下げて消す。
+    var contentExit: (() -> TimeInterval)?
+    /// 中身の消える動きの途中で、もう一度出すことになったとき。中身を出ている見た目へ戻す。
+    var onExitCancelled: (() -> Void)?
     /// `Command` つきのキー（`⌘C` など）が押されたとき。true を返すと、そのキーを使ったことにする。
     var onKeyEquivalent: ((NSEvent) -> Bool)?
 
@@ -87,6 +92,7 @@ final class FloatingPanel: NSPanel {
     /// 窓の不透明度は 1 のまま出し、出る動きは中身（`PanelRoot`）が受け持つ。`duration` が 0 なら動かさない。
     func fadeIn(duration: TimeInterval, makeKey: Bool) {
         fadeGeneration += 1
+        let wasFadingOut = isFadingOut
         isFadingOut = false
         let wasVisible = isVisible
         if !wasVisible {
@@ -102,10 +108,14 @@ final class FloatingPanel: NSPanel {
         }
         if !wasVisible {
             onDidPresent?()
+        } else if wasFadingOut {
+            onExitCancelled?()
         }
     }
 
     /// 隠す。`duration` が 0 ならすぐに隠す。消えるときは不透明度だけを速めに下げる。
+    ///
+    /// `contentExit` があれば、中身の消える動きを待ってから隠す（窓の不透明度は 1 のまま）。
     func fadeOut(duration: TimeInterval) {
         guard isVisible, !isFadingOut else {
             return
@@ -117,6 +127,17 @@ final class FloatingPanel: NSPanel {
             return
         }
         isFadingOut = true
+        if let contentExit {
+            let exitDuration = contentExit()
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(exitDuration))
+                guard let self, fadeGeneration == generation else {
+                    return
+                }
+                finishHiding()
+            }
+            return
+        }
         NSAnimationContext.runAnimationGroup { context in
             context.duration = duration
             context.timingFunction = CAMediaTimingFunction(name: .easeOut)
@@ -163,13 +184,37 @@ final class PassthroughHostingView<Content: View>: NSHostingView<Content> {
 enum PanelEntrance: Equatable {
     /// わずかに小さい大きさから、`anchor` を起点に等倍へ（コメント入力・一覧・ボタン類）。
     case scale(anchor: UnitPoint)
-    /// 少し下から浮き上がる（コピー完了の表示）。
-    case rise
+    /// 中身が自分で出入りの動きを付ける（コピー完了の表示）。`PanelRoot` は動かさず、段階（`PanelPhase`）だけを渡す。
+    case content
+}
+
+/// パネルの中身の出入りの段階。
+enum PanelPhase: Equatable, Sendable {
+    /// 出る前（出しはじめの見た目）。
+    case hidden
+    /// 出ている。
+    case shown
+    /// 消える途中。
+    case leaving
+}
+
+extension EnvironmentValues {
+    /// パネルの中身の出入りの段階。`PanelRoot` が渡す。パネルの外で描くとき（見比べの PNG）は `shown`。
+    @Entry var panelPhase: PanelPhase = .shown
 }
 
 /// パネルの中身が出ているか。`PanelHost` が切り替え、`PanelRoot` が見た目に映す。
 @MainActor @Observable final class PanelPresentation {
     var isPresented = true
+    /// 中身の消える動きの途中か（`PanelEntrance.content` のときだけ使う）。
+    var isLeaving = false
+
+    var phase: PanelPhase {
+        if isLeaving {
+            return .leaving
+        }
+        return isPresented ? .shown : .hidden
+    }
 }
 
 /// パネルの中身。影がはみ出す分の余白を足し、中身の大きさが変わったら知らせる。出る動きもここで付ける。
@@ -189,11 +234,18 @@ struct PanelRoot<Content: View>: View {
             } action: { size in
                 onSizeChange(size)
             }
-            .opacity(presentation.isPresented ? 1 : 0)
+            .environment(\.panelPhase, presentation.phase)
+            .opacity(opacity)
             .scaleEffect(scale, anchor: anchor)
-            .offset(y: offset)
             .padding(margin)
             .lightAppearance()
+    }
+
+    private var opacity: Double {
+        if entrance == .content {
+            return 1
+        }
+        return presentation.isPresented ? 1 : 0
     }
 
     private var scale: CGFloat {
@@ -208,13 +260,6 @@ struct PanelRoot<Content: View>: View {
             return anchor
         }
         return .center
-    }
-
-    private var offset: CGFloat {
-        guard !presentation.isPresented, !reduceMotion, entrance == .rise else {
-            return 0
-        }
-        return Tokens.Motion.toastRise
     }
 }
 
@@ -275,6 +320,11 @@ struct PanelRoot<Content: View>: View {
         presentation.isPresented
     }
 
+    /// 中身の出入りの段階。テスト用。
+    var contentPhase: PanelPhase {
+        presentation.phase
+    }
+
     /// 部品の大きさ（影の余白を含まない）。
     var contentSize: CGSize {
         let size = hostingView.intrinsicContentSize
@@ -319,12 +369,24 @@ struct PanelRoot<Content: View>: View {
             }
             setPresented(false, animation: nil)
         }
+        guard entrance == .content, animatesEntrance else {
+            return
+        }
+        // 消える動きは中身が付ける。段階を変えるだけで、動きの長さを返す。
+        panel.contentExit = { [weak self] in
+            self?.presentation.isLeaving = true
+            return Tokens.Motion.toastExit
+        }
+        panel.onExitCancelled = { [weak self] in
+            self?.presentation.isLeaving = false
+        }
     }
 
     private func setPresented(_ presented: Bool, animation: Animation?) {
         var transaction = Transaction(animation: animation)
         transaction.disablesAnimations = animation == nil
         withTransaction(transaction) {
+            presentation.isLeaving = false
             presentation.isPresented = presented
         }
         if animation == nil {

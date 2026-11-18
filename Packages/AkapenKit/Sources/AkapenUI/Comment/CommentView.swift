@@ -35,13 +35,11 @@ struct CommentView: View {
             Rectangle()
                 .fill(Tokens.Comment.divider.color)
                 .frame(height: Tokens.Stroke.hairline)
-            HStack {
-                Text(strings.commentHint(for: confirmKey))
+            HStack(spacing: 0) {
+                KeyHintRow(hints: strings.commentHints(for: confirmKey), spacing: Tokens.Comment.footerHintGap)
                 Spacer(minLength: Tokens.Spacing.s2)
-                Text(strings[.commentCancel])
+                KeyHintView(hint: strings.cancelHint)
             }
-            .textStyle(Tokens.Typography.meta)
-            .foregroundStyle(Tokens.Comment.footerText.color)
             .padding(.vertical, Tokens.Comment.footerPaddingY)
             .padding(.horizontal, Tokens.Comment.footerPaddingX)
         }

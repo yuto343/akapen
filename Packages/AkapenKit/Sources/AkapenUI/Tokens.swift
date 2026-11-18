@@ -3,7 +3,7 @@ import SwiftUI
 
 /// デザイントークン。Paper のファイル「Design System」の App 01〜09 で使っている値を、役割の名前で持つ。
 ///
-/// 値の出どころは `.director/design/tokens.md` と各画面の資料。画面のコードには数値や色を直接書かず、ここから使う。
+/// 値の出どころは `.director/design/tokens.md` と各画面の資料、2026-11-19 の調節分は `.director/design-v2/changes.md`。画面のコードには数値や色を直接書かず、ここから使う。
 /// 寸法の単位はポイント。文字の字間は em（文字の大きさに対する比）で持ち、表示するときにポイントへ直す。
 public enum Tokens {}
 
@@ -192,8 +192,16 @@ extension Tokens {
         public static let accent15 = ColorToken(rgba: 0xFF3E_3E26)
         /// accent 4%。一覧で編集中の行の地。
         public static let accent4 = ColorToken(rgba: 0xFF3E_3E0A)
-        /// dark-ink 12%。コピー完了の表示のキー表示の地。
-        public static let darkInk12 = ColorToken(rgba: 0xF1F1_EE1F)
+        /// ink 10%。キーの表示（チップ）の内側の輪郭。
+        public static let ink10 = ColorToken(rgba: 0x1212_141A)
+        /// 白 12%。黒い地（Copy prompt）の上のキーの表示の地。
+        public static let white12 = ColorToken(rgba: 0xFFFF_FF1F)
+        /// 白 8%。黒い地の上のキーの表示の内側の輪郭。
+        public static let white8 = ColorToken(rgba: 0xFFFF_FF14)
+        /// 黒い地の上のキーの表示の文字。
+        public static let keycapOnDarkText = ColorToken(rgb: 0xD4D4D8)
+        /// コピー完了の表示のチェックの丸（緑）。
+        public static let success = ColorToken(rgb: 0x1F9D55)
         /// 設定ウィンドウのタイトルバー。
         public static let chrome = ColorToken(rgb: 0xF6F6F8)
         /// `chrome` の 95%。メニューの地。
@@ -258,12 +266,14 @@ extension Tokens {
         public static let media: CGFloat = 12
         /// 赤枠。
         public static let frame: CGFloat = 6
-        /// 一覧のパネル・コピー完了の表示。
+        /// 一覧のパネル。
         public static let large: CGFloat = 16
         /// 終了確認の箱。
         public static let alert: CGFloat = 14
-        /// キーの表示（チップ）・設定の記録欄・終了確認のボタン。
+        /// 設定の記録欄・終了確認のボタン。
         public static let keycap: CGFloat = 7
+        /// 小さなキーの表示（ボタン類・コメント入力・一覧の案内のチップ）。
+        public static let keyChip: CGFloat = 5
         /// 定型文の入力欄・セットアップのキー・重複の注意書き。
         public static let box: CGFloat = 10
         /// メニューの項目・セグメントの選択中の項目・信号ボタン。
@@ -294,8 +304,12 @@ extension Tokens {
         public static let listIcon: CGFloat = 1.5
         /// 右上・右向きの矢印のアイコンの線。
         public static let arrowIcon: CGFloat = 1.7
-        /// 一覧の鉛筆とゴミ箱のアイコンの線。
-        public static let rowIcon: CGFloat = 1.3
+        /// 一覧の鉛筆とゴミ箱のアイコンの線（viewBox 24 の単位）。
+        public static let rowIcon: CGFloat = 2
+        /// 「Copy prompt」のコピーのアイコンの線。
+        public static let copyIcon: CGFloat = 1.5
+        /// コピー完了の表示のチェックの印の線。
+        public static let checkIcon: CGFloat = 1.8
     }
 
     /// 動き（`DECISIONS.md` 19・26）。macOS の標準の動き（コントロールセンター・Spotlight）に寄せる。
@@ -311,7 +325,31 @@ extension Tokens {
         /// パネルが出始めるときの大きさ（1 が等倍）。
         public static let panelEntranceScale: CGFloat = 0.96
         /// コピー完了の表示が出始めるときに、下へずらしておく量（pt）。
-        public static let toastRise: CGFloat = 10
+        public static let toastRise: CGFloat = 6
+        /// コピー完了の表示が出始めるときの大きさ。
+        public static let toastEntranceScale: CGFloat = 0.9
+        /// コピー完了の表示が出始めるときのぼかし（pt）。
+        public static let toastEntranceBlur: CGFloat = 6
+        /// コピー完了の表示が出るときのばねの応答（秒）。わずかに行き過ぎて戻る。
+        public static let toastSpringResponse: Double = 0.38
+        /// コピー完了の表示が出るときのばねの減衰。
+        public static let toastSpringDamping: Double = 0.78
+        /// 箱が出始めてから、チェックの印を描き始めるまで（秒）。
+        public static let toastCheckDelay: TimeInterval = 0.08
+        /// チェックの印を描く長さ（秒）。
+        public static let toastCheckDuration: TimeInterval = 0.3
+        /// 箱が出始めてから、文言が現れ始めるまで（秒）。
+        public static let toastLabelDelay: TimeInterval = 0.16
+        /// 文言が現れる長さ（秒）。
+        public static let toastLabelDuration: TimeInterval = 0.26
+        /// 文言が現れ始めるときに、左へずらしておく量（pt）。
+        public static let toastLabelShift: CGFloat = 4
+        /// コピー完了の表示が消える長さ（秒）。出るときより速い。
+        public static let toastExit: TimeInterval = 0.2
+        /// コピー完了の表示が消えるときの大きさ。
+        public static let toastExitScale: CGFloat = 0.96
+        /// コピー完了の表示が消えるときのぼかし（pt）。
+        public static let toastExitBlur: CGFloat = 4
         /// ホバーの地の色の変化（秒、ease-out）。
         public static let hover: TimeInterval = 0.12
         /// 押した瞬間の大きさ。
@@ -336,6 +374,26 @@ extension Tokens {
         public static var exitAnimation: Animation {
             .easeOut(duration: fade)
         }
+        /// コピー完了の表示が出るときのばね。
+        public static var toastSpring: Animation {
+            .spring(response: toastSpringResponse, dampingFraction: toastSpringDamping)
+        }
+        /// チェックの印を描く動き。箱より少し遅れて始める。
+        public static var toastCheckAnimation: Animation {
+            .easeOut(duration: toastCheckDuration).delay(toastCheckDelay)
+        }
+        /// 文言が現れる動き。チェックの印に続けて始める。
+        public static var toastLabelAnimation: Animation {
+            .easeOut(duration: toastLabelDuration).delay(toastLabelDelay)
+        }
+        /// コピー完了の表示が消える動き。
+        public static var toastExitAnimation: Animation {
+            .easeIn(duration: toastExit)
+        }
+        /// 「視差効果を減らす」がオンのときの、不透明度だけの出入り。
+        public static var reducedFadeAnimation: Animation {
+            .easeOut(duration: fade)
+        }
     }
 }
 
@@ -348,7 +406,7 @@ extension Tokens {
         public static let control = TextStyle(size: 13, weight: .medium, lineHeight: 16)
         /// 「List」のバッジ。SF Pro Text Semibold 11 / 18。
         public static let badge = TextStyle(size: 11, weight: .semibold, lineHeight: 18)
-        /// 等幅のメタ表記（`esc to cancel`・大きさの表示・確定キーの案内・`2 ITEMS`・`Sample App · 14:32`）。11 / 14。
+        /// 等幅のメタ表記（`esc to cancel`・大きさの表示・`2 ITEMS`・`Sample App · 14:32`）。11 / 14。
         public static let meta = TextStyle(size: 11, weight: .regular, lineHeight: 14, monospaced: true)
         /// 等幅のラベル（`STEP 1 OF 2`）。11 / 14、字間 0.02em（`--tracking-label`）。
         public static let metaLabel = TextStyle(size: 11, weight: .regular, lineHeight: 14, tracking: 0.02, monospaced: true)
@@ -360,12 +418,10 @@ extension Tokens {
         public static let listComment = TextStyle(size: 14, weight: .regular, lineHeight: 20)
         /// 一覧のフッター。SF Pro Text Regular 12 / 16。
         public static let listFooter = TextStyle(size: 12, weight: .regular, lineHeight: 16)
-        /// コピー完了の表示の 1 行目。SF Pro Text Semibold 14 / 20。
-        public static let toastTitle = TextStyle(size: 14, weight: .semibold, lineHeight: 20)
-        /// コピー完了の表示の 2 行目。SF Pro Text Regular 13 / 18。
-        public static let toastSubtitle = TextStyle(size: 13, weight: .regular, lineHeight: 18)
-        /// コピー完了の表示のキー表示 `⌘ V`。SF Pro Text Semibold 12 / 24。
-        public static let toastKeycap = TextStyle(size: 12, weight: .semibold, lineHeight: 24)
+        /// 小さなキーの表示（チップ）の文字（`⌘`・`L`・`↵`・`esc`）。SF Pro Text Medium 11 / 14。
+        public static let keyChip = TextStyle(size: 11, weight: .medium, lineHeight: 14)
+        /// キーの表示に添える文言（`Done`・`New line`・`Save`・`Cancel`）。SF Pro Text Regular 11 / 14。
+        public static let keyHintLabel = TextStyle(size: 11, weight: .regular, lineHeight: 14)
         /// メニューの見出しの 1 行目 `akapen`。SF Pro Text Semibold 13 / 16。
         public static let menuTitle = TextStyle(size: 13, weight: .semibold, lineHeight: 16)
         /// メニューの見出しの 2 行目。SF Pro Text Regular 11 / 14。
@@ -449,10 +505,8 @@ extension Tokens {
             outline,
             ShadowToken(color: ShadowColor.black28, x: 0, y: 24, blur: 56, spread: -12),
         ]
-        /// コピー完了の表示。
-        public static let toast = [
-            ShadowToken(color: ShadowColor.black40, x: 0, y: 24, blur: 48, spread: -16),
-        ]
+        /// コピー完了の表示（画面下のボタン類と同じ白いピル）。
+        public static let toast = toolbar
         /// メニュー。
         public static let menu = [
             outlineStrong,
@@ -536,7 +590,14 @@ extension Tokens {
         public static let listOpenOutline = Palette.ink
         public static let badgeBackground = Palette.accent
         public static let badgeText = Palette.cleanBackground
-        public static let badgePaddingX: CGFloat = 6
+        public static let badgePaddingX: CGFloat = 5
+        /// バッジの高さと最小の幅（数字 1 桁で正円）。
+        public static let badgeSize: CGFloat = 18
+        /// バッジを「List」の右上の角からはみ出させる量（右へ・上へ）。
+        public static let badgeOverhang: CGFloat = 6
+        /// バッジのまわりの白い輪（`0 0 0 2px #FFFFFF`）。
+        public static let badgeRing = Palette.cleanBackground
+        public static let badgeRingWidth: CGFloat = 2
         public static let copyBackground = Palette.ink
         public static let copyText = Palette.cleanBackground
         public static let copyPaddingLeading: CGFloat = 16
@@ -544,13 +605,9 @@ extension Tokens {
         public static let copyGap: CGFloat = 10
         public static let copyCircleSize: CGFloat = 28
         public static let copyCircle = Palette.accent
-        public static let copyIconSize: CGFloat = 12
+        public static let copyIconSize: CGFloat = 13
         public static let copyIconColor = Palette.cleanBackground
-        /// 「List」の中に小さく出すショートカット（`⌘L`）の文字の色。
-        public static let listShortcutText = Palette.steel
-        /// 「Copy prompt」の中に小さく出すショートカット（`⌘C`）の文字の色。
-        public static let copyShortcutText = Palette.darkSteel
-        /// ショートカットの表示と、その前の文言との間（ボタンの中の間隔より詰める）。
+        /// 文言と、そのあとのショートカットのキーの表示（`⌘` `L`）との間。
         public static let shortcutGap: CGFloat = 6
     }
 
@@ -603,7 +660,8 @@ extension Tokens {
         public static let footerPaddingY: CGFloat = 8
         public static let footerPaddingX: CGFloat = 16
         public static let divider = Palette.line
-        public static let footerText = Palette.steel
+        /// 下の案内の、確定と改行の案内の間。
+        public static let footerHintGap: CGFloat = 12
     }
 
     /// 一覧（App 03）。
@@ -629,13 +687,15 @@ extension Tokens {
         public static let buttonGap: CGFloat = 4
         public static let buttonSize: CGFloat = 28
         public static let buttonBackground = Palette.cleanSurface
-        public static let buttonIconSize: CGFloat = 13
-        public static let buttonIcon = Palette.ink
+        public static let buttonIconSize: CGFloat = 14
+        public static let buttonIcon = Palette.ink2
         public static let editingBackground = ExtraColor.accent4
         public static let fieldPaddingY: CGFloat = 6
         public static let fieldPaddingX: CGFloat = 8
         public static let fieldBackground = Palette.cleanBackground
         public static let fieldOutline = Palette.accent
+        /// 編集中の行の下の案内の、保存と取りやめの案内の間。
+        public static let editHintGap: CGFloat = 12
         public static let footerPaddingY: CGFloat = 12
         public static let footerPaddingX: CGFloat = 18
         public static let footerBackground = Palette.cleanSurface
@@ -647,22 +707,47 @@ extension Tokens {
         public static let estimatedRowHeight: CGFloat = 85
     }
 
-    /// コピー完了の表示（App 04）。
+    /// コピー完了の表示（App 04）。画面下のボタン類と同じ白いピルの中に、黒いピルを 1 つ入れる。
     public enum Toast {
-        public static let width: CGFloat = 460
-        public static let background = Palette.ink
+        public static let background = ExtraColor.white90
+        public static let padding: CGFloat = 6
         public static let shadows = Shadows.toast
-        public static let paddingY: CGFloat = 12
-        public static let paddingLeading: CGFloat = 12
-        public static let paddingTrailing: CGFloat = 16
-        public static let gap: CGFloat = 14
-        public static let iconSize: CGFloat = 44
-        public static let textGap: CGFloat = 2
+        /// 中の黒いピル。
+        public static let pillHeight: CGFloat = 36
+        public static let pillBackground = Palette.ink
+        public static let pillPaddingLeading: CGFloat = 4
+        public static let pillPaddingTrailing: CGFloat = 18
+        public static let gap: CGFloat = 10
+        /// チェックの丸。
+        public static let checkCircleSize: CGFloat = 28
+        public static let checkCircle = ExtraColor.success
+        public static let checkIconSize: CGFloat = 13
+        public static let checkIcon = Palette.cleanBackground
         public static let title = Palette.cleanBackground
-        public static let subtitle = Palette.darkInk2
-        public static let keycapBackground = ExtraColor.darkInk12
-        public static let keycapText = Palette.darkInk
-        public static let keycapPaddingX: CGFloat = 9
+    }
+
+    /// 小さなキーの表示（チップ）と、それに添える文言（App 01〜03 のボタン類・コメント入力・一覧の案内）。
+    public enum KeyChip {
+        public static let height: CGFloat = 18
+        public static let minWidth: CGFloat = 18
+        /// 1 文字のキーの左右の余白。
+        public static let paddingX: CGFloat = 4
+        /// `esc` のような文字のキーの左右の余白。
+        public static let wordPaddingX: CGFloat = 5
+        /// キーとキーの間（`⌘` `L`）。
+        public static let keyGap: CGFloat = 2
+        /// キーと、それに添える文言の間（`↵` `Done`）。
+        public static let labelGap: CGFloat = 6
+        /// 白い地の上の見た目。
+        public static let background = ExtraColor.ink6
+        public static let outline = ExtraColor.ink10
+        public static let text = Palette.ink2
+        /// 黒い地（Copy prompt）の上の見た目。
+        public static let darkBackground = ExtraColor.white12
+        public static let darkOutline = ExtraColor.white8
+        public static let darkText = ExtraColor.keycapOnDarkText
+        /// 添える文言の色。
+        public static let label = Palette.steel
     }
 }
 

@@ -6,10 +6,26 @@ struct JapaneseStrings: StringTable {
             "一覧"
         case .copyPrompt:
             "プロンプトをコピー"
-        case .listShortcut:
-            "⌘L"
-        case .copyPromptShortcut:
-            "⌘C"
+        case .listShortcutKey:
+            "L"
+        case .copyPromptShortcutKey:
+            "C"
+        case .keyCommand:
+            "⌘"
+        case .keyShift:
+            "⇧"
+        case .keyReturn:
+            "↵"
+        case .keyEscape:
+            "esc"
+        case .hintDone:
+            "確定"
+        case .hintNewLine:
+            "改行"
+        case .hintSave:
+            "保存"
+        case .hintCancel:
+            "キャンセル"
         case .listHelp:
             "一覧を開く・閉じる（⌘L）"
         case .copyPromptHelp:
@@ -22,28 +38,16 @@ struct JapaneseStrings: StringTable {
             "esc でキャンセル"
         case .commentPlaceholder:
             "コメントを入力…"
-        case .commentHintEnter:
-            "↵ 確定 · ⇧↵ 改行"
-        case .commentHintCommandEnter:
-            "⌘↵ 確定 · ↵ 改行"
-        case .commentCancel:
-            "esc"
         case .listTitle:
             "注釈"
         case .listEmpty:
             "注釈はまだありません"
-        case .listEditHintEnter:
-            "↵ 保存 · esc キャンセル"
-        case .listEditHintCommandEnter:
-            "⌘↵ 保存 · esc キャンセル"
         case .listEdit:
             "編集"
         case .listDelete:
             "削除"
         case .copiedTitle:
             "プロンプトをコピーしました"
-        case .copiedShortcut:
-            "⌘ V"
         case .appName:
             "akapen"
         case .menuSettings:
