@@ -151,9 +151,9 @@ public struct MenuBarStatus: Equatable, Sendable {
     }
 }
 
-/// メニューバーのアイコン。`assets/logo/akapen-logo-short.png` を縮めてリソースに入れたもの。
+/// メニューバーのアイコン。`assets/logo/akapen-menubar-template.png`（黒と透明の、手でペンを持つ絵）を縮めてリソースに入れたもの。
 ///
-/// 資料どおりフルカラーで出す（テンプレート画像にしない。`DECISIONS.md` 16）。
+/// テンプレート画像として出し、メニューバーの明るさに合わせた色をシステムに任せる（ユーザーの指示で `DECISIONS.md` 16 から変えた）。
 @MainActor enum MenuBarIconImage {
     /// 表示の大きさ（15×17pt）にした画像。読めないときは nil。
     static func make() -> NSImage? {
@@ -161,7 +161,7 @@ public struct MenuBarStatus: Equatable, Sendable {
             return nil
         }
         image.size = NSSize(width: Tokens.Menu.statusIconWidth, height: Tokens.Menu.statusIconHeight)
-        image.isTemplate = false
+        image.isTemplate = true
         return image
     }
 }
