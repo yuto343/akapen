@@ -3,11 +3,12 @@ const supportUsername = 'yuto343';
 
 export const site = {
   // 仮の値。リリースが決まったら差し替える。
-  downloadUrl: 'https://github.com/yuto343/akapen/releases/latest/download/akapen.dmg' as string | null,
+  downloadUrl: 'https://github.com/yuto343/akapen/releases/latest/download/akapen.zip' as string | null,
+  // 自前の tap（yuto343/homebrew-tap）から入れるコマンド。
+  brewInstallCommand: 'brew install --cask yuto343/tap/akapen',
   githubSponsorsUrl: `https://github.com/sponsors/${supportUsername}`,
   kofiUrl: `https://ko-fi.com/${supportUsername}`,
-  // 仮の値。決まったら差し替える。
-  xUrl: 'https://x.com/yuto343',
+  xUrl: 'https://x.com/uchoco898',
   // 仮の値。決まったら差し替える。
   githubUrl: 'https://github.com/yuto343/akapen',
   // 仮の値。決まったら差し替える。

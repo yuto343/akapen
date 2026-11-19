@@ -1,6 +1,6 @@
 <script lang="ts">
   import '@fontsource/ibm-plex-mono/400.css';
-  import '@fontsource/caveat/600.css';
+  import '@fontsource/ibm-plex-mono/500.css';
   import '../app.css';
   let { children } = $props();
 </script>

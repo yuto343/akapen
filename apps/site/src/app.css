@@ -27,8 +27,6 @@
   --radius-full: 999px;
   --font-sans: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
-  --font-hand: "Caveat", cursive;
-  --author-name-gap: 2px;
   --author-caption-size: 11px;
   --author-caption-line-height: 14px;
   --author-caption-tracking: .04em;
@@ -43,18 +41,9 @@
   font-synthesis: none;
   -webkit-font-smoothing: antialiased;
 }
-:root:lang(ja) { --font-hand: "Kiwi Maru", cursive; }
-/* 日本語の手書き風の文に使う字だけを抜き出したサブセット。scripts/subset-hand-font.mjs が作る。 */
-@font-face {
-  font-family: "Kiwi Maru";
-  src: url("/fonts/kiwi-maru-hand.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
 * { box-sizing: border-box; }
 body { margin: 0; font-size: var(--text-label); line-height: 16px; }
-h1, p { margin: 0; }
+h1, h2, p { margin: 0; }
 a { color: inherit; text-decoration: none; }
 a:hover { color: var(--color-accent-deep); }
 a:focus-visible { outline: 2px solid var(--color-accent); outline-offset: var(--spacing-1); }
@@ -91,22 +80,79 @@ a:focus-visible { outline: 2px solid var(--color-accent); outline-offset: var(--
   --spacing-8: 32px;
   --header-language-padding: 6px;
   --hero-mobile-phrase-gap: 44px;
-  --note-mobile-ja-size: clamp(14px, 4vw, 21px);
   --hero-logo-width: 820px;
   --hero-title-size: clamp(36px, 5vw, 72px);
   --hero-title-line: 1.06;
   --hero-note-size: 18px;
   --hero-note-space: 30px;
-  --hero-bottom-space: 72px;
+  --hero-bottom-space: 80px;
   --hero-button-height: 68px;
   --hero-button-border: 4px;
   --hero-orb-size: 40px;
   --demo-bottom-space: 120px;
-  --avatar-border: 12px;
-  --avatar-size: 46px;
-  --note-ja-size: 21px;
-  --note-ja-offset: 470px;
-  --note-ja-arrow-offset: 225px;
+  /* ヘッダーの Download のリンク（暗い小さなピル）。 */
+  --header-download-padding: 18px;
+  --header-download-size: 14px;
+  --header-download-line: 18px;
+  --shadow-ink-small: inset 0 1px 0 #FFFFFF47, inset 0 -8px 14px -8px #FFFFFF1F, 0 0 0 2px #FFFFFFB3, 0 8px 18px -8px #1C1C2E80;
+  /* Download の節。 */
+  --download-gap: 28px;
+  --download-heading-space: 12px;
+  --download-bottom-space: 40px;
+  --section-title-size: 34px;
+  --section-title-line: 38px;
+  --section-title-tracking: -.02em;
+  --or-line-width: 40px;
+  --or-gap: 14px;
+  --or-tracking: .04em;
+  /* Homebrew のコマンドを見せるターミナル風の枠。 */
+  --terminal-width: 720px;
+  --terminal-radius: 16px;
+  --terminal-ring: 4px;
+  --terminal-surface: linear-gradient(180deg, #2A2A2F, #141416);
+  --terminal-shadow: inset 0 1px 0 #FFFFFF2E, 0 0 0 var(--terminal-ring) #FFFFFFB3, 0 30px 60px -24px #1C1C2E80, 0 2px 8px -2px #1C1C2E26;
+  --terminal-bar-height: 40px;
+  --terminal-bar-padding-start: 16px;
+  --terminal-bar-padding-end: 16px;
+  --terminal-bar-border: #FFFFFF14;
+  --terminal-dot-size: 12px;
+  --terminal-dot-gap: 8px;
+  --terminal-dot-red: #FF5F57;
+  --terminal-dot-yellow: #FEBC2E;
+  --terminal-dot-green: #28C840;
+  --terminal-title-color: #87878F;
+  --terminal-body-padding-block: 22px;
+  --terminal-body-padding-start: 24px;
+  --terminal-body-padding-end: 16px;
+  --terminal-font-size: 17px;
+  --terminal-line-height: 26px;
+  --terminal-prompt-gap: 14px;
+  --terminal-prompt-color: #FF4A4A;
+  --terminal-text-color: #F1F1EE;
+  --terminal-option-color: #B6B6B1;
+  --terminal-fade-width: 40px;
+  --terminal-fade: linear-gradient(90deg, #17171A00, #17171A 85%);
+  --copy-button-height: 36px;
+  --copy-button-padding-start: 12px;
+  --copy-button-padding-end: 14px;
+  --copy-button-gap: 8px;
+  --copy-icon-size: 14px;
+  --copy-label-size: 13px;
+  --copy-label-line: 16px;
+  --shadow-copy: inset 0 -1px 0 #1C1C2E0A, 0 6px 14px -6px #00000066;
+  --shadow-copy-done: inset 0 1px 0 #FFFFFF8C, 0 6px 14px -6px #DC2B2B99;
+  /* フッターの作者表示（X と GitHub のピル）。 */
+  --author-links-space: 12px;
+  --author-pill-height: 48px;
+  --author-pill-padding-start: 6px;
+  --author-pill-padding-end: 16px;
+  --author-pill-gap: 10px;
+  --author-avatar-size: 36px;
+  --author-avatar-ring: inset 0 0 0 1px #1212141A;
+  --author-x-mark-size: 14px;
+  --author-github-mark-size: 16px;
+  --author-alias-gap: 14px;
+  --footer-top-space: 120px;
   --ease-out: cubic-bezier(.22, 1, .36, 1);
   --ease-spring: cubic-bezier(.22, 1, .36, 1);
   --motion-reveal: .7s;
@@ -114,7 +160,6 @@ a:focus-visible { outline: 2px solid var(--color-accent); outline-offset: var(--
   --motion-marker: .45s;
   --motion-marker-delay: .6s;
   --motion-note-delay: 1.05s;
-  --motion-button-delay: 160ms;
   --motion-hover: .24s;
   --motion-caret: .7s;
   --demo-cycle: 18s;
@@ -137,7 +182,7 @@ body {
 }
 a { transition: transform var(--motion-hover) var(--ease-out), box-shadow var(--motion-hover) var(--ease-out); }
 a:hover { color: inherit; }
-.download-button:hover, .header-github:hover, .sponsors-link:hover, .kofi-link:hover, .x-link:hover, .github-link:hover { transform: translateY(var(--motion-lift)); box-shadow: var(--shadow-hover); }
+.download-button:hover, .header-download:hover, .header-github:hover, .sponsors-link:hover, .kofi-link:hover, .author-link:hover { transform: translateY(var(--motion-lift)); box-shadow: var(--shadow-hover); }
 a:active { transform: scale(var(--motion-press-scale)); }
 @keyframes hero-reveal {
   from { opacity: 0; transform: translateY(var(--motion-rise)); filter: blur(var(--motion-blur)); }
@@ -147,8 +192,35 @@ a:active { transform: scale(var(--motion-press-scale)); }
   from { clip-path: polygon(0 9%, 0 9%, 0 100%, 0 100%); }
   to { clip-path: polygon(0 9%, 96% 0, 100% 92%, 3% 100%); }
 }
+:root:lang(ja) {
+  --section-title-size: 32px;
+  --section-title-line: 40px;
+  --section-title-tracking: .01em;
+}
 @media (max-width: 767px) {
   :root { --hero-note-size: 14px; --hero-title-size: clamp(32px, 6.7vw, 50px); --demo-bottom-space: 60px; }
+  :root {
+    --footer-top-space: var(--spacing-10);
+    --section-title-size: 26px;
+    --section-title-line: 32px;
+    --terminal-radius: 14px;
+    --terminal-ring: 3px;
+    --terminal-bar-height: 48px;
+    --terminal-bar-padding-start: 14px;
+    --terminal-bar-padding-end: 8px;
+    --terminal-dot-size: 11px;
+    --terminal-body-padding-block: 18px;
+    --terminal-body-padding-start: 16px;
+    --terminal-body-padding-end: 0px;
+    --terminal-font-size: 15px;
+    --terminal-line-height: 22px;
+    --terminal-prompt-gap: 10px;
+    --copy-button-height: 32px;
+  }
+  :root:lang(ja) { --section-title-size: 24px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
@@ -174,7 +246,7 @@ a:active { transform: scale(var(--motion-press-scale)); }
   --demo-pop-blur: calc(6 * var(--demo-unit));
 }
 
-.download-button:active, .header-github:active, .sponsors-link:active, .kofi-link:active, .x-link:active, .github-link:active { transform: scale(var(--motion-press-scale)); }
+.download-button:active, .header-download:active, .header-github:active, .sponsors-link:active, .kofi-link:active, .author-link:active { transform: scale(var(--motion-press-scale)); }
 @media (prefers-reduced-motion: reduce) {
   a:hover, a:active, .download-button:hover .download-icon svg { transform: none !important; }
 }

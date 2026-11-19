@@ -8,17 +8,14 @@
     "build": "svelte-kit sync && vite build",
     "preview": "vite preview",
     "typecheck": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-    "record:demo": "node scripts/record-demo.mjs",
-    "subset:font": "node --experimental-strip-types --no-warnings scripts/subset-hand-font.mjs"
+    "record:demo": "node scripts/record-demo.mjs"
   },
   "devDependencies": {
-    "@fontsource/caveat": "^5.3.0",
     "@fontsource/ibm-plex-mono": "^5.3.0",
     "@sveltejs/adapter-static": "^3.0.10",
     "@sveltejs/kit": "^2.70.3",
     "@sveltejs/vite-plugin-svelte": "^4.0.4",
     "playwright-core": "1.63.0",
-    "subset-font": "^2.9.0",
     "svelte": "^5.57.2",
     "svelte-check": "^4.7.7",
     "typescript": "^5.9.3",
