@@ -145,6 +145,7 @@ import AkapenAXID
 
     /// 入力の途中のものを片付ける（ウィンドウを閉じるとき）。日数の入力を確定し、キーの記録をやめる。
     func finishEditing() {
+        restoreDefaultBoilerplate()
         commitRetention()
         cancelRecording()
     }
@@ -170,8 +171,17 @@ import AkapenAXID
             isComposing ? .passThrough : .insertNewline
         }
         boilerplate.textView.setAccessibilityIdentifier(AXID.Settings.boilerplate)
+        boilerplate.textView.onEditingEnded = { [weak self] in
+            self?.restoreDefaultBoilerplate()
+        }
         boilerplate.onEdit = { [weak self] text in
             self?.boilerplateEdited(text)
+        }
+    }
+
+    private func restoreDefaultBoilerplate() {
+        if boilerplate.text.isEmpty, !boilerplate.textView.hasMarkedText() {
+            boilerplate.setText(settings.effectiveBoilerplate)
         }
     }
 

@@ -9,27 +9,47 @@ struct StringsTests {
     let japanese = UIStrings(language: .ja)
 
     @Test
+    func clearConfirmationStrings() {
+        #expect(english[.clearAll] == "Clear all")
+        #expect(japanese[.clearAll] == "すべて消す")
+        #expect(english[.clearAllHelp] == "Clear all annotations (⌘⌫)")
+        #expect(japanese[.clearAllHelp] == "注釈をすべて消す (⌘⌫)")
+        #expect(english[.clearTitle] == "Clear all annotations?")
+        #expect(japanese[.clearTitle] == "注釈をすべて消しますか？")
+        #expect(english.plural(.clearMessage, count: 1) == "1 annotation and its image will be deleted.\nThis can’t be undone.")
+        #expect(english.plural(.clearMessage, count: 2) == "2 annotations and their images will be deleted.\nThis can’t be undone.")
+        for count in [1, 2] {
+            #expect(japanese.plural(.clearMessage, count: count) == "\(count) 件の注釈と画像を消します。\n元に戻せません。")
+        }
+        #expect(english[.quitCancel] == "Cancel")
+        #expect(japanese[.quitCancel] == "キャンセル")
+    }
+
+    @Test
     func toolbarShortcutsAreShown() {
+        #expect(english.clearShortcutKeys == ["⌘", "⌫"])
         #expect(english.listShortcutKeys == ["⌘", "L"])
         #expect(english.copyPromptShortcutKeys == ["⌘", "C"])
         #expect(english[.listHelp] == "Show or hide the list (⌘L)")
         #expect(english[.copyPromptHelp] == "Copy the prompt (⌘C)")
+        #expect(japanese.clearShortcutKeys == ["⌘", "⌫"])
         #expect(japanese.listShortcutKeys == ["⌘", "L"])
         #expect(japanese.copyPromptShortcutKeys == ["⌘", "C"])
-        #expect(japanese[.listHelp] == "一覧を開く・閉じる（⌘L）")
+        #expect(japanese[.listHelp] == "リストを開く・閉じる（⌘L）")
         #expect(japanese[.copyPromptHelp] == "プロンプトをコピー（⌘C）")
     }
 
     @Test
     func englishMatchesPaper() {
         #expect(english[.list] == "List")
-        #expect(english[.copyPrompt] == "Copy prompt")
+        #expect(english[.copyPrompt] == "Copy")
         #expect(english[.drawHint] == "Drag to frame")
-        #expect(english[.drawCancel] == "esc to cancel")
+        #expect(english.cancelHint.keys == ["esc"])
+        #expect(english.cancelHint.label == "Cancel")
         #expect(english[.commentPlaceholder] == "Add a comment…")
         #expect(english[.listTitle] == "Annotations")
         #expect(english[.listEmpty] == "No annotations yet")
-        #expect(english[.copiedTitle] == "Prompt copied!")
+        #expect(english[.copiedTitle] == "Copied!")
         #expect(english.sizeLabel(width: 332, height: 88) == "332 × 88")
         #expect(english.annotationMeta(appName: "Sample App", time: "14:32") == "Sample App · 14:32")
     }
@@ -50,10 +70,10 @@ struct StringsTests {
 
     @Test
     func languageComesFromSettingsNotSystem() {
-        #expect(UIStrings(language: .en)[.copyPrompt] == "Copy prompt")
-        #expect(UIStrings(language: .ja)[.copyPrompt] == "プロンプトをコピー")
+        #expect(UIStrings(language: .en)[.copyPrompt] == "Copy")
+        #expect(UIStrings(language: .ja)[.copyPrompt] == "コピー")
         #expect(japanese[.listTitle] == "注釈")
-        #expect(japanese[.drawHint] == "ドラッグして枠を描く")
+        #expect(japanese[.drawHint] == "ドラッグしてフレームを追加")
     }
 
     @Test
@@ -118,7 +138,7 @@ struct StringsTests {
         #expect(english.menuStatus(count: 1) == "1 annotation waiting")
         #expect(english.menuStatus(count: 2) == "2 annotations waiting")
         #expect(japanese.menuStatus(count: 0) == "注釈はありません")
-        #expect(japanese.menuStatus(count: 2) == "2 件の注釈がコピー待ち")
+        #expect(japanese.menuStatus(count: 2) == "リスト内に 2 件あります")
         #expect(english.plural(.quitMessage, count: 1) == "1 annotation hasn’t been copied yet.\nIt will be discarded.")
         #expect(english.plural(.quitMessage, count: 2) == "2 annotations haven’t been copied yet.\nThey will be discarded.")
         #expect(japanese.plural(.quitMessage, count: 1) == "コピーしていない注釈が 1 件あります。\n終了すると破棄されます。")
@@ -136,7 +156,7 @@ struct StringsTests {
         #expect(english[.confirmKeyEnter] == "↵ Enter")
         #expect(english[.confirmKeyCommandEnter] == "⌘ ↵ Enter")
         #expect(english[.settingsPromptHeader] == "Prompt header")
-        #expect(english[.settingsPromptNote] == "Edits the English version")
+        #expect(english[.settingsPromptNote] == "Once edited, it won’t change with the language")
         #expect(english[.settingsPromptCaption] == "Each annotation is added below as an image path followed by its comment.")
         #expect(english[.settingsRetention] == "Keep images for")
         #expect(english[.recorderPlaceholder] == "Record shortcut")
@@ -158,7 +178,7 @@ struct StringsTests {
         #expect(japanese[.confirmKeyEnter] == "↵ Enter")
         #expect(japanese[.confirmKeyCommandEnter] == "⌘ ↵ Enter")
         #expect(japanese[.settingsPromptHeader] == "プロンプトの定型文")
-        #expect(japanese[.settingsPromptNote] == "日本語版を編集します")
+        #expect(japanese[.settingsPromptNote] == "編集すると、言語設定によって変更されなくなります")
         #expect(japanese[.settingsPromptCaption] == "この下に、注釈ごとに画像のパスとコメントが続きます。")
         #expect(japanese[.settingsRetention] == "画像を残す日数")
         #expect(japanese[.recorderPlaceholder] == "ショートカットを記録")
@@ -179,7 +199,7 @@ struct StringsTests {
         #expect(english[.setupConflictNote] == "⌘⇧6 is also used by macOS to save a screenshot of the Touch Bar (on Macs with a Touch Bar). You can change it here or later in Settings.")
         #expect(english[.setupContinue] == "Continue")
         #expect(english[.setupPermissionTitle] == "Allow Screen Recording")
-        #expect(english[.setupPermissionBody] == "akapen captures the screen around each frame. Images stay on this Mac in ~/Library/Caches/akapen.")
+        #expect(english.setupPermissionBody(path: "~/Library/Caches/akapen") == "akapen captures the screen around each frame. Images stay on this Mac in ~/Library/Caches/akapen.")
         #expect(english[.setupStepOpenSettings] == "Open System Settings → Privacy & Security")
         #expect(english[.setupStepTurnOn] == "Turn on akapen under Screen Recording")
         #expect(english[.setupStepComeBack] == "Come back here")
@@ -194,12 +214,12 @@ struct StringsTests {
     func setupInJapanese() {
         #expect(japanese.setupStep(current: 1, total: 2) == "ステップ 1 / 2")
         #expect(japanese[.setupHotkeyTitle] == "ホットキーを決める")
-        #expect(japanese[.setupHotkeyBody] == "どこで押しても、ボタン類が出て枠を描き始めます。\nもう一度押すと、次の枠を描きます。")
-        #expect(japanese[.setupRecorderHint] == "クリックして、新しい組み合わせを押すと変わります")
+        #expect(japanese[.setupHotkeyBody] == "akapen を呼び出すと、マウスで枠を描くモードになります。")
+        #expect(japanese[.setupRecorderHint] == "クリックして変更します")
         #expect(japanese[.setupConflictNote] == "⌘⇧6 は、Touch Bar のある Mac では macOS の Touch Bar のスクリーンショットにも使われています。ここか、あとで設定から変えられます。")
         #expect(japanese[.setupContinue] == "続ける")
         #expect(japanese[.setupPermissionTitle] == "画面収録を許可する")
-        #expect(japanese[.setupPermissionBody] == "akapen は枠のまわりの画面を撮影します。画像はこの Mac の\n~/Library/Caches/akapen に残ります。")
+        #expect(japanese.setupPermissionBody(path: "~/Library/Caches/akapen") == "akapen は画面を撮影するので、画面収録の権限が必要です。\n画像はこの Mac の ~/Library/Caches/akapen に残ります。")
         #expect(japanese[.setupStepOpenSettings] == "システム設定 → プライバシーとセキュリティを開く")
         #expect(japanese[.setupStepTurnOn] == "「画面収録」で akapen をオンにする")
         #expect(japanese[.setupStepComeBack] == "ここに戻る")

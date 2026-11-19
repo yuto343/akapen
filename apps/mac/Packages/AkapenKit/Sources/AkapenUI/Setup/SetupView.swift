@@ -28,7 +28,8 @@ struct SetupView: View {
             .padding(.bottom, Tokens.Setup.bodyPaddingBottom)
         }
         .frame(width: Tokens.Setup.width)
-        .background(Tokens.Window.background.color)
+        .glassSurface(radius: Tokens.Glass.setupRadius, tint: Tokens.Glass.window)
+        .clipShape(RoundedBox(cornerRadius: Tokens.Glass.setupRadius))
         .lightAppearance()
     }
 
@@ -77,7 +78,7 @@ struct SetupView: View {
         SetupHeading(
             step: step(strings),
             title: strings[.setupPermissionTitle],
-            message: strings[.setupPermissionBody]
+            message: strings.setupPermissionBody(path: flow.imagesPath)
         )
         VStack(spacing: 0) {
             SetupStepRow(number: 1, text: strings[.setupStepOpenSettings], showsDivider: true) {

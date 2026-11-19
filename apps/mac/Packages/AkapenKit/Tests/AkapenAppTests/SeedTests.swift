@@ -41,7 +41,7 @@ struct SeedTests {
         #expect(settings.setupCompleted)
         #expect(settings.imageRetentionDays == 3)
         #expect(settings.boilerplate(for: .en) == "Look at these.")
-        #expect(settings.boilerplate(for: .ja) == Boilerplate.japanese)
+        #expect(settings.boilerplate(for: .ja) == "Look at these.")
     }
 
     @Test
@@ -253,4 +253,22 @@ struct SeedTests {
         // 設定は書き換えていない。
         #expect(!FileManager.default.fileExists(atPath: directory.appending(path: "settings.json").path(percentEncoded: false)))
     }
+}
+
+@Test
+func seedAcceptsCustomNullAndLegacyBoilerplates() throws {
+    var stored = Settings()
+    stored.customBoilerplate = "old"
+    let current = try LaunchSeed.parse(#"{"settings":{"customBoilerplate":"shared","language":"ja"}}"#)
+    #expect(current.settings?.applied(to: stored).effectiveBoilerplate == "shared")
+    let reset = try LaunchSeed.parse(#"{"settings":{"customBoilerplate":null}}"#)
+    #expect(reset.settings?.applied(to: stored).customBoilerplate == nil)
+    let unchanged = try LaunchSeed.parse(#"{"settings":{"language":"ja"}}"#)
+    #expect(unchanged.settings?.applied(to: stored).customBoilerplate == "old")
+    let legacy = try LaunchSeed.parse(#"{"settings":{"language":"ja","boilerplates":{"en":"ignored","ja":"移行"}}}"#)
+    #expect(legacy.settings?.applied(to: stored).customBoilerplate == "移行")
+    let missing = try LaunchSeed.parse(#"{"settings":{"language":"ja","boilerplates":{"en":"ignored"}}}"#)
+    #expect(missing.settings?.applied(to: stored).customBoilerplate == nil)
+    let roundTrip = try LaunchSeed.parse(reset.json())
+    #expect(roundTrip.settings?.applied(to: stored).customBoilerplate == nil)
 }

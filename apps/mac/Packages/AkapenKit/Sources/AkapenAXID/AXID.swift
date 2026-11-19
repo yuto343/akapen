@@ -2,6 +2,7 @@
 public enum AXID {
     /// Toolbar の操作対象。
     public enum Toolbar {
+        public static let clear = "toolbar.clear"
         public static let list = "toolbar.list"
         public static let copyPrompt = "toolbar.copyPrompt"
     }
@@ -42,6 +43,14 @@ public enum AXID {
         /// 件数入りの説明文。
         public static let message = "quitConfirm.message"
     }
+    /// 全削除の確認の操作対象。
+    public enum ClearConfirm {
+        public static let panel = "clearConfirm.panel"
+        public static let message = "clearConfirm.message"
+        public static let confirm = "clearConfirm.confirm"
+        public static let cancel = "clearConfirm.cancel"
+    }
+
     /// Settings の操作対象。
     public enum Settings {
         public static let language = "settings.language"

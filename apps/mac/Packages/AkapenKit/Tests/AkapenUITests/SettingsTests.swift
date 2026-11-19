@@ -97,7 +97,7 @@ struct SettingsTests {
     }
 
     @Test
-    func editedBoilerplateIsKeptPerLanguage() {
+    func editedBoilerplateIsSharedAcrossLanguages() {
         let sink = SettingsSink()
         let controller = makeController(sink)
         defer { controller.close() }
@@ -105,16 +105,22 @@ struct SettingsTests {
         let editor = controller.form.boilerplate
         type("Please fix these.", into: editor)
         #expect(sink.settings.boilerplate(for: .en) == "Please fix these.")
-        #expect(sink.settings.boilerplate(for: .ja) == Boilerplate.japanese)
+        #expect(sink.settings.boilerplate(for: .ja) == "Please fix these.")
         controller.form.setLanguage(.ja)
-        #expect(editor.text == Boilerplate.japanese)
+        #expect(editor.text == "Please fix these.")
         type("直してください。", into: editor)
         #expect(sink.settings.boilerplate(for: .ja) == "直してください。")
         controller.form.setLanguage(.en)
-        #expect(editor.text == "Please fix these.")
-        #expect(sink.settings.boilerplate(for: .en) == "Please fix these.")
+        #expect(editor.text == "直してください。")
+        #expect(sink.settings.boilerplate(for: .en) == "直してください。")
         #expect(sink.settings.boilerplate(for: .ja) == "直してください。")
         #expect(sink.settings.language == .en)
+        type("", into: editor)
+        controller.form.finishEditing()
+        #expect(sink.settings.customBoilerplate == nil)
+        #expect(editor.text == Boilerplate.english)
+        controller.form.setLanguage(.ja)
+        #expect(editor.text == Boilerplate.japanese)
     }
 
     @Test

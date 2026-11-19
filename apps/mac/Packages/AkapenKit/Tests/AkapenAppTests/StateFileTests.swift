@@ -48,6 +48,7 @@ struct StateFileTests {
         let hotkey = try #require(settings["hotkey"] as? [String: Any])
         #expect(hotkey["keyCode"] as? Int == 22)
         #expect(hotkey["modifiers"] as? Int == 3)
+         #expect(settings["customBoilerplate"] is NSNull)
         let boilerplates = try #require(settings["boilerplates"] as? [String: String])
         #expect(boilerplates == ["en": Boilerplate.english, "ja": Boilerplate.japanese])
         let storage = try #require(state["storage"] as? [String: Any])
@@ -59,6 +60,7 @@ struct StateFileTests {
         #expect(windows["setup"] as? Bool == false)
         #expect(windows["setupPage"] is NSNull)
         #expect(windows["quitConfirm"] as? Bool == false)
+        #expect(windows["clearConfirm"] as? Bool == false)
         let hotkeys = try #require(state["hotkeys"] as? [String: Any])
         #expect(hotkeys["draw"] is NSNull)
         #expect(hotkeys.keys.contains("toolbar") == false)
@@ -145,7 +147,8 @@ struct StateFileTests {
         let values = try #require(state["settings"] as? [String: Any])
         #expect(values["language"] as? String == "ja")
         #expect(values["confirmKey"] as? String == "commandEnter")
-        #expect(values["boilerplates"] as? [String: String] == ["en": Boilerplate.english, "ja": "書き換えた"])
+        #expect(values["boilerplates"] as? [String: String] == ["en": "書き換えた", "ja": "書き換えた"])
+        #expect(values["customBoilerplate"] as? String == "書き換えた")
         // 次の入力が成功したら、失敗は消える。
         await app.send(.escapePressed)
         state = try app.stateJSON()
@@ -158,7 +161,7 @@ struct StateFileTests {
         let app = try await TestApp.make()
         defer { app.cleanUp() }
         app.environment.windowStatus = {
-            SessionSnapshot.Windows(settings: true, setup: true, setupPage: .permission, quitConfirm: true)
+            SessionSnapshot.Windows(settings: true, setup: true, setupPage: .permission, quitConfirm: true, clearConfirm: true)
         }
         app.environment.startWritingState()
         let windows = try #require(try app.stateJSON()["windows"] as? [String: Any])
@@ -166,5 +169,6 @@ struct StateFileTests {
         #expect(windows["setup"] as? Bool == true)
         #expect(windows["setupPage"] as? String == "permission")
         #expect(windows["quitConfirm"] as? Bool == true)
+        #expect(windows["clearConfirm"] as? Bool == true)
     }
 }

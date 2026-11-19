@@ -30,7 +30,8 @@ final class ContentWindow: NSWindow {
         animationBehavior = .documentWindow
         collectionBehavior = [.moveToActiveSpace]
         appearance = NSAppearance(named: .aqua)
-        backgroundColor = Tokens.Window.background.nsColor
+        isOpaque = false
+        backgroundColor = .clear
     }
 
     override func close() {

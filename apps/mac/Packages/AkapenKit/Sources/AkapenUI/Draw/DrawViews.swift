@@ -24,18 +24,21 @@ public struct DrawHintView: View {
             Circle()
                 .fill(Tokens.Hint.dot.color)
                 .frame(width: Tokens.Hint.dotSize, height: Tokens.Hint.dotSize)
+                .overlay(Circle().stroke(Tokens.Glass.dotRing.color, lineWidth: Tokens.Glass.dotRingWidth))
             Text(notice.map(strings.failureMessage) ?? strings[.drawHint])
                 .textStyle(Tokens.Typography.control)
                 .foregroundStyle(Tokens.Hint.title.color)
             if showsCancel {
-                Text(strings[.drawCancel])
+                KeyChipsView(keys: strings.cancelHint.keys, tone: .dark)
+                Text(strings[.hintCancel])
                     .textStyle(Tokens.Typography.meta)
                     .foregroundStyle(Tokens.Hint.meta.color)
             }
         }
         .padding(.horizontal, Tokens.Hint.paddingX)
         .frame(height: Tokens.Hint.height)
-        .background(Capsule().fill(Tokens.Hint.background.color))
+        .background(Capsule().fill(Tokens.Glass.ink))
+        .insetOutline(Tokens.Glass.ring, width: Tokens.Toolbar.badgeRingWidth, cornerRadius: Tokens.Radius.pill)
         .boxShadow(Tokens.Hint.shadows, cornerRadius: Tokens.Radius.pill)
         .fixedSize()
         .lightAppearance()
@@ -52,6 +55,7 @@ public struct RedFrameView: View {
     public var body: some View {
         RoundedBox(cornerRadius: Tokens.Radius.frame)
             .strokeBorder(Tokens.Frame.stroke.color, lineWidth: Tokens.Stroke.frame)
+            .shadow(color: Tokens.Glass.dotRing.color, radius: Tokens.Motion.entranceBlur)
             .boxShadow([Tokens.Frame.glow], cornerRadius: Tokens.Radius.frame)
             .allowsHitTesting(false)
             .accessibilityElement()
@@ -74,7 +78,8 @@ public struct SizeLabelView: View {
             .foregroundStyle(Tokens.SizeLabel.text.color)
             .padding(.horizontal, Tokens.SizeLabel.paddingX)
             .frame(height: Tokens.SizeLabel.height)
-            .background(Capsule().fill(Tokens.SizeLabel.background.color))
+            .background(Capsule().fill(Tokens.Glass.ink))
+        .insetOutline(Tokens.Glass.ring, width: Tokens.Toolbar.badgeRingWidth, cornerRadius: Tokens.Radius.pill)
             .fixedSize()
             .lightAppearance()
             .accessibilityElement(children: .combine)
@@ -137,6 +142,11 @@ public struct OverlayView: View {
         OverlayLayout(state: state) {
             if let frame = state.frame {
                 RedFrameView()
+                    .phaseAnimator([false, true, false], trigger: state.cursor == nil) { content, expanded in
+                        content.scaleEffect(expanded && !reduceMotion && state.cursor == nil ? Tokens.Motion.framePop : 1)
+                    } animation: { _ in
+                        animated ? (reduceMotion ? Tokens.Motion.reducedFadeAnimation : Tokens.Motion.pressSpring) : nil
+                    }
                     .layoutValue(key: OverlayRole.self, value: .frame)
                 if state.cursor != nil {
                     SizeLabelView(text: strings.sizeLabel(
@@ -149,6 +159,7 @@ public struct OverlayView: View {
             DrawHintView(strings: strings, notice: state.notice, showsCancel: state.showsCancel)
                 .opacity(state.showsHint ? 1 : 0)
                 .scaleEffect(hintScale, anchor: .top)
+                .offset(y: state.showsHint || reduceMotion ? 0 : -Tokens.Motion.hintRise)
                 .animation(hintAnimation, value: state.showsHint)
                 .accessibilityHidden(!state.showsHint)
                 .layoutValue(key: OverlayRole.self, value: .hint)
@@ -165,7 +176,7 @@ public struct OverlayView: View {
         guard animated else {
             return nil
         }
-        return state.showsHint ? Tokens.Motion.panelSpring : Tokens.Motion.exitAnimation
+        return reduceMotion ? Tokens.Motion.reducedFadeAnimation : (state.showsHint ? Tokens.Motion.panelSpring : Tokens.Motion.exitAnimation)
     }
 }
 

@@ -140,7 +140,7 @@ struct IconShape: Shape {
     }
 }
 
-/// アプリのアイコン（タイル付き）。`assets/logo/akapen-logo-short-tile.png` を縮めてリソースに入れたもの。
+/// アプリのアイコン（タイル付き）。`brand/logo/akapen-logo-short-tile.png` を縮めてリソースに入れたもの。
 @MainActor enum AppIconImage {
     static let image: NSImage? = Bundle.module.image(forResource: "AppIcon")
 }

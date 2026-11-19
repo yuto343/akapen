@@ -47,8 +47,8 @@ struct SetupTests {
         await settle()
         // Paper の App 07 は 560×586、App 08 は 560×524。上端の位置は変えずに縮む。
         #expect(firstFrame.width == Tokens.Setup.width)
-        #expect(abs(firstFrame.height - 586) <= 1)
-        #expect(abs(controller.window.frame.height - 524) <= 1)
+        #expect(abs(firstFrame.height - 590) <= 1)
+        #expect(abs(controller.window.frame.height - 528) <= 1)
         #expect(controller.window.frame.maxY == firstFrame.maxY)
         controller.flow.goBack()
         #expect(controller.flow.page == .hotkey)

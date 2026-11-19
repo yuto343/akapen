@@ -10,6 +10,9 @@ import AkapenCore
 /// ボタン類が出ているあいだは、画面全体を覆う面がマウスを受け、カーソルを十字にする（下のアプリは操作できない）。
 /// `drawing` と `listOpen` のあいだは、`⌘C`（Copy prompt）と `⌘L`（一覧の開閉）を、キーになっているパネルで受ける。
 @MainActor public final class SessionWindows {
+    /// ボタンまたはショートカットから全削除の確認を要求する。
+    public var onClearRequested: (@MainActor () -> Void)?
+
     private let model: SessionModel?
     private let send: (SessionEvent) -> Void
     private let screens: any ScreenProviding
@@ -96,7 +99,7 @@ import AkapenCore
             level: Self.panelLevel,
             allowsKey: false,
             screens: screens,
-            entrance: .scale(anchor: .bottom),
+            entrance: .scale(anchor: .bottom, initialScale: Tokens.Motion.toolbarScale),
             animatesEntrance: animated
         )
         comment = PanelHost(
@@ -105,7 +108,7 @@ import AkapenCore
             level: Self.panelLevel,
             allowsKey: true,
             screens: screens,
-            entrance: .scale(anchor: .top),
+            entrance: .scale(anchor: .top, initialScale: Tokens.Motion.commentScale),
             animatesEntrance: animated
         )
         list = PanelHost(
@@ -306,6 +309,12 @@ import AkapenCore
         guard modifiers == .command else {
             return false
         }
+        if event.keyCode == KeyCode.delete {
+            if state?.annotations.isEmpty == false {
+                onClearRequested?()
+            }
+            return true
+        }
         switch event.charactersIgnoringModifiers?.lowercased() {
         case "c":
             send(.copyPromptTapped)
@@ -502,6 +511,9 @@ import AkapenCore
             },
             onCopy: { [weak self] in
                 self?.send(.copyPromptTapped)
+            },
+            onClear: { [weak self] in
+                self?.onClearRequested?()
             }
         ))
         let visibleFrame = screen.visibleFrame

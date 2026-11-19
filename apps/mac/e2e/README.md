@@ -1,5 +1,7 @@
 # E2E テスト
 
+以下の Mac アプリ内のパスとコマンドは `apps/mac/` を基準にする。ルートからも make ラッパーで実行できる。共通のエージェント定義はリポジトリルートの `.claude/agents/`、ブリーフは `.director/` にある。
+
 akapen の E2E は、「抽象的な md のシナリオ」を仕様として置き、テストコード（XCUITest）はエージェント（planner / generator / healer）に生成・修復させる。細かい UI の変更では落ちず、本質的な不具合は確実に見つけることがゴール。考え方は ashvally の `e2e/` と同じで、道具が Playwright から XCUITest に替わる。
 
 設計の正は `ARCHITECTURE.md`（「E2E の仕組み」「テストの分担」「確かめた結果」）。この README はその運用ルールを書く。食い違いに気づいたら `ARCHITECTURE.md` に合わせる。

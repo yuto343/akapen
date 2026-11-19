@@ -12,6 +12,7 @@ import AkapenUI
     private let windows: SessionWindows
     private let menuBar: MenuBarController
     private let mainMenu: MainMenuController
+    private let clearConfirm: ConfirmationController
     private let quitConfirm: QuitConfirmController
     private let settingsWindow: SettingsController
     private let setupWindow: SetupController
@@ -32,6 +33,7 @@ import AkapenUI
         menuBar = MenuBarController(model: model)
         mainMenu = MainMenuController(language: model.settings.language)
         quitConfirm = QuitConfirmController(model: model)
+        clearConfirm = ConfirmationController(model: model, purpose: .clear)
         settingsWindow = SettingsController(
             model: model,
             canUseHotkey: { [weak hotkeys] shortcut in
@@ -41,6 +43,7 @@ import AkapenUI
         setupWindow = SetupController(
             model: model,
             permission: environment.permission,
+            imagesPath: FileImageStore.displayPath(for: environment.choice.imagesDirectory),
             canUseHotkey: { [weak hotkeys] shortcut in
                 hotkeys?.canUse(shortcut, for: .draw) ?? false
             }
@@ -77,6 +80,7 @@ import AkapenUI
         guard count > 0 else {
             return true
         }
+        clearConfirm.hide()
         quitConfirm.show(annotationCount: count)
         environment.writeState()
         return false
@@ -86,6 +90,7 @@ import AkapenUI
     func willTerminate() {
         environment.hotkeys.unregisterAll()
         quitConfirm.hide()
+        clearConfirm.hide()
         windows.hide()
     }
 
@@ -109,6 +114,23 @@ import AkapenUI
         }
         mainMenu.onQuitRequested = {
             NSApp.terminate(nil)
+        }
+        windows.onClearRequested = { [weak self] in
+            guard let self, canClear, !quitConfirm.isShown else {
+                return
+            }
+            clearConfirm.show(annotationCount: model.annotations.count)
+            environment.writeState()
+        }
+        clearConfirm.onResult = { [weak self] result in
+            guard let self else {
+                return
+            }
+            if result == .confirm, canClear {
+                model.send(.annotationsCleared)
+            }
+            windows.restoreFocus()
+            environment.writeState()
         }
         quitConfirm.onResult = { [weak self] result in
             self?.quitAnswered(result)
@@ -138,6 +160,14 @@ import AkapenUI
         environment.hotkeys.apply(model.settings)
         handleNewFailure()
         windows.render()
+        if clearConfirm.isShown {
+            if canClear {
+                clearConfirm.show(annotationCount: model.annotations.count)
+            } else {
+                clearConfirm.hide()
+                windows.restoreFocus()
+            }
+        }
         settingsWindow.refresh()
         setupWindow.refresh()
         mainMenu.setLanguage(model.settings.language)
@@ -216,6 +246,10 @@ import AkapenUI
         }
     }
 
+    private var canClear: Bool {
+        (model.phase == .drawing || model.phase == .listOpen) && !model.annotations.isEmpty
+    }
+
     private var windowStatus: SessionSnapshot.Windows {
         let setupPage: SessionSnapshot.Windows.SetupPage?
         if setupWindow.isShown {
@@ -227,7 +261,8 @@ import AkapenUI
             settings: settingsWindow.isShown,
             setup: setupWindow.isShown,
             setupPage: setupPage,
-            quitConfirm: quitConfirm.isShown
+            quitConfirm: quitConfirm.isShown,
+            clearConfirm: clearConfirm.isShown
         )
     }
 }

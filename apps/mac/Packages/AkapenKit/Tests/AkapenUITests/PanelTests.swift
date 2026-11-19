@@ -313,6 +313,34 @@ struct PanelTests {
     }
 
     @Test
+    func clearShortcutOnlyRequestsConfirmationWhenAvailable() {
+        let windows = makeWindows()
+        defer { windows.hide() }
+        var requests = 0
+        windows.onClearRequested = { requests += 1 }
+        let commandDelete = keyEvent(KeyCode.delete, characters: "", modifiers: .command)
+        for phase in [Phase.drawing, .listOpen] {
+            windows.render(SessionViewState(phase: phase, annotations: Fixtures.twoAnnotations))
+            #expect(windows.handleShortcut(commandDelete))
+        }
+        #expect(requests == 2)
+        windows.listEditing.begin(Fixtures.twoAnnotations[0], index: 0)
+        #expect(!windows.handleShortcut(commandDelete))
+        windows.listEditing.end()
+        for phase in [Phase.hidden, .commenting, .copied] {
+            windows.render(SessionViewState(phase: phase, annotations: Fixtures.twoAnnotations))
+            #expect(!windows.handleShortcut(commandDelete))
+        }
+        windows.render(SessionViewState(phase: .drawing))
+        #expect(windows.handleShortcut(commandDelete))
+        windows.render(SessionViewState(phase: .drawing, annotations: Fixtures.twoAnnotations))
+        for modifiers: NSEvent.ModifierFlags in [[], [.command, .shift], [.command, .option], [.command, .control]] {
+            #expect(!windows.handleShortcut(keyEvent(KeyCode.delete, characters: "", modifiers: modifiers)))
+        }
+        #expect(requests == 2)
+    }
+
+    @Test
     func panelsDoNotActivateTheApp() {
         let windows = makeWindows()
         defer { windows.hide() }
@@ -345,7 +373,7 @@ struct PanelTests {
         let toolbar = try #require(windows.toolbar.contentFrame)
         #expect(toolbar.y + toolbar.height == 800 - 16)
         #expect(abs((toolbar.x + toolbar.width / 2) - 640) < 0.5)
-        #expect(toolbar.height == 48)
+        #expect(toolbar.height == 52)
     }
 
     @Test

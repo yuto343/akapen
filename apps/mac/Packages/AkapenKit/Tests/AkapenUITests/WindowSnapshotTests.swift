@@ -117,7 +117,8 @@ struct WindowSnapshotTests {
             canUseHotkey: { _ in true },
             shortcutText: .ansi,
             pollInterval: .seconds(60),
-            activatesApp: false
+            activatesApp: false,
+            imagesPath: "~/Library/Caches/akapen"
         )
         controller.show()
         return controller

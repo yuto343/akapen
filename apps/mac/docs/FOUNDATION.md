@@ -1,5 +1,7 @@
 # Foundation の引き継ぎ
 
+以下の Mac アプリ内のパスとコマンドは `apps/mac/` を基準にする。ルートからも make ラッパーで実行できる。共通のエージェント定義はリポジトリルートの `.claude/agents/`、ブリーフは `.director/` にある。
+
 ## 公開 API（2026-11-18）
 
 パスの基準は `Packages/AkapenKit/Sources/`。

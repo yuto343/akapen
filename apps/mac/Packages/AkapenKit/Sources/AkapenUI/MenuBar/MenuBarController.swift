@@ -151,7 +151,7 @@ public struct MenuBarStatus: Equatable, Sendable {
     }
 }
 
-/// メニューバーのアイコン。`assets/logo/akapen-menubar-template.png`（黒と透明の、手でペンを持つ絵）を縮めてリソースに入れたもの。
+/// メニューバーのアイコン。`brand/logo/akapen-menubar-template.png`（黒と透明の、手でペンを持つ絵）を縮めてリソースに入れたもの。
 ///
 /// テンプレート画像として出し、メニューバーの明るさに合わせた色をシステムに任せる（ユーザーの指示で `DECISIONS.md` 16 から変えた）。
 @MainActor enum MenuBarIconImage {

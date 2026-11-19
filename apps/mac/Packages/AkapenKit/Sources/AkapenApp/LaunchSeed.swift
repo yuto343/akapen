@@ -104,6 +104,9 @@ public struct LaunchSeed: Equatable, Sendable {
         public var confirmKey: ConfirmKey?
         /// 書き換える言語ごとの定型文。キーは `en` / `ja`。書いていない言語は保存済みの値のまま。
         public var boilerplates: [String: String]?
+        /// 共通の定型文。JSON の null は言語追従へ戻す。
+        public var customBoilerplate: String?
+        private var hasCustomBoilerplate = false
         public var imageRetentionDays: Int?
         public var setupCompleted: Bool?
 
@@ -115,6 +118,7 @@ public struct LaunchSeed: Equatable, Sendable {
             case hotkey
             case confirmKey
             case boilerplates
+            case customBoilerplate
             case imageRetentionDays
             case setupCompleted
         }
@@ -125,6 +129,8 @@ public struct LaunchSeed: Equatable, Sendable {
             language = try container.decodeIfPresent(Language.self, forKey: .language)
             hotkey = try container.decodeIfPresent(KeyboardShortcut.self, forKey: .hotkey)
             confirmKey = try container.decodeIfPresent(ConfirmKey.self, forKey: .confirmKey)
+            hasCustomBoilerplate = container.contains(.customBoilerplate)
+            customBoilerplate = try container.decodeIfPresent(String.self, forKey: .customBoilerplate)
             boilerplates = try container.decodeIfPresent([String: String].self, forKey: .boilerplates)
             if let boilerplates {
                 let unknown = boilerplates.keys.filter { Language(rawValue: $0) == nil }.sorted()
@@ -146,6 +152,9 @@ public struct LaunchSeed: Equatable, Sendable {
             try container.encodeIfPresent(hotkey, forKey: .hotkey)
             try container.encodeIfPresent(confirmKey, forKey: .confirmKey)
             try container.encodeIfPresent(boilerplates, forKey: .boilerplates)
+            if hasCustomBoilerplate || customBoilerplate != nil {
+                try container.encode(customBoilerplate, forKey: .customBoilerplate)
+            }
             try container.encodeIfPresent(imageRetentionDays, forKey: .imageRetentionDays)
             try container.encodeIfPresent(setupCompleted, forKey: .setupCompleted)
         }
@@ -162,10 +171,10 @@ public struct LaunchSeed: Equatable, Sendable {
             if let confirmKey {
                 result.confirmKey = confirmKey
             }
-            for (key, text) in boilerplates ?? [:] {
-                if let language = Language(rawValue: key) {
-                    result.setBoilerplate(text, for: language)
-                }
+            if hasCustomBoilerplate || customBoilerplate != nil {
+                result.customBoilerplate = customBoilerplate
+            } else if let boilerplates {
+                result.setBoilerplate(boilerplates[result.language.rawValue] ?? "", for: result.language)
             }
             if let imageRetentionDays {
                 result.imageRetentionDays = imageRetentionDays

@@ -222,16 +222,16 @@ struct FlowTests {
         await app.send(.settingsChanged(settings))
         await app.send(.copyPromptTapped)
         #expect(app.pasteboardText() == "Fix these, please.\n\n" + secondPath + "\n二回目")
-        // 日本語の定型文は既定のまま。
-        #expect(app.model.settings.boilerplate(for: .ja) == Boilerplate.japanese)
-        // 定型文を空にすると、「パス → コメント」の並びだけになる（DECISIONS.md A7）。
+        // カスタム文は言語を切り替えても共通。
+        #expect(app.model.settings.boilerplate(for: .ja) == "Fix these, please.")
+        // 定型文を空にすると、言語の既定文へ戻る。
         await app.annotate("三回目", rect: TestApp.firstRect)
         let thirdPath = app.model.annotations[0].imagePath
         settings = app.model.settings
         settings.setBoilerplate("", for: .en)
         await app.send(.settingsChanged(settings))
         await app.send(.copyPromptTapped)
-        #expect(app.pasteboardText() == thirdPath + "\n三回目")
+        #expect(app.pasteboardText() == Boilerplate.english + "\n\n" + thirdPath + "\n三回目")
     }
 
     @Test

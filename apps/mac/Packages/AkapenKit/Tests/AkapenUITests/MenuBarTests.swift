@@ -108,8 +108,8 @@ struct MenuBarTests {
         (1, Language.en, "1 annotation waiting"),
         (2, Language.en, "2 annotations waiting"),
         (0, Language.ja, "注釈はありません"),
-        (1, Language.ja, "1 件の注釈がコピー待ち"),
-        (2, Language.ja, "2 件の注釈がコピー待ち"),
+        (1, Language.ja, "リスト内に 1 件あります"),
+        (2, Language.ja, "リスト内に 2 件あります"),
     ])
     func headerStatusText(count: Int, language: Language, expected: String) {
         #expect(UIStrings(language: language).menuStatus(count: count) == expected)

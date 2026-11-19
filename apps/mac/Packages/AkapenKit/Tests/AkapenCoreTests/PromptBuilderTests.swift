@@ -51,7 +51,7 @@ func promptUsesJapaneseBoilerplate() {
 }
 
 @Test
-func promptUsesEditedBoilerplateOfCurrentLanguage() {
+func promptKeepsCustomBoilerplateAcrossLanguages() {
     var settings = Settings()
     settings.setBoilerplate("見てください。", for: .ja)
     settings.setBoilerplate("Look at these.\n", for: .en)
@@ -64,7 +64,7 @@ func promptUsesEditedBoilerplateOfCurrentLanguage() {
         """)
     settings.language = .ja
     let japanese = PromptBuilder.build(settings: settings, annotations: [designAnnotations[1]])
-    #expect(japanese.hasPrefix("見てください。\n\n/Users/"))
+    #expect(japanese == english)
 }
 
 @Test
@@ -89,6 +89,36 @@ func boilerplateFallsBackToDefaultPerLanguage() throws {
     // 書き換えた言語だけを保存した古い内容でも、ほかの言語は既定文になる。
     let json = Data(#"{"boilerplates":{"ja":"書き換えた"}}"#.utf8)
     let settings = try JSONDecoder().decode(Settings.self, from: json)
-    #expect(settings.boilerplate(for: .ja) == "書き換えた")
+    #expect(settings.boilerplate(for: .ja) == Boilerplate.japanese)
     #expect(settings.boilerplate(for: .en) == Boilerplate.english)
+}
+
+@Test
+func customBoilerplateFollowsLanguageUntilEditedAndResetsWhenEmpty() throws {
+    var settings = Settings()
+    #expect(settings.effectiveBoilerplate == Boilerplate.english)
+    settings.language = .ja
+    #expect(settings.effectiveBoilerplate == Boilerplate.japanese)
+    settings.setBoilerplate(Boilerplate.japanese, for: .ja)
+    #expect(settings.customBoilerplate == nil)
+    settings.setBoilerplate("共通", for: .ja)
+    settings.language = .en
+    #expect(settings.effectiveBoilerplate == "共通")
+    let decoded = try JSONDecoder().decode(Settings.self, from: JSONEncoder().encode(settings))
+    #expect(decoded == settings)
+    settings.setBoilerplate("", for: .en)
+    #expect(settings.customBoilerplate == nil)
+    #expect(settings.effectiveBoilerplate == Boilerplate.english)
+}
+
+@Test
+func legacyBoilerplateMigrationUsesStoredLanguage() throws {
+    let custom = Data(#"{"language":"ja","boilerplates":{"en":"ignored","ja":"共通"}}"#.utf8)
+    let migrated = try JSONDecoder().decode(Settings.self, from: custom)
+    #expect(migrated.customBoilerplate == "共通")
+    #expect(migrated.boilerplate(for: .en) == "共通")
+    let defaults = try JSONSerialization.data(withJSONObject: ["language": "ja", "boilerplates": Boilerplate.defaults])
+    #expect(try JSONDecoder().decode(Settings.self, from: defaults).customBoilerplate == nil)
+    let explicitNull = Data(#"{"customBoilerplate":null,"boilerplates":{"en":"old"}}"#.utf8)
+    #expect(try JSONDecoder().decode(Settings.self, from: explicitNull).customBoilerplate == nil)
 }

@@ -1322,3 +1322,57 @@ func settingsDecodeIgnoresRemovedToolbarShortcut() throws {
     let encoded = try #require(String(data: JSONEncoder().encode(settings), encoding: .utf8))
     #expect(!encoded.contains("toolbarShortcut"))
 }
+
+@Test(arguments: [false, true])
+@MainActor
+func clearAnnotationsKeepsPhase(listOpen: Bool) async throws {
+    let harness = try Harness()
+    await harness.annotate("first")
+    await harness.annotate("second")
+    if listOpen {
+        await harness.send(.listToggled)
+    }
+    let phase = harness.model.phase
+    let paths = harness.model.annotations.map(\.imagePath)
+    await harness.send(.annotationsCleared)
+    #expect(harness.model.annotations.isEmpty)
+    #expect(harness.model.phase == phase)
+    #expect(harness.images.removedPaths == paths)
+    #expect(harness.images.files.isEmpty)
+}
+
+@Test(arguments: [Phase.hidden, .drawing, .listOpen, .commenting, .copied])
+@MainActor
+func clearAnnotationsIgnoresUnavailableStates(phase: Phase) async throws {
+    let harness = try Harness()
+    switch phase {
+    case .drawing, .listOpen:
+        await harness.send(.hotkeyPressed)
+        if phase == .listOpen {
+            await harness.send(.listToggled)
+        }
+    case .hidden, .commenting, .copied:
+        await harness.annotate("kept")
+        switch phase {
+        case .hidden:
+            await harness.send(.hotkeyPressed)
+        case .commenting:
+            await harness.drag()
+        case .copied:
+            await harness.send(.copyPromptTapped)
+        default:
+            break
+        }
+    }
+    let annotations = harness.model.annotations
+    let draft = harness.model.draft
+    let files = harness.images.files
+    let changes = harness.changeCount
+    await harness.send(.annotationsCleared)
+    #expect(harness.model.phase == phase)
+    #expect(harness.model.annotations == annotations)
+    #expect(harness.model.draft == draft)
+    #expect(harness.images.files == files)
+    #expect(harness.images.removedPaths.isEmpty)
+    #expect(harness.changeCount == changes)
+}

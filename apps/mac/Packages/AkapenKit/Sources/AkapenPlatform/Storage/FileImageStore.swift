@@ -34,6 +34,13 @@ import AkapenCore
         self.timeZone = timeZone
     }
 
+    /// 保存先の表示。ホーム以下だけをチルダで省略する。
+    public static func displayPath(for url: URL) -> String {
+        let path = url.path(percentEncoded: false)
+        let home = FileManager.default.homeDirectoryForCurrentUser.path(percentEncoded: false)
+        return path.hasPrefix(home + "/") ? "~" + path.dropFirst(home.count) : path
+    }
+
     /// 本番の置き場 `~/Library/Caches/akapen/`。
     public static func defaultRoot() -> URL {
         URL.cachesDirectory.appending(path: "akapen", directoryHint: .isDirectory)

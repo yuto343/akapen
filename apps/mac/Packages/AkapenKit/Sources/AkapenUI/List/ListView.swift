@@ -75,7 +75,7 @@ struct ListView: View {
             footer
         }
         .frame(width: Tokens.List.width)
-        .background(Tokens.List.background.color)
+        .glassSurface(radius: Tokens.Radius.large)
         .clipShape(RoundedBox(cornerRadius: Tokens.Radius.large))
         .boxShadow(Tokens.List.shadows, cornerRadius: Tokens.Radius.large)
         .lightAppearance()
@@ -136,6 +136,7 @@ struct ListView: View {
                         onDelete(annotation.id)
                     }
                 )
+                .staggeredEntrance(delay: Double(index) * Tokens.Motion.rowDelay)
                 .onGeometryChange(for: CGFloat.self) { proxy in
                     proxy.size.height
                 } action: { height in
@@ -271,7 +272,8 @@ struct ListRowView: View {
                 lineWidth: Tokens.Stroke.rowIcon
             )
             .frame(width: Tokens.List.buttonSize, height: Tokens.List.buttonSize)
-            .background(RoundedBox(cornerRadius: Tokens.Radius.field).fill(Tokens.List.buttonBackground.color))
+            .background(Capsule().fill(Tokens.Glass.white))
+            .boxShadow(Tokens.Shadows.segmentSelected, cornerRadius: Tokens.Radius.pill)
         }
         .buttonStyle(ControlButtonStyle(cornerRadius: Tokens.Radius.field))
         .accessibilityLabel(label)
@@ -286,6 +288,7 @@ struct ListRowView: View {
                 .padding(.horizontal, Tokens.List.fieldPaddingX)
                 .background(RoundedBox(cornerRadius: Tokens.Radius.field).fill(Tokens.List.fieldBackground.color))
                 .insetOutline(Tokens.List.fieldOutline, width: Tokens.Stroke.emphasis, cornerRadius: Tokens.Radius.field)
+                .boxShadow([Tokens.Frame.glow], cornerRadius: Tokens.Radius.field)
             KeyHintRow(hints: strings.listEditHints(for: confirmKey), spacing: Tokens.List.editHintGap)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

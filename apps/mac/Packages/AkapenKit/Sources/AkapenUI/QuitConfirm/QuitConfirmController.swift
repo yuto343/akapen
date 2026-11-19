@@ -1,7 +1,4 @@
-import AppKit
-import SwiftUI
 import AkapenCore
-import AkapenAXID
 
 /// 終了の確認の答え。
 public enum QuitConfirmResult: Equatable, Sendable {
@@ -11,155 +8,63 @@ public enum QuitConfirmResult: Equatable, Sendable {
     case cancel
 }
 
-/// 終了の確認（App 09）を出す。自前のパネルで、画面の暗転、赤い `Quit`、`Return` で `Quit`、`Esc` で `Cancel`（`DECISIONS.md` 15）。
-///
-/// 出すかどうかは組み立ての側が決め（`DECISIONS.md` A4）、件数を渡して `show(annotationCount:)` を呼ぶ。
-/// 答えは `onResult` で伝える。自分ではアプリを終了しない。
-/// 出ているあいだにもう一度 `show` を呼んでも、パネルは 1 つのまま（件数だけ新しくする）。
-/// パネルは、`show` を呼んだときにカーソルがある画面に出す。
+/// 終了確認の互換窓口。パネルとキー処理は全削除の確認と共用する。
 @MainActor public final class QuitConfirmController {
-    /// 答えが出たとき。パネルを隠してから呼ぶ。1 回の確認につき 1 回だけ呼ぶ。
+    /// パネルを隠してから答えを伝える。
     public var onResult: (@MainActor (QuitConfirmResult) -> Void)?
+    private let confirmation: ConfirmationController
 
-    let panel: FloatingPanel
-    let hostingView: FirstMouseHostingView<QuitConfirmOverlay>
-    private let language: @MainActor () -> Language
-    private let screens: any ScreenProviding
-    private let fadeDuration: TimeInterval
-    private let presentation = PanelPresentation()
-    /// 出している画面。出ているあいだは変えない。
-    private(set) var screen: ScreenInfo?
-    /// いま出している件数。
-    private(set) var annotationCount = 0
-
-    /// 文言の言語は `model` の設定から読む。
-    public convenience init(model: SessionModel) {
-        self.init(
-            language: { [weak model] in
-                model?.settings.language ?? Settings().language
-            },
-            screens: SystemScreens(),
-            fadeDuration: Tokens.Motion.fade
-        )
+    var panel: FloatingPanel {
+        confirmation.panel
     }
 
-    /// テスト用。画面とフェードの長さを差し替えられる。`fadeDuration` が 0 ならフェードしない。
-    init(language: @escaping @MainActor () -> Language, screens: any ScreenProviding, fadeDuration: TimeInterval) {
-        self.language = language
-        self.screens = screens
-        self.fadeDuration = fadeDuration
-        panel = FloatingPanel(level: .modalPanel)
-        panel.allowsKey = true
-        panel.setAccessibilityIdentifier(AXID.QuitConfirm.panel)
-        let placeholder = ScreenInfo(
-            id: 0,
-            frame: ScreenRect(x: 0, y: 0, width: 0, height: 0),
-            visibleFrame: ScreenRect(x: 0, y: 0, width: 0, height: 0)
-        )
-        hostingView = FirstMouseHostingView(rootView: QuitConfirmOverlay(
-            screen: placeholder,
-            annotationCount: 0,
-            strings: UIStrings(language: .en),
-            onQuit: {},
-            onCancel: {}
-        ))
-        hostingView.sizingOptions = []
-        panel.contentView = hostingView
-        panel.onReturn = { [weak self] in
-            self?.answer(.quit)
+    var hostingView: FirstMouseHostingView<QuitConfirmOverlay> {
+        confirmation.hostingView
+    }
+
+    var annotationCount: Int {
+        confirmation.annotationCount
+    }
+
+    var screen: ScreenInfo? {
+        confirmation.screen
+    }
+
+
+    /// 設定の言語で終了の確認を作る。
+    public convenience init(model: SessionModel) {
+        self.init(confirmation: ConfirmationController(model: model, purpose: .quit))
+    }
+
+    init(language: @escaping @MainActor () -> Language, screens: any ScreenProviding, fadeDuration: Double) {
+        confirmation = ConfirmationController(purpose: .quit, language: language, screens: screens, fadeDuration: fadeDuration)
+        connect()
+    }
+
+    private init(confirmation: ConfirmationController) {
+        self.confirmation = confirmation
+        connect()
+    }
+
+    private func connect() {
+        confirmation.onResult = { [weak self] result in
+            self?.onResult?(result == .confirm ? .quit : .cancel)
         }
-        panel.onCancel = { [weak self] in
-            self?.answer(.cancel)
-        }
-        connectPresentation()
     }
 
     /// 確認が出ているか。
     public var isShown: Bool {
-        panel.isShown
+        confirmation.isShown
     }
 
-    /// 確認を出す。`annotationCount` は説明文に出す未コピーの注釈の件数。出ているあいだに呼んだら、件数だけ新しくする。
+
+    /// 件数を映して確認を出す。
     public func show(annotationCount: Int) {
-        self.annotationCount = annotationCount
-        let wasShown = panel.isShown
-        if !wasShown || screen == nil {
-            screen = ScreenInfo.containing(screens.mouseLocation, in: screens.screens)
-        }
-        guard let screen else {
-            return
-        }
-        hostingView.rootView = QuitConfirmOverlay(
-            screen: screen,
-            annotationCount: annotationCount,
-            strings: UIStrings(language: language()),
-            onQuit: { [weak self] in
-                self?.answer(.quit)
-            },
-            onCancel: { [weak self] in
-                self?.answer(.cancel)
-            },
-            presentation: presentation
-        )
-        let area = PanelPlacement.dimmedArea(screen: screen)
-        panel.setFrame(ScreenCoordinates.nsRect(area, primaryTop: screens.primaryTop), display: true)
-        if !wasShown {
-            panel.fadeIn(duration: fadeDuration, makeKey: true)
-        }
+        confirmation.show(annotationCount: annotationCount)
     }
 
-    /// 答えを待たずに隠す（`onResult` は呼ばない）。注釈がなくなったときや、終了処理の後始末に使う。
+    /// 答えを待たずに隠す。
     public func hide() {
-        panel.hideNow()
-        screen = nil
-    }
-
-    /// 出しはじめは見えない状態で描き、前に出してから、ばねで出す（暗転は不透明度だけ）。
-    private func connectPresentation() {
-        panel.onWillPresent = { [weak self] in
-            guard let self, fadeDuration > 0 else {
-                return
-            }
-            setPresented(false, animation: nil)
-        }
-        panel.onDidPresent = { [weak self] in
-            guard let self else {
-                return
-            }
-            guard fadeDuration > 0 else {
-                setPresented(true, animation: nil)
-                return
-            }
-            Task { @MainActor [weak self] in
-                self?.setPresented(true, animation: Tokens.Motion.panelSpring)
-            }
-        }
-        panel.onDidHide = { [weak self] in
-            guard let self, fadeDuration > 0 else {
-                return
-            }
-            setPresented(false, animation: nil)
-        }
-    }
-
-    private func setPresented(_ presented: Bool, animation: Animation?) {
-        var transaction = Transaction(animation: animation)
-        transaction.disablesAnimations = animation == nil
-        withTransaction(transaction) {
-            presentation.isPresented = presented
-        }
-        if animation == nil {
-            hostingView.layoutSubtreeIfNeeded()
-        }
-    }
-
-    /// 答えを出す。出ていなければ何もしない（`Return` の連打などで 2 回呼ばない）。
-    func answer(_ result: QuitConfirmResult) {
-        guard panel.isShown else {
-            return
-        }
-        panel.fadeOut(duration: fadeDuration)
-        screen = nil
-        onResult?(result)
+        confirmation.hide()
     }
 }

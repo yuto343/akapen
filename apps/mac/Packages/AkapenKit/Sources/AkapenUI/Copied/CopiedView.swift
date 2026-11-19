@@ -44,9 +44,9 @@ public struct CopiedView: View {
         .padding(.leading, Tokens.Toast.pillPaddingLeading)
         .padding(.trailing, Tokens.Toast.pillPaddingTrailing)
         .frame(height: Tokens.Toast.pillHeight)
-        .background(Capsule().fill(Tokens.Toast.pillBackground.color))
+        .background(Capsule().fill(Tokens.Glass.ink))
         .padding(Tokens.Toast.padding)
-        .background(Capsule().fill(Tokens.Toast.background.color))
+        .glassBar()
         .boxShadow(Tokens.Toast.shadows, cornerRadius: Tokens.Radius.pill)
         .fixedSize()
         .scaleEffect(look.scale)
@@ -79,7 +79,7 @@ public struct CopiedView: View {
             .frame(width: Tokens.Toast.checkIconSize, height: Tokens.Toast.checkIconSize)
             .animation(checkAnimation, value: phase)
             .frame(width: Tokens.Toast.checkCircleSize, height: Tokens.Toast.checkCircleSize)
-            .background(Circle().fill(Tokens.Toast.checkCircle.color))
+            .background(Circle().fill(Tokens.Glass.green))
             .accessibilityHidden(true)
     }
 

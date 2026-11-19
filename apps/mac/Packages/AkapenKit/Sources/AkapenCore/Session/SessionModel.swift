@@ -288,6 +288,8 @@ extension SessionModel {
             .done(annotationEdited(id: id, text: text))
         case let .annotationDeleted(id):
             .done(annotationDeleted(id: id))
+        case .annotationsCleared:
+            .done(annotationsCleared())
         case .copyPromptTapped:
             .done(copyPromptTapped())
         case .copiedExpired:
@@ -540,6 +542,18 @@ extension SessionModel {
         }
         let removed = annotations.remove(at: index)
         removeImage(atPath: removed.imagePath)
+        return .succeeded
+    }
+
+    private func annotationsCleared() -> Outcome {
+        guard phase == .drawing || phase == .listOpen, !annotations.isEmpty else {
+            return .ignored
+        }
+        let removed = annotations
+        annotations.removeAll()
+        for annotation in removed {
+            removeImage(atPath: annotation.imagePath)
+        }
         return .succeeded
     }
 

@@ -13,6 +13,7 @@ public struct SessionSnapshot: Encodable, Equatable {
         public var language: Language
         public var hotkey: KeyboardShortcut
         public var confirmKey: ConfirmKey
+        public var customBoilerplate: String?
         public var boilerplates: [String: String]
         public var imageRetentionDays: Int
         public var setupCompleted: Bool
@@ -22,6 +23,7 @@ public struct SessionSnapshot: Encodable, Equatable {
             language = settings.language
             hotkey = settings.hotkey
             confirmKey = settings.confirmKey
+            customBoilerplate = settings.customBoilerplate
             boilerplates = Dictionary(uniqueKeysWithValues: [Language.en, Language.ja].map { language in
                 (language.rawValue, settings.boilerplate(for: language))
             })
@@ -34,6 +36,7 @@ public struct SessionSnapshot: Encodable, Equatable {
             case hotkey
             case confirmKey
             case boilerplates
+            case customBoilerplate
             case imageRetentionDays
             case setupCompleted
         }
@@ -43,6 +46,7 @@ public struct SessionSnapshot: Encodable, Equatable {
             try container.encode(language, forKey: .language)
             try container.encode(hotkey, forKey: .hotkey)
             try container.encode(confirmKey, forKey: .confirmKey)
+            try container.encode(customBoilerplate, forKey: .customBoilerplate)
             try container.encode(boilerplates, forKey: .boilerplates)
             try container.encode(imageRetentionDays, forKey: .imageRetentionDays)
             try container.encode(setupCompleted, forKey: .setupCompleted)
@@ -96,16 +100,19 @@ public struct SessionSnapshot: Encodable, Equatable {
         /// セットアップの出ているページ。出ていなければ null。
         public var setupPage: SetupPage?
         public var quitConfirm: Bool
+        /// 全削除の確認が出ているか。
+        public var clearConfirm: Bool
 
         /// どれも出ていない。
         public static let none = Windows(settings: false, setup: false, setupPage: nil, quitConfirm: false)
 
         /// 値をそのまま持つ。
-        public init(settings: Bool, setup: Bool, setupPage: SetupPage?, quitConfirm: Bool) {
+        public init(settings: Bool, setup: Bool, setupPage: SetupPage?, quitConfirm: Bool, clearConfirm: Bool = false) {
             self.settings = settings
             self.setup = setup
             self.setupPage = setupPage
             self.quitConfirm = quitConfirm
+            self.clearConfirm = clearConfirm
         }
 
         private enum CodingKeys: String, CodingKey {
@@ -113,6 +120,7 @@ public struct SessionSnapshot: Encodable, Equatable {
             case setup
             case setupPage
             case quitConfirm
+            case clearConfirm
         }
 
         public func encode(to encoder: any Encoder) throws {
@@ -121,6 +129,7 @@ public struct SessionSnapshot: Encodable, Equatable {
             try container.encode(setup, forKey: .setup)
             try container.encode(setupPage, forKey: .setupPage)
             try container.encode(quitConfirm, forKey: .quitConfirm)
+            try container.encode(clearConfirm, forKey: .clearConfirm)
         }
     }
 

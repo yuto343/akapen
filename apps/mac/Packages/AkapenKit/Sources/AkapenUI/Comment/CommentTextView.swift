@@ -69,6 +69,8 @@ final class CommentTextView: NSTextView {
     var onConfirm: ((String) -> Void)?
     var onCancel: (() -> Void)?
     var onTextChange: (() -> Void)?
+    /// 入力欄からフォーカスが外れたとき。
+    var onEditingEnded: (() -> Void)?
     /// 空のときに出す文言。
     var placeholder: NSAttributedString? {
         didSet {
@@ -85,6 +87,14 @@ final class CommentTextView: NSTextView {
         }
         focusWhenAttached = false
         window.makeFirstResponder(self)
+    }
+
+    override func resignFirstResponder() -> Bool {
+        let resigned = super.resignFirstResponder()
+        if resigned {
+            onEditingEnded?()
+        }
+        return resigned
     }
 
     override func keyDown(with event: NSEvent) {

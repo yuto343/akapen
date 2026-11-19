@@ -44,8 +44,8 @@ struct CommentView: View {
             .padding(.horizontal, Tokens.Comment.footerPaddingX)
         }
         .frame(width: Tokens.Comment.width)
-        .background(RoundedBox(cornerRadius: Tokens.Radius.media).fill(Tokens.Comment.background.color))
-        .boxShadow(Tokens.Comment.shadows, cornerRadius: Tokens.Radius.media)
+        .glassSurface(radius: Tokens.Glass.commentRadius)
+        .boxShadow(Tokens.Comment.shadows, cornerRadius: Tokens.Glass.commentRadius)
         .lightAppearance()
     }
 }

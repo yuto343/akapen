@@ -97,6 +97,8 @@ struct SegmentedChoice<Value: Hashable>: View {
     let label: String
     let identifier: String
     let onSelect: (Value) -> Void
+    @Namespace private var selectionSpace
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(spacing: 0) {
@@ -105,7 +107,8 @@ struct SegmentedChoice<Value: Hashable>: View {
             }
         }
         .padding(Tokens.Settings.segmentPadding)
-        .background(RoundedBox(cornerRadius: Tokens.Radius.field).fill(Tokens.Settings.segmentBackground.color))
+        .background(RoundedBox(cornerRadius: Tokens.Radius.pill).fill(Tokens.Settings.segmentBackground.color))
+        .animation(reduceMotion ? Tokens.Motion.reducedFadeAnimation : Tokens.Motion.panelSpring, value: selection)
         .fixedSize()
         .accessibilityElement(children: .contain)
         .accessibilityLabel(label)
@@ -122,13 +125,17 @@ struct SegmentedChoice<Value: Hashable>: View {
                 .padding(.horizontal, Tokens.Settings.segmentItemPaddingX)
                 .background {
                     if selected {
-                        RoundedBox(cornerRadius: Tokens.Radius.item)
-                            .fill(Tokens.Settings.segmentSelectedBackground.color)
-                            .boxShadow(Tokens.Settings.segmentSelectedShadows, cornerRadius: Tokens.Radius.item)
+                        if reduceMotion {
+                            Capsule().fill(Tokens.Settings.segmentSelectedBackground.color)
+                        } else {
+                            Capsule().fill(Tokens.Settings.segmentSelectedBackground.color)
+                                .matchedGeometryEffect(id: "selection", in: selectionSpace)
+                                .boxShadow(Tokens.Settings.segmentSelectedShadows, cornerRadius: Tokens.Radius.pill)
+                        }
                     }
                 }
         }
-        .buttonStyle(ControlButtonStyle(cornerRadius: Tokens.Radius.item))
+        .buttonStyle(ControlButtonStyle(cornerRadius: Tokens.Radius.pill))
         .accessibilityIdentifier(option.identifier)
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
@@ -172,6 +179,7 @@ struct ShortcutChip: View {
             .lineLimit(1)
             .padding(.horizontal, Tokens.Settings.recorderPaddingX)
             .background(RoundedBox(cornerRadius: Tokens.Radius.keycap).fill(Tokens.Settings.recorderBackground.color))
+            .boxShadow(Tokens.Shadows.segmentSelected, cornerRadius: Tokens.Radius.keycap)
             .insetOutline(
                 recorder.isRecording ? Tokens.Settings.recorderRecordingOutline : Tokens.Settings.recorderOutline,
                 width: recorder.isRecording ? Tokens.Stroke.emphasis : Tokens.Stroke.hairline,
@@ -230,6 +238,7 @@ struct RetentionField: View {
         .padding(.horizontal, Tokens.Settings.recorderPaddingX)
         .frame(height: Tokens.Typography.retentionValue.lineHeight)
         .background(RoundedBox(cornerRadius: Tokens.Radius.keycap).fill(Tokens.Settings.recorderBackground.color))
+            .boxShadow(Tokens.Shadows.segmentSelected, cornerRadius: Tokens.Radius.keycap)
         .insetOutline(Tokens.Settings.recorderOutline, width: Tokens.Stroke.hairline, cornerRadius: Tokens.Radius.keycap)
         .accessibilityIdentifier(AXID.Settings.imageRetentionDays)
     }

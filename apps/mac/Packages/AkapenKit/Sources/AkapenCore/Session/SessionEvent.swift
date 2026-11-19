@@ -11,6 +11,8 @@ public enum SessionEvent: Sendable {
     case listToggled
     case annotationEdited(id: UUID, text: String)
     case annotationDeleted(id: UUID)
+    /// 確定済みの注釈と画像をすべて消す。
+    case annotationsCleared
     case copyPromptTapped
     case copiedExpired
     /// 浮く部品を下げる（設定やセットアップのウィンドウを開くとき。画面全体を覆う面がウィンドウを隠さないように）。

@@ -153,19 +153,13 @@ extension Tokens {
     public enum Palette {
         public static let paper = ColorToken(rgb: 0xF4F4F2)
         public static let paper2 = ColorToken(rgb: 0xE9E9E6)
-        public static let ink = ColorToken(rgb: 0x121214)
-        public static let ink2 = ColorToken(rgb: 0x4A4A50)
-        public static let steel = ColorToken(rgb: 0x62626A)
-        public static let line = ColorToken(rgba: 0x1212_141F)
-        public static let accent = ColorToken(rgb: 0xFF3E3E)
-        public static let accentDeep = ColorToken(rgb: 0xC62828)
-        public static let darkPaper = ColorToken(rgb: 0x0F0F11)
-        public static let darkPaper2 = ColorToken(rgb: 0x18181B)
-        public static let darkInk = ColorToken(rgb: 0xF1F1EE)
-        public static let darkInk2 = ColorToken(rgb: 0xB6B6B1)
+        public static let ink = ColorToken(rgb: 0x1C1C1F)
+        public static let ink2 = ColorToken(rgb: 0x5A5A60)
+        public static let steel = ColorToken(rgb: 0x8E8E94)
+        public static let line = ColorToken(rgba: 0x1C1C_1F0A)
+        public static let accent = ColorToken(rgb: 0xDC2B2B)
+        public static let accentDeep = ColorToken(rgb: 0xB81C1C)
         public static let darkSteel = ColorToken(rgb: 0x87878F)
-        public static let darkLine = ColorToken(rgba: 0xF1F1_EE24)
-        public static let darkAccent = ColorToken(rgb: 0xFF4A4A)
         public static let cleanBackground = ColorToken(rgb: 0xFFFFFF)
         public static let cleanSurface = ColorToken(rgb: 0xF5F5F7)
     }
@@ -177,23 +171,23 @@ extension Tokens {
         /// 白 80%。メニューで選択中の行のショートカット表記。
         public static let white80 = ColorToken(rgba: 0xFFFF_FFCC)
         /// ink 90%。案内の表示の地。
-        public static let ink90 = ColorToken(rgba: 0x1212_14E6)
+        public static let ink90 = ColorToken(rgba: 0x1C1C_1FE6)
         /// ink 18%。セットアップの未選択の点、オフのスイッチ。
-        public static let ink18 = ColorToken(rgba: 0x1212_142E)
+        public static let ink18 = ColorToken(rgba: 0x1C1C_1F2E)
         /// ink 15%。メニューバーのアイコンが押されている状態の地、キーキャップ下端の影。
-        public static let ink15 = ColorToken(rgba: 0x1212_1426)
+        public static let ink15 = ColorToken(rgba: 0x1C1C_1F26)
         /// ink 8%。終了確認のときの画面の暗転。
-        public static let ink8 = ColorToken(rgba: 0x1212_1414)
+        public static let ink8 = ColorToken(rgba: 0x1C1C_1F14)
         /// ink 6%。グループ内の区切り線、セグメントの地。
-        public static let ink6 = ColorToken(rgba: 0x1212_140F)
+        public static let ink6 = ColorToken(rgba: 0x1C1C_1F0F)
         /// accent 70%。セットアップの主ボタンの下に落ちる赤い影。
-        public static let accent70 = ColorToken(rgba: 0xFF3E_3EB3)
+        public static let accent70 = ColorToken(rgba: 0xDC2B_2BB3)
         /// accent 15%。赤枠の外側のにじみ。
-        public static let accent15 = ColorToken(rgba: 0xFF3E_3E26)
+        public static let accent15 = ColorToken(rgba: 0xDC2B_2B26)
         /// accent 4%。一覧で編集中の行の地。
-        public static let accent4 = ColorToken(rgba: 0xFF3E_3E0A)
+        public static let accent4 = ColorToken(rgba: 0xDC2B_2B0A)
         /// ink 10%。キーの表示（チップ）の内側の輪郭。
-        public static let ink10 = ColorToken(rgba: 0x1212_141A)
+        public static let ink10 = ColorToken(rgba: 0x1C1C_1F1A)
         /// 白 12%。黒い地（Copy prompt）の上のキーの表示の地。
         public static let white12 = ColorToken(rgba: 0xFFFF_FF1F)
         /// 白 8%。黒い地の上のキーの表示の内側の輪郭。
@@ -261,21 +255,21 @@ extension Tokens {
         /// 両端が丸い形（Paper の 999）。
         public static let pill: CGFloat = 999
         /// 入力欄・サムネイル・小さなボタン（`--radius-field`）。
-        public static let field: CGFloat = 8
+        public static let field: CGFloat = 12
         /// コメント入力・グループの箱・ウィンドウ（`--radius-media`）。
-        public static let media: CGFloat = 12
+        public static let media: CGFloat = 18
         /// 赤枠。
-        public static let frame: CGFloat = 6
+        public static let frame: CGFloat = 10
         /// 一覧のパネル。
-        public static let large: CGFloat = 16
+        public static let large: CGFloat = 24
         /// 終了確認の箱。
-        public static let alert: CGFloat = 14
+        public static let alert: CGFloat = 26
         /// 設定の記録欄・終了確認のボタン。
-        public static let keycap: CGFloat = 7
+        public static let keycap: CGFloat = 10
         /// 小さなキーの表示（ボタン類・コメント入力・一覧の案内のチップ）。
-        public static let keyChip: CGFloat = 5
+        public static let keyChip: CGFloat = 6
         /// 定型文の入力欄・セットアップのキー・重複の注意書き。
-        public static let box: CGFloat = 10
+        public static let box: CGFloat = 16
         /// メニューの項目・セグメントの選択中の項目・信号ボタン。
         public static let item: CGFloat = 6
         /// メニューバーのアイコンが押された状態の地。
@@ -316,14 +310,27 @@ extension Tokens {
     ///
     /// システムの「視差効果を減らす」がオンのときは、拡大縮小とずらしをやめて不透明度だけにする。
     public enum Motion {
+        public static let hoverLift: CGFloat = 1
+        public static let arrowShift: CGFloat = 2
+        public static let toolbarScale: CGFloat = 0.92
+        public static let entranceRise: CGFloat = 12
+        public static let entranceBlur: CGFloat = 8
+        public static let hintRise: CGFloat = 8
+        public static let buttonDelay: Double = 0.03
+        public static let rowDelay: Double = 0.025
+        public static let badgePop: CGFloat = 1.25
+        public static let framePop: CGFloat = 1.02
+        public static let commentScale: CGFloat = 0.95
+        public static let pressSpring = Animation.spring(response: 0.25, dampingFraction: 0.7)
+        public static let listSpring = Animation.spring(response: 0.45, dampingFraction: 0.85)
         /// パネルが消えるときのフェード（秒）。出るときより速くする。
-        public static let fade: TimeInterval = 0.15
+        public static let fade: TimeInterval = 0.18
         /// パネルが出るときのばねの応答（秒）。
-        public static let panelSpringResponse: Double = 0.3
+        public static let panelSpringResponse: Double = 0.42
         /// パネルが出るときのばねの減衰。
-        public static let panelSpringDamping: Double = 0.85
+        public static let panelSpringDamping: Double = 0.82
         /// パネルが出始めるときの大きさ（1 が等倍）。
-        public static let panelEntranceScale: CGFloat = 0.96
+        public static let panelEntranceScale: CGFloat = 0.94
         /// コピー完了の表示が出始めるときに、下へずらしておく量（pt）。
         public static let toastRise: CGFloat = 6
         /// コピー完了の表示が出始めるときの大きさ。
@@ -351,9 +358,9 @@ extension Tokens {
         /// コピー完了の表示が消えるときのぼかし（pt）。
         public static let toastExitBlur: CGFloat = 4
         /// ホバーの地の色の変化（秒、ease-out）。
-        public static let hover: TimeInterval = 0.12
+        public static let hover: TimeInterval = 0.15
         /// 押した瞬間の大きさ。
-        public static let pressedScale: CGFloat = 0.97
+        public static let pressedScale: CGFloat = 0.96
         /// 押している最中の不透明度。
         public static let pressedOpacity: Double = 0.8
         /// 使えない状態の不透明度。
@@ -372,7 +379,7 @@ extension Tokens {
         }
         /// 消えるときの動き。
         public static var exitAnimation: Animation {
-            .easeOut(duration: fade)
+            .easeIn(duration: fade)
         }
         /// コピー完了の表示が出るときのばね。
         public static var toastSpring: Animation {
@@ -392,7 +399,7 @@ extension Tokens {
         }
         /// 「視差効果を減らす」がオンのときの、不透明度だけの出入り。
         public static var reducedFadeAnimation: Animation {
-            .easeOut(duration: fade)
+            .easeIn(duration: fade)
         }
     }
 }
@@ -481,7 +488,7 @@ extension Tokens {
     /// 影（`tokens.md`「影の一覧」）。配列は手前の層から順。
     public enum Shadows {
         /// 0.5pt の輪郭線（黒 18%）。
-        public static let outline = ShadowToken(color: ShadowColor.black18, x: 0, y: 0, blur: 0, spread: 0.5)
+        public static let outline = ShadowToken(color: Glass.ring, x: 0, y: 0, blur: 0, spread: 0.5)
         /// 0.5pt の輪郭線（黒 25%）。メニュー・終了確認。
         public static let outlineStrong = ShadowToken(color: ShadowColor.black25, x: 0, y: 0, blur: 0, spread: 0.5)
         /// 0.5pt の輪郭線（黒 30%）。設定・セットアップのウィンドウ。
@@ -489,7 +496,7 @@ extension Tokens {
         /// 画面下のボタン類。
         public static let toolbar = [
             outline,
-            ShadowToken(color: ShadowColor.black25, x: 0, y: 12, blur: 32, spread: -8),
+            ShadowToken(color: Glass.shadow, x: 0, y: 24, blur: 48, spread: -20),
         ]
         /// 案内の表示。
         public static let hint = [
@@ -498,12 +505,12 @@ extension Tokens {
         /// コメント入力。
         public static let comment = [
             outline,
-            ShadowToken(color: ShadowColor.black25, x: 0, y: 16, blur: 40, spread: -8),
+            ShadowToken(color: Glass.shadow, x: 0, y: 24, blur: 48, spread: -16),
         ]
         /// 一覧。
         public static let list = [
             outline,
-            ShadowToken(color: ShadowColor.black28, x: 0, y: 24, blur: 56, spread: -12),
+            ShadowToken(color: Glass.shadow, x: 0, y: 24, blur: 48, spread: -16),
         ]
         /// コピー完了の表示（画面下のボタン類と同じ白いピル）。
         public static let toast = toolbar
@@ -526,7 +533,7 @@ extension Tokens {
         public static let frameGlow = ShadowToken(color: ExtraColor.accent15, x: 0, y: 0, blur: 0, spread: Stroke.frameGlow)
         /// セットアップの主ボタンの下に落ちる赤い光。
         public static let primaryGlow = [
-            ShadowToken(color: ExtraColor.accent70, x: 0, y: 18, blur: 40, spread: -18),
+            ShadowToken(color: Glass.shadow, x: 0, y: 8, blur: 18, spread: -8),
         ]
         /// 設定のセグメントの選択中の項目。
         public static let segmentSelected = [
@@ -574,11 +581,16 @@ extension Tokens {
     /// 画面下のボタン類（`components.md`）。
     public enum Toolbar {
         public static let background = ExtraColor.white90
-        public static let padding: CGFloat = 6
+        public static let padding: CGFloat = 7
         public static let gap: CGFloat = 6
         public static let shadows = Shadows.toolbar
         /// 「List」「Copy prompt」の高さ。
-        public static let controlHeight: CGFloat = 36
+        public static let controlHeight: CGFloat = 38
+        /// 全削除のボタン。既存の操作ボタンと配色をそろえる。
+        public static let clearBackground = controlBackground
+        public static let clearIconSize = iconSize
+        public static let clearIconColor = iconColor
+        public static let clearIconStroke = Tokens.Stroke.listIcon
         public static let controlBackground = Palette.cleanSurface
         public static let iconSize: CGFloat = 14
         public static let iconColor = Palette.ink
@@ -592,7 +604,7 @@ extension Tokens {
         public static let badgeText = Palette.cleanBackground
         public static let badgePaddingX: CGFloat = 5
         /// バッジの高さと最小の幅（数字 1 桁で正円）。
-        public static let badgeSize: CGFloat = 18
+        public static let badgeSize: CGFloat = 20
         /// バッジを「List」の右上の角からはみ出させる量（右へ・上へ）。
         public static let badgeOverhang: CGFloat = 6
         /// バッジのまわりの白い輪（`0 0 0 2px #FFFFFF`）。
@@ -600,8 +612,8 @@ extension Tokens {
         public static let badgeRingWidth: CGFloat = 2
         public static let copyBackground = Palette.ink
         public static let copyText = Palette.cleanBackground
-        public static let copyPaddingLeading: CGFloat = 16
-        public static let copyPaddingTrailing: CGFloat = 4
+        public static let copyPaddingLeading: CGFloat = 5
+        public static let copyPaddingTrailing: CGFloat = 14
         public static let copyGap: CGFloat = 10
         public static let copyCircleSize: CGFloat = 28
         public static let copyCircle = Palette.accent
@@ -614,7 +626,7 @@ extension Tokens {
     /// 案内の表示（App 01）。
     public enum Hint {
         public static let background = ExtraColor.ink90
-        public static let height: CGFloat = 34
+        public static let height: CGFloat = 36
         public static let paddingX: CGFloat = 14
         public static let gap: CGFloat = 10
         public static let shadows = Shadows.hint
@@ -698,7 +710,7 @@ extension Tokens {
         public static let editHintGap: CGFloat = 12
         public static let footerPaddingY: CGFloat = 12
         public static let footerPaddingX: CGFloat = 18
-        public static let footerBackground = Palette.cleanSurface
+        public static let footerBackground = Glass.footer
         public static let footerText = Palette.steel
         public static let emptyText = Palette.steel
         /// 行の部分がスクロールに切り替わる件数（`DECISIONS.md` 6）。
@@ -739,13 +751,13 @@ extension Tokens {
         /// キーと、それに添える文言の間（`↵` `Done`）。
         public static let labelGap: CGFloat = 6
         /// 白い地の上の見た目。
-        public static let background = ExtraColor.ink6
+        public static let background = Glass.segment
         public static let outline = ExtraColor.ink10
-        public static let text = Palette.ink2
+        public static let text = Palette.steel
         /// 黒い地（Copy prompt）の上の見た目。
-        public static let darkBackground = ExtraColor.white12
+        public static let darkBackground = ColorToken(rgba: 0xFFFF_FF24)
         public static let darkOutline = ExtraColor.white8
-        public static let darkText = ExtraColor.keycapOnDarkText
+        public static let darkText = ExtraColor.white80
         /// 添える文言の色。
         public static let label = Palette.steel
     }
@@ -809,7 +821,7 @@ extension Tokens {
         public static let bodyPaddingX: CGFloat = 28
         public static let bodyPaddingBottom: CGFloat = 28
         public static let sectionGap: CGFloat = 20
-        public static let groupBackground = Palette.cleanSurface
+        public static let groupBackground = Glass.group
         public static let rowHeight: CGFloat = 48
         public static let rowPaddingX: CGFloat = 16
         public static let rowDivider = ExtraColor.ink6
@@ -823,7 +835,7 @@ extension Tokens {
         public static let segmentSelectedText = Palette.ink
         public static let segmentText = Palette.ink2
         public static let recorderBackground = Palette.cleanBackground
-        public static let recorderOutline = Palette.line
+        public static let recorderOutline = ExtraColor.transparent
         public static let recorderPaddingX: CGFloat = 12
         public static let recorderText = Palette.ink
         public static let recorderPlaceholder = Palette.steel
@@ -832,7 +844,7 @@ extension Tokens {
         public static let sectionNote = Palette.steel
         public static let boilerplatePaddingY: CGFloat = 12
         public static let boilerplatePaddingX: CGFloat = 14
-        public static let boilerplateOutline = Palette.line
+        public static let boilerplateOutline = Glass.segment
         public static let boilerplateText = Palette.ink
         public static let caption = Palette.steel
         public static let retentionGap: CGFloat = 8
@@ -869,7 +881,7 @@ extension Tokens {
         public static let title = Palette.ink
         public static let body = Palette.ink2
         public static let bodyWidth: CGFloat = 400
-        public static let recorderBackground = Palette.cleanSurface
+        public static let recorderBackground = Glass.group
         public static let recorderPadding: CGFloat = 24
         public static let recorderGap: CGFloat = 10
         public static let keyGap: CGFloat = 8
@@ -894,7 +906,7 @@ extension Tokens {
         public static let pageDotCurrentWidth: CGFloat = 20
         public static let pageDotCurrent = Palette.ink
         public static let pageDot = ExtraColor.ink18
-        public static let buttonHeight: CGFloat = 40
+        public static let buttonHeight: CGFloat = 44
         public static let buttonGap: CGFloat = 8
         public static let buttonPaddingLeading: CGFloat = 18
         public static let buttonPaddingTrailing: CGFloat = 5
@@ -909,7 +921,7 @@ extension Tokens {
         public static let buttonIcon = Palette.cleanBackground
         public static let secondaryButtonOutline = Palette.line
         public static let secondaryButtonText = Palette.ink
-        public static let stepsBackground = Palette.cleanSurface
+        public static let stepsBackground = Glass.group
         public static let stepRowHeight: CGFloat = 48
         public static let stepRowPaddingX: CGFloat = 16
         public static let stepRowGap: CGFloat = 12
@@ -949,12 +961,48 @@ extension Tokens {
         public static let title = Palette.ink
         public static let body = Palette.ink2
         public static let buttonGap: CGFloat = 6
-        public static let buttonHeight: CGFloat = 28
+        public static let buttonHeight: CGFloat = 36
         public static let quitBackground = Palette.accent
         public static let quitText = Palette.cleanBackground
         public static let cancelBackground = Palette.cleanBackground
         public static let cancelText = Palette.ink
-        public static let cancelOutline = ShadowColor.black20
+        public static let cancelOutline = ExtraColor.transparent
         public static let cancelShadows = Shadows.alertCancel
+    }
+}
+
+
+extension Tokens {
+    /// Soft Glass / Ink + Red の素材と輪郭。
+    public enum Glass {
+        public static let inkTop = ColorToken(rgb: 0x4A4A52)
+        public static let redTop = ColorToken(rgb: 0xF65A57)
+        public static let greenTop = ColorToken(rgb: 0x4FD18A)
+        public static let barTop = ColorToken(rgba: 0xFFFF_FFB8)
+        public static let barBottom = ColorToken(rgba: 0xFFFF_FF8C)
+        public static let panel = ColorToken(rgba: 0xFFFF_FFD9)
+        public static let window = ColorToken(rgba: 0xF7F8_FAE6)
+        public static let group = ColorToken(rgba: 0xFFFF_FFB3)
+        public static let footer = ColorToken(rgba: 0xFFFF_FF66)
+        public static let segment = ColorToken(rgba: 0x1C1C_1F0D)
+        public static let redTint = ColorToken(rgb: 0xFCDCDB)
+        public static let ring = ColorToken(rgba: 0xFFFF_FFB3)
+        public static let dotRing = ColorToken(rgba: 0xDC2B_2B4D)
+        public static let ringWidth: CGFloat = 1
+        public static let dotRingWidth: CGFloat = 3
+        public static let commentRadius: CGFloat = 20
+        public static let settingsRadius: CGFloat = 26
+        public static let setupRadius: CGFloat = 28
+        public static let setupKeyRadius: CGFloat = 14
+        public static let ink = LinearGradient(colors: [inkTop.color, Palette.ink.color], startPoint: .top, endPoint: .bottom)
+        public static let red = LinearGradient(colors: [redTop.color, Palette.accent.color], startPoint: .top, endPoint: .bottom)
+        public static let green = LinearGradient(colors: [greenTop.color, ExtraColor.success.color], startPoint: .top, endPoint: .bottom)
+        public static let white = LinearGradient(colors: [Palette.cleanBackground.color, panel.color], startPoint: .top, endPoint: .bottom)
+        public static let bar = LinearGradient(colors: [barTop.color, barBottom.color], startPoint: .top, endPoint: .bottom)
+        public static let hoverShadow: CGFloat = 5
+        public static let shadow = ColorToken(rgba: 0x1C1C_2E33)
+        public static let pillShadow = [ShadowToken(color: shadow, x: 0, y: 4, blur: 10, spread: -6)]
+        public static let redShadow = [ShadowToken(color: ColorToken(rgba: 0xDC2B_2B99), x: 0, y: 3, blur: 8, spread: -2)]
+        public static let inkShadow = [ShadowToken(color: ColorToken(rgba: 0x1C1C_2E80), x: 0, y: 8, blur: 18, spread: -8)]
     }
 }

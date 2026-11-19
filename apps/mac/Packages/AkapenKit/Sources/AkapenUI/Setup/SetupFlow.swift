@@ -41,6 +41,8 @@ import AkapenCore
     /// `Done` が押されたとき（許可が取れているときだけ）。
     @ObservationIgnored var onDone: (@MainActor () -> Void)?
 
+    var imagesPath = ""
+
     init(settings: Settings, shortcutText: ShortcutText = ShortcutText()) {
         language = settings.language
         hotkey = KeyRecorderModel(shortcut: settings.hotkey, allowsNone: false)

@@ -23,7 +23,8 @@ struct SettingsView: View {
             .padding(.bottom, Tokens.Settings.bodyPaddingBottom)
         }
         .frame(width: Tokens.Settings.width)
-        .background(Tokens.Window.background.color)
+        .glassSurface(radius: Tokens.Glass.settingsRadius, tint: Tokens.Glass.window)
+        .clipShape(RoundedBox(cornerRadius: Tokens.Glass.settingsRadius))
         .lightAppearance()
     }
 
@@ -100,6 +101,7 @@ struct SettingsView: View {
                 .frame(width: SettingsForm.boilerplateTextWidth, height: form.boilerplate.height)
                 .padding(.vertical, Tokens.Settings.boilerplatePaddingY)
                 .padding(.horizontal, Tokens.Settings.boilerplatePaddingX)
+                .background(RoundedBox(cornerRadius: Tokens.Radius.box).fill(Tokens.Glass.group.color))
                 .insetOutline(Tokens.Settings.boilerplateOutline, width: Tokens.Stroke.hairline, cornerRadius: Tokens.Radius.box)
             Text(strings[.settingsPromptCaption])
                 .textStyle(Tokens.Typography.caption)

@@ -183,7 +183,7 @@ final class PassthroughHostingView<Content: View>: NSHostingView<Content> {
 /// パネルの出る動き。
 enum PanelEntrance: Equatable {
     /// わずかに小さい大きさから、`anchor` を起点に等倍へ（コメント入力・一覧・ボタン類）。
-    case scale(anchor: UnitPoint)
+    case scale(anchor: UnitPoint, initialScale: CGFloat = Tokens.Motion.panelEntranceScale)
     /// 中身が自分で出入りの動きを付ける（コピー完了の表示）。`PanelRoot` は動かさず、段階（`PanelPhase`）だけを渡す。
     case content
 }
@@ -237,6 +237,13 @@ struct PanelRoot<Content: View>: View {
             .environment(\.panelPhase, presentation.phase)
             .opacity(opacity)
             .scaleEffect(scale, anchor: anchor)
+            .blur(radius: !presentation.isPresented && !reduceMotion && entrance != .content ? Tokens.Motion.entranceBlur : 0)
+            .offset(y: !presentation.isPresented && !reduceMotion && entrance != .content ? Tokens.Motion.entranceRise : 0)
+            .transaction { transaction in
+                if reduceMotion, transaction.animation != nil {
+                    transaction.animation = Tokens.Motion.reducedFadeAnimation
+                }
+            }
             .padding(margin)
             .lightAppearance()
     }
@@ -245,18 +252,21 @@ struct PanelRoot<Content: View>: View {
         if entrance == .content {
             return 1
         }
-        return presentation.isPresented ? 1 : 0
+        return presentation.isPresented && !presentation.isLeaving ? 1 : 0
     }
 
     private var scale: CGFloat {
-        guard !presentation.isPresented, !reduceMotion, case .scale = entrance else {
+        guard (!presentation.isPresented || presentation.isLeaving), !reduceMotion, case .scale = entrance else {
             return 1
         }
-        return Tokens.Motion.panelEntranceScale
+        if case let .scale(_, initialScale) = entrance {
+            return presentation.isLeaving ? Tokens.Motion.toastExitScale : initialScale
+        }
+        return 1
     }
 
     private var anchor: UnitPoint {
-        if case let .scale(anchor) = entrance {
+        if case let .scale(anchor, _) = entrance {
             return anchor
         }
         return .center
@@ -368,6 +378,18 @@ struct PanelRoot<Content: View>: View {
                 return
             }
             setPresented(false, animation: nil)
+        }
+        if entrance != .content, animatesEntrance {
+            panel.contentExit = { [weak self] in
+                withAnimation(Tokens.Motion.exitAnimation) {
+                    self?.presentation.isLeaving = true
+                }
+                return Tokens.Motion.fade
+            }
+            panel.onExitCancelled = { [weak self] in
+                self?.presentation.isLeaving = false
+            }
+            return
         }
         guard entrance == .content, animatesEntrance else {
             return

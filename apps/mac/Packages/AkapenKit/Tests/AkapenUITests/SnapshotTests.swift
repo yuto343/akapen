@@ -95,6 +95,12 @@ struct SnapshotTests {
     }
 
     @Test(arguments: languages)
+    func clearConfirmation(language: Language) async throws {
+        let view = ConfirmationView(annotationCount: 2, purpose: .clear, strings: UIStrings(language: language), onQuit: {}, onCancel: {})
+        try Snapshot.write(try await Snapshot.render(framed(view)), to: "\(language.rawValue)/clear-confirm.png")
+    }
+
+    @Test(arguments: languages)
     func drawStates(language: Language) async throws {
         let strings = UIStrings(language: language)
         let folder = language.rawValue

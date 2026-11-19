@@ -5,7 +5,9 @@ struct EnglishStrings: StringTable {
         case .list:
             "List"
         case .copyPrompt:
-            "Copy prompt"
+            "Copy"
+        case .clearShortcutKey:
+            "⌫"
         case .listShortcutKey:
             "L"
         case .copyPromptShortcutKey:
@@ -26,6 +28,12 @@ struct EnglishStrings: StringTable {
             "Save"
         case .hintCancel:
             "Cancel"
+        case .clearAll:
+            "Clear all"
+        case .clearAllHelp:
+            "Clear all annotations (⌘⌫)"
+        case .clearTitle:
+            "Clear all annotations?"
         case .listHelp:
             "Show or hide the list (⌘L)"
         case .copyPromptHelp:
@@ -34,8 +42,6 @@ struct EnglishStrings: StringTable {
             "Quit"
         case .drawHint:
             "Drag to frame"
-        case .drawCancel:
-            "esc to cancel"
         case .commentPlaceholder:
             "Add a comment…"
         case .listTitle:
@@ -47,7 +53,7 @@ struct EnglishStrings: StringTable {
         case .listDelete:
             "Delete"
         case .copiedTitle:
-            "Prompt copied!"
+            "Copied!"
         case .appName:
             "akapen"
         case .menuSettings:
@@ -79,7 +85,7 @@ struct EnglishStrings: StringTable {
         case .settingsPromptHeader:
             "Prompt header"
         case .settingsPromptNote:
-            "Edits the English version"
+            "Once edited, it won’t change with the language"
         case .settingsPromptCaption:
             "Each annotation is added below as an image path followed by its comment."
         case .settingsRetention:
@@ -104,8 +110,6 @@ struct EnglishStrings: StringTable {
             "Continue"
         case .setupPermissionTitle:
             "Allow Screen Recording"
-        case .setupPermissionBody:
-            "akapen captures the screen around each frame. Images stay on this Mac in ~/Library/Caches/akapen."
         case .setupStepOpenSettings:
             "Open System Settings → Privacy & Security"
         case .setupStepTurnOn:
@@ -148,6 +152,10 @@ struct EnglishStrings: StringTable {
     }
 
     /// 英語の複数形の決まり（CLDR）: 1 だけが単数。0 は複数。
+    func setupPermissionBody(path: String) -> String {
+        "akapen captures the screen around each frame. Images stay on this Mac in \(path)."
+    }
+
     func plural(_ key: PluralKey, count: Int) -> String {
         let one = count == 1
         switch key {
@@ -159,6 +167,8 @@ struct EnglishStrings: StringTable {
             return one ? "1 annotation · paste it into your AI agent" : "\(count) annotations · paste it into your AI agent"
         case .menuWaiting:
             return one ? "1 annotation waiting" : "\(count) annotations waiting"
+        case .clearMessage:
+            return count == 1 ? "1 annotation and its image will be deleted.\nThis can’t be undone." : "\(count) annotations and their images will be deleted.\nThis can’t be undone."
         case .quitMessage:
             return one
                 ? "1 annotation hasn’t been copied yet.\nIt will be discarded."

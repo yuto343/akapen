@@ -122,3 +122,49 @@ struct RoundedBox: InsettableShape {
         RoundedBox(cornerRadius: cornerRadius, insetAmount: insetAmount + amount)
     }
 }
+
+
+extension View {
+    /// 背景をぼかし、白い面と細い光の縁を重ねる。
+    func glassSurface(radius: CGFloat, tint: ColorToken = Tokens.Glass.panel) -> some View {
+        background {
+            RoundedBox(cornerRadius: radius).fill(.ultraThinMaterial)
+                .overlay(RoundedBox(cornerRadius: radius).fill(tint.color))
+        }
+        .insetOutline(Tokens.Glass.ring, width: Tokens.Glass.ringWidth, cornerRadius: radius)
+    }
+}
+
+
+/// パネルの段階に合わせ、部品を順番に出す。静止画では既定の shown を使う。
+private struct StaggeredEntrance: ViewModifier {
+    let delay: Double
+    @Environment(\.panelPhase) private var phase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(phase == .shown ? 1 : 0)
+            .offset(y: phase == .shown || reduceMotion ? 0 : Tokens.Motion.entranceRise)
+            .animation(reduceMotion ? Tokens.Motion.reducedFadeAnimation : Tokens.Motion.panelSpring.delay(delay), value: phase)
+    }
+}
+
+extension View {
+    /// 親パネルより少し遅らせた出入り。
+    func staggeredEntrance(delay: Double) -> some View {
+        modifier(StaggeredEntrance(delay: delay))
+    }
+}
+
+
+extension View {
+    /// 上から下へ白が薄くなる、ツールバー用のガラス。
+    func glassBar() -> some View {
+        background {
+            Capsule().fill(.ultraThinMaterial)
+                .overlay(Capsule().fill(Tokens.Glass.bar))
+        }
+        .insetOutline(Tokens.Glass.ring, width: Tokens.Glass.ringWidth, cornerRadius: Tokens.Radius.pill)
+    }
+}

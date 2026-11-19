@@ -32,8 +32,10 @@ private struct ControlButtonBody: View {
             .contentShape(RoundedBox(cornerRadius: cornerRadius))
             .opacity(opacity)
             .scaleEffect(scale)
+            .offset(y: isHovering && isEnabled && !reduceMotion ? -Tokens.Motion.hoverLift : 0)
+            .shadow(color: Tokens.Glass.shadow.color, radius: isHovering && !reduceMotion ? Tokens.Glass.hoverShadow : 0)
             .animation(Tokens.Motion.hoverAnimation, value: isHovering)
-            .animation(Tokens.Motion.hoverAnimation, value: configuration.isPressed)
+            .animation(reduceMotion ? Tokens.Motion.reducedFadeAnimation : Tokens.Motion.pressSpring, value: configuration.isPressed)
             .hoverCursor(.pointingHand, isEnabled: isEnabled)
             .onHover { hovering in
                 isHovering = hovering

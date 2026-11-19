@@ -3,9 +3,11 @@ struct JapaneseStrings: StringTable {
     func text(_ key: StringKey) -> String {
         switch key {
         case .list:
-            "一覧"
+            "リスト"
         case .copyPrompt:
-            "プロンプトをコピー"
+            "コピー"
+        case .clearShortcutKey:
+            "⌫"
         case .listShortcutKey:
             "L"
         case .copyPromptShortcutKey:
@@ -26,16 +28,20 @@ struct JapaneseStrings: StringTable {
             "保存"
         case .hintCancel:
             "キャンセル"
+        case .clearAll:
+            "すべて消す"
+        case .clearAllHelp:
+            "注釈をすべて消す (⌘⌫)"
+        case .clearTitle:
+            "注釈をすべて消しますか？"
         case .listHelp:
-            "一覧を開く・閉じる（⌘L）"
+            "リストを開く・閉じる（⌘L）"
         case .copyPromptHelp:
             "プロンプトをコピー（⌘C）"
         case .quit:
             "終了"
         case .drawHint:
-            "ドラッグして枠を描く"
-        case .drawCancel:
-            "esc でキャンセル"
+            "ドラッグしてフレームを追加"
         case .commentPlaceholder:
             "コメントを入力…"
         case .listTitle:
@@ -47,7 +53,7 @@ struct JapaneseStrings: StringTable {
         case .listDelete:
             "削除"
         case .copiedTitle:
-            "プロンプトをコピーしました"
+            "コピーしました！"
         case .appName:
             "akapen"
         case .menuSettings:
@@ -79,7 +85,7 @@ struct JapaneseStrings: StringTable {
         case .settingsPromptHeader:
             "プロンプトの定型文"
         case .settingsPromptNote:
-            "日本語版を編集します"
+            "編集すると、言語設定によって変更されなくなります"
         case .settingsPromptCaption:
             "この下に、注釈ごとに画像のパスとコメントが続きます。"
         case .settingsRetention:
@@ -95,17 +101,15 @@ struct JapaneseStrings: StringTable {
         case .setupHotkeyTitle:
             "ホットキーを決める"
         case .setupHotkeyBody:
-            "どこで押しても、ボタン類が出て枠を描き始めます。\nもう一度押すと、次の枠を描きます。"
+            "akapen を呼び出すと、マウスで枠を描くモードになります。"
         case .setupRecorderHint:
-            "クリックして、新しい組み合わせを押すと変わります"
+            "クリックして変更します"
         case .setupConflictNote:
             "⌘⇧6 は、Touch Bar のある Mac では macOS の Touch Bar のスクリーンショットにも使われています。ここか、あとで設定から変えられます。"
         case .setupContinue:
             "続ける"
         case .setupPermissionTitle:
             "画面収録を許可する"
-        case .setupPermissionBody:
-            "akapen は枠のまわりの画面を撮影します。画像はこの Mac の\n~/Library/Caches/akapen に残ります。"
         case .setupStepOpenSettings:
             "システム設定 → プライバシーとセキュリティを開く"
         case .setupStepTurnOn:
@@ -147,6 +151,10 @@ struct JapaneseStrings: StringTable {
         }
     }
 
+    func setupPermissionBody(path: String) -> String {
+        "akapen は画面を撮影するので、画面収録の権限が必要です。\n画像はこの Mac の \(path) に残ります。"
+    }
+
     func plural(_ key: PluralKey, count: Int) -> String {
         switch key {
         case .listItems:
@@ -156,7 +164,9 @@ struct JapaneseStrings: StringTable {
         case .copiedSummary:
             "\(count) 件 · AI エージェントに貼り付けてください"
         case .menuWaiting:
-            "\(count) 件の注釈がコピー待ち"
+            "リスト内に \(count) 件あります"
+        case .clearMessage:
+            "\(count) 件の注釈と画像を消します。\n元に戻せません。"
         case .quitMessage:
             "コピーしていない注釈が \(count) 件あります。\n終了すると破棄されます。"
         case .retentionUnit:

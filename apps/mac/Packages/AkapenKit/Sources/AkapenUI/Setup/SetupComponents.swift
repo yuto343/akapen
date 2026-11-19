@@ -3,6 +3,8 @@ import AkapenAXID
 
 /// 黒い丸ボタン＋赤い丸のアイコン（`Continue`・`Open System Settings`・`Done`。`components.md` の主ボタン）。
 struct SetupPrimaryButton: View {
+    @State private var hovering = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let title: String
     let glyph: IconGlyph
     let identifier: String
@@ -22,13 +24,17 @@ struct SetupPrimaryButton: View {
                     lineWidth: Tokens.Stroke.arrowIcon
                 )
                 .frame(width: Tokens.Setup.buttonCircleSize, height: Tokens.Setup.buttonCircleSize)
-                .background(Circle().fill(Tokens.Setup.buttonCircle.color))
+                .background(Circle().fill(Tokens.Glass.red))
+                .offset(x: hovering && !reduceMotion ? Tokens.Motion.arrowShift : 0)
+                .animation(reduceMotion ? Tokens.Motion.reducedFadeAnimation : Tokens.Motion.hoverAnimation, value: hovering)
             }
             .padding(.leading, Tokens.Setup.buttonPaddingLeading)
             .padding(.trailing, Tokens.Setup.buttonPaddingTrailing)
             .frame(height: Tokens.Setup.buttonHeight)
-            .background(Capsule().fill(Tokens.Setup.buttonBackground.color))
+            .background(Capsule().fill(Tokens.Glass.ink))
+            .insetOutline(Tokens.Palette.cleanBackground, width: Tokens.Glass.dotRingWidth, cornerRadius: Tokens.Radius.pill)
             .boxShadow(Tokens.Setup.buttonShadows, cornerRadius: Tokens.Radius.pill)
+            .onHover { hovering = $0 }
             .fixedSize()
         }
         .buttonStyle(ControlButtonStyle(cornerRadius: Tokens.Radius.pill))
@@ -50,6 +56,8 @@ struct SetupSecondaryButton: View {
                 .lineLimit(1)
                 .padding(.horizontal, Tokens.Setup.buttonPaddingLeading)
                 .frame(height: Tokens.Setup.buttonHeight)
+                .background(Capsule().fill(Tokens.Glass.white))
+                .boxShadow(Tokens.Shadows.segmentSelected, cornerRadius: Tokens.Radius.pill)
                 .insetOutline(Tokens.Setup.secondaryButtonOutline, width: Tokens.Stroke.hairline, cornerRadius: Tokens.Radius.pill)
                 .fixedSize()
         }
@@ -213,6 +221,7 @@ struct SetupConflictNote: View {
         }
         .padding(.vertical, Tokens.Setup.notePaddingY)
         .padding(.horizontal, Tokens.Setup.notePaddingX)
+        .background(RoundedBox(cornerRadius: Tokens.Radius.box).fill(Tokens.Glass.redTint.color))
         .insetOutline(Tokens.Setup.noteOutline, width: Tokens.Stroke.hairline, cornerRadius: Tokens.Radius.box)
     }
 }

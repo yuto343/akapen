@@ -4,11 +4,15 @@ import SwiftUI
 enum KeyChipTone {
     /// 白い地の上（「List」、コメント入力・一覧の案内）。
     case light
+    /// 入力ヒント用の白いキー型。
+    case keycap
     /// 黒い地の上（「Copy prompt」）。
     case dark
 
     var background: ColorToken {
         switch self {
+        case .keycap:
+            Tokens.Palette.cleanBackground
         case .light:
             Tokens.KeyChip.background
         case .dark:
@@ -18,6 +22,8 @@ enum KeyChipTone {
 
     var outline: ColorToken {
         switch self {
+        case .keycap:
+            Tokens.ExtraColor.transparent
         case .light:
             Tokens.KeyChip.outline
         case .dark:
@@ -27,6 +33,8 @@ enum KeyChipTone {
 
     var text: ColorToken {
         switch self {
+        case .keycap:
+            Tokens.Palette.ink2
         case .light:
             Tokens.KeyChip.text
         case .dark:
@@ -58,6 +66,7 @@ struct KeyChipsView: View {
             .frame(minWidth: Tokens.KeyChip.minWidth)
             .frame(height: Tokens.KeyChip.height)
             .background(RoundedBox(cornerRadius: Tokens.Radius.keyChip).fill(tone.background.color))
+            .boxShadow(tone == .keycap ? Tokens.Shadows.segmentSelected : [], cornerRadius: Tokens.Radius.keyChip)
             .insetOutline(tone.outline, width: Tokens.Stroke.outline, cornerRadius: Tokens.Radius.keyChip)
     }
 }
@@ -68,7 +77,7 @@ struct KeyHintView: View {
 
     var body: some View {
         HStack(spacing: Tokens.KeyChip.labelGap) {
-            KeyChipsView(keys: hint.keys)
+            KeyChipsView(keys: hint.keys, tone: .keycap)
             Text(hint.label)
                 .textStyle(Tokens.Typography.keyHintLabel)
                 .foregroundStyle(Tokens.KeyChip.label.color)

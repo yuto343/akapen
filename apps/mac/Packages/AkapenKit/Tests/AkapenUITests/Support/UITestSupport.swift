@@ -77,6 +77,8 @@ import AkapenCore
                 "annotationEdited"
             case .annotationDeleted:
                 "annotationDeleted"
+            case .annotationsCleared:
+                "annotationsCleared"
             case .copyPromptTapped:
                 "copyPromptTapped"
             case .copiedExpired:

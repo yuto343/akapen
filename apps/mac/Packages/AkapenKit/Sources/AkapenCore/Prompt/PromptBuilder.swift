@@ -19,7 +19,7 @@ public enum PromptBuilder {
 
     /// 設定の言語に合った定型文（書き換えていればその文面）でプロンプトを作る。
     public static func build(settings: Settings, annotations: [Annotation]) -> String {
-        build(boilerplate: settings.boilerplate(for: settings.language), annotations: annotations)
+        build(boilerplate: settings.effectiveBoilerplate, annotations: annotations)
     }
 }
 

@@ -44,6 +44,7 @@ import AkapenAXID
     public convenience init(
         model: SessionModel,
         permission: any ScreenRecordingPermission,
+        imagesPath: String = "",
         canUseHotkey: @escaping @MainActor (KeyboardShortcut) -> Bool = { _ in true }
     ) {
         self.init(
@@ -59,6 +60,7 @@ import AkapenAXID
             pollInterval: Self.defaultPollInterval,
             activatesApp: true
         )
+        flow.imagesPath = imagesPath
     }
 
     /// テスト用。設定の読み出しと送り先、キーの表示、許可を確かめる間隔を差し替えられる。
@@ -70,13 +72,15 @@ import AkapenAXID
         canUseHotkey: @escaping @MainActor (KeyboardShortcut) -> Bool,
         shortcutText: ShortcutText,
         pollInterval: Duration,
-        activatesApp: Bool
+        activatesApp: Bool,
+        imagesPath: String = ""
     ) {
         self.settings = settings
         self.send = send
         self.permission = permission
         self.pollInterval = pollInterval
         flow = SetupFlow(settings: settings(), shortcutText: shortcutText)
+        flow.imagesPath = imagesPath
         host = ContentWindowHost(
             content: SetupView(flow: flow),
             toolbarStyle: .unifiedCompact,

@@ -1,5 +1,7 @@
 # akapen アーキテクチャ
 
+以下の Mac アプリ内のパスとコマンドは `apps/mac/` を基準にする。ルートからも make ラッパーで実行できる。共通のエージェント定義はリポジトリルートの `.claude/agents/`、ブリーフは `.director/` にある。
+
 `DESIGN.md`（何を作るか）に対して、どう組むかを決める文書。E2E を「md の仕様からテストコードを生成する」運用（ashvally の `e2e/` と同じ考え方）で回す前提で、ディレクトリ構成・モジュール分割・テスト用の切り口を定める。
 
 2026-11-18 時点。部品（Core・Platform・UI）と組み立て（App）を実装済み。末尾の「確かめた結果」と `docs/FOUNDATION.md` に実機検証と公開 API・`state.json`・`AKAPEN_SEED` の形を記録する。
@@ -16,59 +18,59 @@
 
 ```
 akapen/
-├── DESIGN.md
-├── ARCHITECTURE.md
-├── project.yml                     # XcodeGen の定義（.xcodeproj は生成物。コミットしない）
-├── Makefile                        # gen / build / run / test / e2e / e2e-live / e2e-lint / clean
-├── scripts/                        # e2e.py（E2E の実行と排他ロック）、xcode.sh（xcodebuild の呼び出し）
-├── docs/FOUNDATION.md              # 公開 API、state.json v3、AKAPEN_SEED の形
-├── assets/                         # 元素材（ロゴ・アイコン・LP 用の動画）。既存
-│
-├── App/                            # アプリのターゲット（エントリだけ。ロジックを置かない）
-│   ├── main.swift                  # AkapenApp の AppDelegate を起こすだけ
-│   └── Assets.xcassets             # AppIcon（メニューバーのアイコンは AkapenUI/Resources）
-│
-├── Packages/AkapenKit/             # ローカルの Swift パッケージ
-│   ├── Package.swift
-│   ├── Sources/
-│   │   ├── AkapenCore/             # 純粋なロジック。AppKit の UI に依存しない
-│   │   ├── AkapenPlatform/         # OS に触る実装（プロトコルは Core 側）
-│   │   ├── AkapenUI/               # SwiftUI の画面と AppKit のパネル
-│   │   ├── AkapenApp/              # 組み立て（依存の注入）、起動時の設定の読み取り、AppDelegate
-│   │   └── AkapenAXID/             # アクセシビリティ識別子の一覧（アプリと E2E が共有）
-│   └── Tests/                      # すべて Swift Testing。swift test で走る
-│       ├── AkapenCoreTests/        # 単体：ロジックと状態の遷移（依存は偽物）
-│       ├── AkapenPlatformTests/    # 結合：OS に触る実装を 1 つずつ、実物の相手に当てる
-│       ├── AkapenUITests/          # 結合：パネルの出し入れ、入力欄の確定キー、設定・セットアップ・終了確認・メニューの操作
-│       └── AkapenAppTests/         # 結合：本物の組み立てで一連の流れを通す（画面は操作しない）
-│
-├── e2e/
-│   ├── README.md                   # 運用ルール（ファイルごとの扱い、md の書式、healer の制約）
-│   ├── check-specs.mjs             # md の書式と、生成物との対応を確かめる（make e2e-lint）
-│   ├── specs/                      # 人が読む仕様（ソース・オブ・トゥルース）
-│   │   ├── _template.md
-│   │   ├── draw/                   # 枠を描く（Paper: App 01）
-│   │   ├── comment/                # コメントを書いて確定する（App 02）
-│   │   ├── list/                   # 一覧で見返す・直す・消す（App 03）
-│   │   ├── copy-prompt/            # プロンプトをコピーする（App 04）
-│   │   ├── menu-bar/               # メニューバーと終了確認（App 05・09）
-│   │   ├── settings/               # 設定ページ（App 06）
-│   │   ├── setup/                  # 初回のセットアップ（App 07・08）
-│   │   └── toolbar/                # ボタン類が出ているあいだのショートカット（⌘C / ⌘L）
-│   ├── tests/                      # UI テストのターゲット（XCTest / XCUITest）
-│   │   ├── Seed.swift              # 手で書く：generator / healer の起点
-│   │   ├── Support/                # 手で書く：起動・前提づくり・検証のヘルパー
-│   │   │   ├── AkapenUITestCase.swift
-│   │   │   ├── Launch.swift
-│   │   │   ├── Gestures.swift
-│   │   │   └── Verify.swift
-│   │   ├── Generated/              # generator / healer が書く：直接編集しない（spec 1 本につき 1 ファイル）
-│   │   │   └── <機能>/<Dir><Name>Tests.swift   # 例: draw/DrawCaptureTests.swift
-│   │   └── Live/                   # 手で書く：実際の画面収録を通す確認（手元だけ）
-│   │       └── LiveCaptureTests.swift
-│   └── sample-target/              # 撮影対象にする小さなアプリ「Sample App」のターゲット
-│       └── main.swift、SampleDelegate / SampleLayout / SampleViews.swift、Localizable.xcstrings
-│
+├── apps/
+│   ├── site/                       # SvelteKit の静的 LP（英語・日本語）
+│   └── mac/
+│       ├── DESIGN.md
+│       ├── ARCHITECTURE.md
+│       ├── project.yml                     # XcodeGen の定義（.xcodeproj は生成物。コミットしない）
+│       ├── Makefile                        # gen / build / run / test / e2e / e2e-live / e2e-lint / clean
+│       ├── scripts/                        # e2e.py（E2E の実行と排他ロック）、xcode.sh（xcodebuild の呼び出し）
+│       ├── docs/FOUNDATION.md              # 公開 API、state.json v3、AKAPEN_SEED の形
+│       ├── App/                            # アプリのターゲット（エントリだけ。ロジックを置かない）
+│       │   ├── main.swift                  # AkapenApp の AppDelegate を起こすだけ
+│       │   └── Assets.xcassets             # AppIcon（メニューバーのアイコンは AkapenUI/Resources）
+│       ├── Packages/AkapenKit/             # ローカルの Swift パッケージ
+│       │   ├── Package.swift
+│       │   ├── Sources/
+│       │   │   ├── AkapenCore/             # 純粋なロジック。AppKit の UI に依存しない
+│       │   │   ├── AkapenPlatform/         # OS に触る実装（プロトコルは Core 側）
+│       │   │   ├── AkapenUI/               # SwiftUI の画面と AppKit のパネル
+│       │   │   ├── AkapenApp/              # 組み立て（依存の注入）、起動時の設定の読み取り、AppDelegate
+│       │   │   └── AkapenAXID/             # アクセシビリティ識別子の一覧（アプリと E2E が共有）
+│       │   └── Tests/                      # すべて Swift Testing。swift test で走る
+│       │       ├── AkapenCoreTests/        # 単体：ロジックと状態の遷移（依存は偽物）
+│       │       ├── AkapenPlatformTests/    # 結合：OS に触る実装を 1 つずつ、実物の相手に当てる
+│       │       ├── AkapenUITests/          # 結合：パネルの出し入れ、入力欄の確定キー、設定・セットアップ・終了確認・メニューの操作
+│       │       └── AkapenAppTests/         # 結合：本物の組み立てで一連の流れを通す（画面は操作しない）
+│       ├── e2e/
+│       │   ├── README.md                   # 運用ルール（ファイルごとの扱い、md の書式、healer の制約）
+│       │   ├── check-specs.mjs             # md の書式と、生成物との対応を確かめる（make e2e-lint）
+│       │   ├── specs/                      # 人が読む仕様（ソース・オブ・トゥルース）
+│       │   │   ├── _template.md
+│       │   │   ├── draw/                   # 枠を描く（Paper: App 01）
+│       │   │   ├── comment/                # コメントを書いて確定する（App 02）
+│       │   │   ├── list/                   # 一覧で見返す・直す・消す（App 03）
+│       │   │   ├── copy-prompt/            # プロンプトをコピーする（App 04）
+│       │   │   ├── menu-bar/               # メニューバーと終了確認（App 05・09）
+│       │   │   ├── settings/               # 設定ページ（App 06）
+│       │   │   ├── setup/                  # 初回のセットアップ（App 07・08）
+│       │   │   └── toolbar/                # ボタン類が出ているあいだのショートカット（⌘C / ⌘L）
+│       │   ├── tests/                      # UI テストのターゲット（XCTest / XCUITest）
+│       │   │   ├── Seed.swift              # 手で書く：generator / healer の起点
+│       │   │   ├── Support/                # 手で書く：起動・前提づくり・検証のヘルパー
+│       │   │   │   ├── AkapenUITestCase.swift
+│       │   │   │   ├── Launch.swift
+│       │   │   │   ├── Gestures.swift
+│       │   │   │   └── Verify.swift
+│       │   │   ├── Generated/              # generator / healer が書く：直接編集しない（spec 1 本につき 1 ファイル）
+│       │   │   │   └── <機能>/<Dir><Name>Tests.swift   # 例: draw/DrawCaptureTests.swift
+│       │   │   └── Live/                   # 手で書く：実際の画面収録を通す確認（手元だけ）
+│       │   │       └── LiveCaptureTests.swift
+│       │   └── sample-target/              # 撮影対象にする小さなアプリ「Sample App」のターゲット
+│       │       └── main.swift、SampleDelegate / SampleLayout / SampleViews.swift、Localizable.xcstrings
+├── brand/                          # 元素材（ロゴ・アイコン・LP 用の動画）
+├── Makefile                        # apps/mac への転送
 └── .claude/agents/
     ├── e2e-planner.md
     ├── e2e-generator.md
@@ -104,7 +106,7 @@ e2e/tests ──▶ AkapenAXID（だけ）
 | `LaunchConfiguration.swift` | 起動引数・環境変数を読んで値にする。純粋な関数（`[String: String]` → 設定値）。E2E で足りない・読めない値を `problems` に集める |
 | `LaunchSeed.swift` | `AKAPEN_SEED`（E2E の起動時の前提の JSON）を読む。純粋な関数 |
 | `AppEnvironment.swift` | `LaunchConfiguration` から使う実装を選び（`choose`。OS に触らない）、依存一式（`SessionModel` と各プロトコルの実装、ホットキー）を組み立てる（`make`）。起動時の処理（seed の設定、古い回の掃除、seed の注釈）もここ。`state.json` を書き出す |
-| `HotkeyCoordinator.swift` | グローバルなホットキー（ボタン類の表示のトグル）の登録を設定に合わせ続ける。記録欄が記録を待つ間は外す。記録欄に渡す「使えるか」の判定。ボタン類が出ているあいだの `⌘C` / `⌘L` はグローバルには登録しない |
+| `HotkeyCoordinator.swift` | グローバルなホットキー（ボタン類の表示のトグル）の登録を設定に合わせ続ける。記録欄が記録を待つ間は外す。記録欄に渡す「使えるか」の判定。ボタン類が出ているあいだの `⌘C` / `⌘L` / `⌘⌫` はグローバルには登録しない |
 | `AppController.swift` | 画面（メニューバー・メインメニュー・浮く部品・設定・セットアップ・終了の確認）を依存一式につなぐ。状態の遷移は判断しない |
 | `QuitPolicy.swift` | 終了の確認を出すか（確定済みの注釈か書きかけの注釈があるか）と、確認に出す件数 |
 | `PermissionCheckedCapturer.swift` | 許可がなければ撮影を断る包み。E2E の偽の撮影を、本物と同じく許可に従わせる |
@@ -166,13 +168,13 @@ Paper の画面と 1 対 1 で対応させる。色・文字サイズ・角丸�
 
 | ディレクトリ・ファイル | 中身 | Paper |
 | --- | --- | --- |
-| `Toolbar/` | 画面端のボタン類（「一覧」「copy prompt」。それぞれに `⌘` `L` / `⌘` `C` をキーのチップで添え、ツールチップでも示す。件数のバッジは「一覧」の右上の角に重ねる）。`ToolbarView` | App 01〜03 |
+| `Toolbar/` | 画面端のボタン類（「すべて消す」「一覧」「copy prompt」。それぞれに `⌘` `L` / `⌘` `C` をキーのチップで添え、ツールチップでも示す。件数のバッジは「一覧」の右上の角に重ねる）。`ToolbarView` | App 01〜03 |
 | `Draw/` | 案内の表示、赤枠、大きさの表示。`DrawHintView`・`RedFrameView`・`SizeLabelView`・`OverlayView` | App 01 |
 | `Comment/` | 枠の横の入力欄。`CommentView`、複数行の入力欄 `GrowingTextController`（一覧と設定の定型文でも使う） | App 02 |
 | `List/` | 注釈の一覧。`ListView`、サムネイルの切り抜き | App 03 |
 | `Copied/` | コピー完了の表示（緑のチェックと `Prompt copied!`。件数は読み上げの文言にだけ入れる）。出入りの動き（ばねで出て、チェックの印を描き、文言が続く。消えるときは縮んでぼける）はこの部品が付け、パネルは動きが終わってから外す。`CopiedView` | App 04 |
 | `MenuBar/` | メニューバーのアイコンとメニュー。制御役 `MenuBarController`、見出し `MenuHeaderView`。画面には出ないメインメニュー `MainMenuController`（`⌘Q`・`⌘,`・入力欄の編集のキー） | App 05 |
-| `QuitConfirm/` | 終了の確認。制御役 `QuitConfirmController`、確認の箱 `QuitConfirmView` | App 09 |
+| `QuitConfirm/` | 終了・全削除の確認。共通の `ConfirmationController`・`ConfirmationView` が暗転・動き・キー処理を担当し、`ConfirmationPurpose` で文言と識別子を選ぶ。`QuitConfirmController` は終了用途の窓口 | App 09 |
 | `Settings/` | 設定のウィンドウ。制御役 `SettingsController`、状態 `SettingsForm`、画面 `SettingsView` | App 06 |
 | `Setup/` | 初回のセットアップ。制御役 `SetupController`、状態 `SetupFlow`、画面 `SetupView` | App 07・08 |
 | `Common/` | 共通の部品。ボタンの見た目（`ControlButtonStyle`。ホバーの地の変化・押したときの縮み・指のカーソル）、ホバー中のカーソル（`hoverCursor(_:)`。`.activeAlways` の追跡領域で `NSCursor.set()` するので、アクティブでないパネルの上でも効く）、アイコン、文字のスタイルと影、キーの記録欄（`KeyRecorderModel` と、キー入力を受け取る `KeyCaptureView`。設定とセットアップで共通）、キーの表示（`ShortcutText`。キーボードの配列に従う）、小さなキーのチップと案内（`KeyChipsView` / `KeyHintView`。ボタン類・コメント入力・一覧の案内）、Paper の SVG のパスを描く `SVGPath` | — |
@@ -245,7 +247,7 @@ generator はこの一覧にある識別子だけを使う。足りないとき�
 | `listOpen` | `hidden` | `drawing`（編集中なら編集の取りやめだけ。`DECISIONS.md` A1。`SessionWindows` の入力欄が受ける） | — | — | `drawing` | 注釈があれば `copied` | `hidden` |
 | `copied` | 新しい回で `drawing` | — | — | — | — | — | — |
 
-- 入力は `send(_ event:)` の 1 本にまとめる（`hotkeyPressed` / `dragEnded(rect, screen)` / `commentConfirmed(text)` / `commentCancelled` / `escapePressed` / `listToggled` / `annotationEdited` / `annotationDeleted` / `copyPromptTapped` / `copiedExpired` / `dismissRequested` / `settingsChanged` / `setupCompleted`）。`annotationEdited` と `annotationDeleted` は `listOpen` のときだけ効く。
+- 入力は `send(_ event:)` の 1 本にまとめる（`hotkeyPressed` / `dragEnded(rect, screen)` / `commentConfirmed(text)` / `commentCancelled` / `escapePressed` / `listToggled` / `annotationEdited` / `annotationDeleted` / `annotationsCleared` / `copyPromptTapped` / `copiedExpired` / `dismissRequested` / `settingsChanged` / `setupCompleted`）。`annotationEdited` と `annotationDeleted` は `listOpen` のときだけ効く。`annotationsCleared` は注釈がある `drawing` / `listOpen` で注釈と画像を消し、状態を保つ。
 - `dismissRequested` は、設定やセットアップのウィンドウを開くときに組み立ての側が送る（画面全体を覆う面がウィンドウを隠さないように）。
 - 撮影・保存・クリップボードへの書き込みは、注入されたプロトコル越しに `SessionModel` が呼ぶ。だから一連の流れは `swift test` で、偽の実装を差して最後まで確かめられる。
 - **枠を描き終えてから入力欄が出るまでを待たせない。** 流れは次のとおり。
@@ -264,12 +266,13 @@ generator はこの一覧にある識別子だけを使う。足りないとき�
 
 | ウィンドウ | 種類 | 出ている間 |
 | --- | --- | --- |
-| 覆う面 | 画面全体を覆う枠なしのパネル。マウスを受け取り、カーソルを十字にする | ボタン類が出ているあいだ（`drawing`・`commenting`・`listOpen`）。枠を描くのは `drawing` だけで、キーになれるのも `drawing` だけ（`Esc`・`⌘C`・`⌘L` を受ける）。`commenting` では書きかけの赤枠を描く |
+| 覆う面 | 画面全体を覆う枠なしのパネル。マウスを受け取り、カーソルを十字にする | ボタン類が出ているあいだ（`drawing`・`commenting`・`listOpen`）。枠を描くのは `drawing` だけで、キーになれるのも `drawing` だけ（`Esc`・`⌘C`・`⌘L`・`⌘⌫` を受ける）。`commenting` では書きかけの赤枠を描く |
 | ボタン類 | 手前に浮く、アクティブ化しないパネル | `drawing`・`commenting`・`listOpen` |
 | コメント入力 | キー入力を受け取れる、アクティブ化しないパネル | `commenting` |
 | 一覧 | 手前に浮く、キー入力を受け取れるパネル（`Esc`・`⌘C`・`⌘L` を受ける。編集中の `⌘C` は入力欄の文字のコピー） | `listOpen` |
 | コピー完了の表示 | マウスを受け取らないパネル | `copied` |
 | 設定 / セットアップ | 通常のウィンドウ（`ContentWindow`。タイトルバーは透明で、信号ボタンだけシステムが描く）。開くとアプリを前面に出してキー入力を受け取る（前面に出せなくても、ウィンドウは手前に出す） | 開いている間 |
+| 全削除確認 | 終了確認と共通の暗転・キー入力を受けるパネル | `ConfirmationController.show` から答えが出るまで。ボタン類が隠れたとき・注釈が 0 件になったときは取り下げる |
 | 終了確認 | メニューバーより下の画面全体を暗くする、キー入力を受け取れるアクティブ化しないパネル（`.modalPanel`。覆う面より手前） | `QuitConfirmController.show` から答えが出るまで |
 | メニュー | 標準の `NSStatusItem` と `NSMenu`（見出しだけカスタムビュー） | アイコンは常に。メニューは開いている間 |
 | メインメニュー | `NSApp.mainMenu`（LSUIElement なので画面には出ない）。`⌘Q`・`⌘,`・入力欄の編集のキーを効かせる | 常に |
@@ -442,3 +445,7 @@ CI は当面置かない。置くときは `make test`・`make e2e-lint`・`make
 - 注釈はメモリにだけ持つ（起動し直すと 0 件。画像ファイルは日数による掃除まで残る）。
 - Apple Development 証明書で署名。チーム G5564YSC93。プロファイル要求・認証ダイアログはなく、アドホックへの切り替えなし。
 - E2E は Python 標準の fcntl.flock で同一リポジトリを排他制御し、Live 配下かどうかでクラスを選ぶ。全ログは build/logs、結果バンドルは build/e2e.xcresult。
+
+2026-11-19: `annotationsCleared` は drawing / listOpen で確定済みの注釈と画像を消し、phase は維持する。全削除の要求は `SessionWindows.onClearRequested` から `AppController` に渡し、確認の確定時だけモデルへ送る。確認はボタン類が隠れたとき・注釈が 0 件になったときに取り下げる。`SessionSnapshot.Windows.clearConfirm` に表示状態を出す。
+
+2026-11-20: 定型文は `Settings.customBoilerplate: String?` に 1 つだけ保持する。nil は言語の既定文への追従。`effectiveBoilerplate` からプロンプトを組み立て、空または現在の既定文の入力で nil に戻す。旧 `boilerplates` は保存言語の文だけを移行する。LaunchSeed は新旧両形式と明示的な null を受け付ける。`state.json` は `customBoilerplate`（null 可）と、互換用の `boilerplates`（en/ja の実効文）を両方出す。

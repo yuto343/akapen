@@ -6,8 +6,16 @@ public enum StringKey: String, CaseIterable, Sendable {
     case list
     /// 「Copy prompt」ボタン。
     case copyPrompt
+    /// 全削除のボタン。
+    case clearAll
+    /// 全削除のツールチップ。
+    case clearAllHelp
+    /// 全削除の確認の見出し。
+    case clearTitle
     /// 「List」ボタンのショートカットのキー `L`（`⌘` と並べてチップで出す）。
     case listShortcutKey
+    /// 全削除のショートカットの Delete キー。
+    case clearShortcutKey
     /// 「Copy prompt」ボタンのショートカットのキー `C`。
     case copyPromptShortcutKey
     /// キーのチップの `⌘`。
@@ -35,7 +43,6 @@ public enum StringKey: String, CaseIterable, Sendable {
     /// 案内の表示の `Drag to frame`。
     case drawHint
     /// 案内の表示の `esc to cancel`。
-    case drawCancel
     /// コメント入力のプレースホルダー。
     case commentPlaceholder
     /// 一覧の見出し。
@@ -105,7 +112,6 @@ public enum StringKey: String, CaseIterable, Sendable {
     /// セットアップ 2 ページ目の見出し `Allow Screen Recording`。
     case setupPermissionTitle
     /// セットアップ 2 ページ目の説明文。
-    case setupPermissionBody
     /// 許可の手順 1。
     case setupStepOpenSettings
     /// 許可の手順 2。
@@ -158,6 +164,8 @@ public enum PluralKey: String, CaseIterable, Sendable {
     case menuWaiting
     /// 終了確認の説明文（`2 annotations haven’t been copied yet.` と `They will be discarded.` の 2 行。資料の絵の改行の位置）。
     case quitMessage
+    /// 全削除の件数入りの説明。
+    case clearMessage
     /// 画像を残す日数の単位（`days`）。数は設定の日数。
     case retentionUnit
 }
@@ -183,6 +191,8 @@ public struct KeyHint: Equatable, Sendable {
 
 /// 1 つの言語の文言の表。
 protocol StringTable: Sendable {
+    func setupPermissionBody(path: String) -> String
+
     func text(_ key: StringKey) -> String
 
     func plural(_ key: PluralKey, count: Int) -> String
@@ -235,6 +245,11 @@ public struct UIStrings: Sendable {
         table.annotationMeta(appName: appName, time: time)
     }
 
+    /// 全削除のボタンに添えるショートカットのキー。
+    public var clearShortcutKeys: [String] {
+        [self[.keyCommand], self[.clearShortcutKey]]
+    }
+
     /// 「List」ボタンに添えるショートカットのキー（`⌘` `L`）。
     public var listShortcutKeys: [String] {
         [self[.keyCommand], self[.listShortcutKey]]
@@ -266,6 +281,11 @@ public struct UIStrings: Sendable {
     }
 
     /// 取りやめの案内（`esc` `Cancel`）。
+    /// 保存先を差し込んだ、画面収録の説明。
+    public func setupPermissionBody(path: String) -> String {
+        table.setupPermissionBody(path: path)
+    }
+
     public var cancelHint: KeyHint {
         KeyHint(keys: [self[.keyEscape]], label: self[.hintCancel])
     }
