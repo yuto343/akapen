@@ -3,7 +3,7 @@
   import { site, siteUrl } from '$lib/site';
   import Hero from './Hero.svelte';
   import SiteHeader from './SiteHeader.svelte';
-  import Demo from './Demo.svelte';
+  import DemoVideo from './DemoVideo.svelte';
   import SiteFooter from './SiteFooter.svelte';
   let { language }: { language: Language } = $props();
   const text = $derived(messages[language]);
@@ -20,11 +20,14 @@
   <link rel="alternate" hreflang="en" href={siteUrl('/')} />
   <link rel="alternate" hreflang="ja" href={siteUrl('/ja/')} />
   <link rel="alternate" hreflang="x-default" href={siteUrl('/')} />
+  {#if language === 'ja'}
+    <link rel="preload" href="/fonts/kiwi-maru-hand.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
+  {/if}
 </svelte:head>
 
 <SiteHeader {language} />
 <main>
   <Hero {language} />
-  <Demo {language} label={text.demoLabel} />
+  <DemoVideo {language} />
 </main>
 <SiteFooter {language} />

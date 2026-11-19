@@ -1,12 +1,14 @@
 <script lang="ts">
   import { messages, type Language } from '$lib/i18n';
   import KeyChip from './KeyChip.svelte';
-  let { label, language }: { label: string; language: Language } = $props();
+  // LP の動画（static/demo/）を撮るための絵。LP には直接置かず、scripts/record-demo.mjs が 1 コマずつ止めて撮る。
+  let { language }: { language: Language } = $props();
   const text = $derived(messages[language]);
+  const promptPath = '/Users/you/Library/Caches/akapen/20261117-1432/';
 </script>
 
 <div class="demo-section">
-  <div class="demo-container" role="img" aria-label={label}>
+  <div class="demo-container">
     <div aria-hidden="true">
     <div class="desktop">
 
@@ -15,7 +17,7 @@
         <svg style="width: calc(13 * var(--demo-unit)); height: calc(15 * var(--demo-unit))" viewBox="0 0 13 15">
           <path d="M10.6 8c0-1.9 1.6-2.8 1.6-2.9-.9-1.3-2.2-1.5-2.7-1.5-1.1-.1-2.2.7-2.8.7-.6 0-1.5-.7-2.4-.6C3 3.7 1.9 4.4 1.3 5.5 0 7.7 1 11 2.2 12.8c.6.9 1.3 1.8 2.2 1.8.9 0 1.2-.6 2.3-.6 1.1 0 1.4.6 2.3.6 1 0 1.6-.9 2.2-1.8.7-1 1-2 1-2.1 0 0-1.6-.6-1.6-2.7zM8.8 2.4c.5-.6.8-1.4.7-2.2-.7 0-1.6.5-2.1 1.1-.5.5-.9 1.4-.8 2.2.8.1 1.6-.4 2.2-1.1z" fill="#121214" />
         </svg>
-        <div class="menu-app">{text.demoApp}</div>
+        <div class="menu-app"><span class="menu-app-sample">{text.demoApp}</span><span class="menu-app-chat">{text.demoChatApp}</span></div>
         <div class="menu-file">{text.demoFile}</div>
         <div class="menu-edit">{text.demoEdit}</div>
         <div class="menu-view">{text.demoView}</div>
@@ -76,6 +78,42 @@
               <div class="submit-button">
                 <div class="submit-label">{text.demoSubmit}</div>
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 貼り付け先の AI チャット -->
+      <div class="chat-window">
+        <div class="titlebar">
+          <div class="traffic-close"></div>
+          <div class="traffic-minimize"></div>
+          <div class="traffic-zoom"></div>
+          <div class="window-title">{text.demoChatApp}</div>
+        </div>
+        <div class="chat-body">
+          <div class="chat-message">
+            <div class="chat-avatar"></div>
+            <div class="chat-lines">
+              <div class="chat-line-one"></div>
+              <div class="chat-line-two"></div>
+              <div class="chat-line-three"></div>
+            </div>
+          </div>
+          <div class="composer">
+            <div class="composer-placeholder">{text.demoChatPlaceholder}<span class="composer-caret"></span></div>
+            <div class="composer-text">
+              <div>{text.demoPromptIntro}</div>
+              <div>{text.demoPromptInstruction}</div>
+              <div class="prompt-gap"></div>
+              <div class="prompt-path">{promptPath}01.png</div>
+              <div>{text.demoEarlierComment}</div>
+              <div class="prompt-gap"></div>
+              <div class="prompt-path">{promptPath}02.png</div>
+              <div>{text.demoComment}</div>
+            </div>
+            <div class="send-button">
+              <svg viewBox="0 0 14 14"><path d="M7 11.5v-9M3 6.5l4-4 4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg>
             </div>
           </div>
         </div>
@@ -159,6 +197,9 @@
         </div>
       </div>
 
+      <!-- 貼り付けのキー操作 -->
+      <div class="paste-hud"><span class="paste-keys"><KeyChip dark>⌘</KeyChip><KeyChip dark>V</KeyChip></span><span>{text.demoPaste}</span></div>
+
       <!-- コピー完了とカーソルも絵の一部。読み上げは外側の説明にまとめる。 -->
       <div class="copied-toast">
         <div class="copied-pill">
@@ -183,8 +224,7 @@
 </div>
 
 <style>
-.demo-section { padding: 0 var(--page-gutter) var(--demo-bottom-space); }
-.demo-container { width: 100%; max-width: 1280px; aspect-ratio: 1280 / 800; margin-inline: auto; container-type: inline-size; }
+.demo-container { width: 100%; aspect-ratio: 1280 / 800; container-type: inline-size; }
 /* 1280×800 の絵は、線・影・文字を含めて同じ比率で縮める。 */
 .demo-container > div {
   --demo-unit: calc(100cqw / 1280);
@@ -748,13 +788,12 @@
   width: calc(28 * var(--demo-unit));
 }
 
-/* 動きを減らす設定や CSS アニメーション非対応時は、元の注釈済みの絵にする。 */
+/* 撮影用の絵。時間の流れはすべて下の @keyframes が決める。 */
 .comment-label { display: inline-block; position: relative; white-space: nowrap; }
 .typed-text { display: inline-block; }
 .caret { position: absolute; left: 100%; top: 0; }
 .count-badge { display: grid; }
 .count-label { grid-area: 1 / 1; }
-.count-one, .copied-toast, .demo-cursor { visibility: hidden; }
 .copied-toast {
   position: absolute;
   left: 50%;
@@ -792,88 +831,138 @@
 .crosshair-cursor { transform: translate(-50%, -50%); }
 .arrow-cursor { transform: translate(-16.667%, -8.333%); }
 
-@media (prefers-reduced-motion: no-preference) {
-  /* 12 秒: 待機 → ドラッグ → 入力 → 確定 → コピー → 完了 → 待機。 */
-  
-  .red-frame { transform-origin: top left; animation: draw-frame var(--demo-cycle) linear infinite; }
-  .comment { animation: show-comment var(--demo-cycle) var(--ease-spring) infinite; }
-  .typed-text { animation: type-comment var(--demo-cycle) var(--ease-out) infinite; }
-  .caret { animation: move-caret var(--demo-cycle) var(--ease-out) infinite, blink-caret var(--motion-caret) steps(1) infinite; }
-  .count-one { visibility: visible; animation: first-count var(--demo-cycle) steps(1) infinite; }
-  .count-two { animation: second-count var(--demo-cycle) steps(1) infinite; }
-  .count-badge { animation: count-bounce var(--demo-cycle) var(--ease-out) infinite; }
-  .toolbar { animation: show-toolbar var(--demo-cycle) var(--ease-spring) infinite; }
-  .guide-pill { animation: show-guide var(--demo-cycle) var(--ease-out) infinite; }
-  .red-frame::after { animation: frame-ring var(--demo-cycle) var(--ease-out) infinite; }
-  .copy-button { animation: press-copy var(--demo-cycle) var(--ease-out) infinite; }
-  .demo-cursor { visibility: visible; animation: move-cursor var(--demo-cycle) linear infinite; }
-  .crosshair-cursor { animation: crosshair-visible var(--demo-cycle) steps(1) infinite; }
-  .arrow-cursor { animation: arrow-visible var(--demo-cycle) steps(1) infinite; }
-  .copied-toast { visibility: visible; animation: show-copied var(--demo-cycle) var(--ease-out) infinite; }
-  .copied-check path { stroke-dasharray: 1; animation: draw-check var(--demo-cycle) var(--ease-out) infinite; }
-  .copied-label { animation: show-copied-label var(--demo-cycle) var(--ease-out) infinite; }
+/*
+  18 秒で 1 回だけ流す（--demo-cycle）。
+  0〜6.7%: 待機 → 15.3%: 枠を描き終える → 18.7〜32.7%: 入力 → 36.7%: 確定
+  → 47.7%: コピーを押す → 48.7〜62%: コピー完了 → 63〜67%: AI チャットへ切り替え
+  → 69%: 入力欄をクリック → 72.5%: ⌘V → 73%: 貼り付け → 100% まで止めて見せる。
+*/
+.red-frame { transform-origin: top left; animation: draw-frame var(--demo-cycle) linear both; }
+.comment { animation: show-comment var(--demo-cycle) var(--ease-spring) both; }
+.typed-text { animation: type-comment var(--demo-cycle) var(--ease-out) both; }
+.caret { animation: move-caret var(--demo-cycle) var(--ease-out) both, blink-caret var(--motion-caret) steps(1) infinite; }
+.count-one { animation: first-count var(--demo-cycle) steps(1) both; }
+.count-two { animation: second-count var(--demo-cycle) steps(1) both; }
+.count-badge { animation: count-bounce var(--demo-cycle) var(--ease-out) both; }
+.toolbar { animation: show-toolbar var(--demo-cycle) var(--ease-spring) both; }
+.guide-pill { animation: show-guide var(--demo-cycle) var(--ease-out) both; }
+.red-frame::after { animation: frame-ring var(--demo-cycle) var(--ease-out) both; }
+.copy-button { animation: press-copy var(--demo-cycle) var(--ease-out) both; }
+.demo-cursor { animation: move-cursor var(--demo-cycle) var(--ease-out) both; }
+.crosshair-cursor { animation: crosshair-visible var(--demo-cycle) steps(1) both; }
+.arrow-cursor { animation: arrow-visible var(--demo-cycle) steps(1) both, click-cursor var(--demo-cycle) var(--ease-out) both; }
+.copied-toast { animation: show-copied var(--demo-cycle) var(--ease-out) both; }
+.copied-check path { stroke-dasharray: 1; animation: draw-check var(--demo-cycle) var(--ease-out) both; }
+.copied-label { animation: show-copied-label var(--demo-cycle) var(--ease-out) both; }
+.menu-app-sample { animation: hide-at-switch var(--demo-cycle) steps(1) both; }
+.menu-app-chat { animation: show-at-switch var(--demo-cycle) steps(1) both; }
+.chat-window { animation: show-chat var(--demo-cycle) var(--ease-spring) both; }
+.composer { animation: focus-composer var(--demo-cycle) var(--ease-out) both, grow-composer var(--demo-cycle) var(--ease-spring) both; }
+.composer-placeholder { animation: hide-placeholder var(--demo-cycle) steps(1) both; }
+.composer-caret { animation: show-composer-caret var(--demo-cycle) steps(1) both, blink-caret var(--motion-caret) steps(1) infinite; }
+.composer-text { animation: paste-text var(--demo-cycle) var(--ease-out) both; }
+.paste-hud { animation: show-paste-hud var(--demo-cycle) var(--ease-out) both; }
+.paste-keys { animation: press-paste var(--demo-cycle) var(--ease-out) both; }
+.send-button { animation: enable-send var(--demo-cycle) var(--ease-out) both; }
 
-  @keyframes draw-frame {
-    0%, 10% { opacity: 0; transform: scale(0); }
-    10.1% { opacity: 1; transform: scale(0); }
-    23% { opacity: 1; transform: scale(1); }
-    24.5% { transform: scale(1.015); }
-    26%, 54.9% { opacity: 1; transform: scale(1); }
-    55%, 100% { opacity: 0; transform: scale(1); }
-  }
-  @keyframes show-comment {
-    0%, 24% { opacity: 0; transform: translateY(var(--demo-pop-shift)) scale(var(--motion-pop-scale)); filter: blur(var(--demo-pop-blur)); }
-    27% { opacity: 1; transform: translateY(0) scale(1.02); filter: blur(0); }
-    29%, 54.9% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
-    55%, 100% { opacity: 0; transform: translateY(0); }
-  }
-  @keyframes type-comment {
-    0%, 28% { clip-path: inset(0 100% 0 0); animation-timing-function: steps(29, end); }
-    49%, 100% { clip-path: inset(0 0 0 0); }
-  }
-  @keyframes move-caret {
-    0%, 28% { left: 0; animation-timing-function: steps(29, end); }
-    49%, 100% { left: 100%; }
-  }
-  @keyframes blink-caret { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-  @keyframes first-count { 0% { opacity: 1; } 55%, 100% { opacity: 0; } }
-  @keyframes second-count { 0% { opacity: 0; } 55%, 100% { opacity: 1; } }
-  @keyframes count-bounce { 0%, 54.9%, 59%, 100% { transform: scale(1); } 56% { transform: scale(1.25); } 57.5% { transform: scale(.94); } }
-  @keyframes show-toolbar {
-    0% { opacity: 0; transform: translateX(-50%) translateY(var(--demo-pop-shift)) scale(var(--motion-pop-scale)); filter: blur(var(--demo-pop-blur)); }
-    6%, 72.9% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); filter: blur(0); }
-    73%, 100% { opacity: 0; transform: translateX(-50%); }
-  }
-  @keyframes show-guide {
-    0% { opacity: 0; transform: translate(-50%, calc(-1 * var(--demo-pop-shift))); }
-    6%, 54% { opacity: 1; transform: translate(-50%, 0); }
-    56%, 100% { opacity: 0; transform: translate(-50%, 0); }
-  }
-  @keyframes frame-ring { 0%, 23% { opacity: 0; } 27%, 100% { opacity: 1; } }
-  @keyframes press-copy { 0%, 70%, 73%, 100% { transform: scale(1); } 71.5% { transform: scale(.95); } }
-  @keyframes move-cursor {
-    0%, 10% { left: calc(910 * var(--demo-unit)); top: calc(468 * var(--demo-unit)); opacity: 1; }
-    23%, 60% { left: calc(1114 * var(--demo-unit)); top: calc(524 * var(--demo-unit)); opacity: 1; }
-    69%, 72.9% { left: calc(750 * var(--demo-unit)); top: calc(760 * var(--demo-unit)); opacity: 1; }
-    73%, 100% { left: calc(750 * var(--demo-unit)); top: calc(760 * var(--demo-unit)); opacity: 0; }
-  }
-  @keyframes crosshair-visible { 0% { opacity: 1; } 60%, 100% { opacity: 0; } }
-  @keyframes arrow-visible { 0% { opacity: 0; } 60%, 100% { opacity: 1; } }
-  @keyframes show-copied {
-    0%, 73% { opacity: 0; transform: translate(-50%, calc(6 * var(--demo-unit))) scale(.9); filter: blur(calc(6 * var(--demo-unit))); }
-    76% { opacity: 1; transform: translate(-50%, 0) scale(1.03); filter: blur(0); }
-    78%, 91% { opacity: 1; transform: translate(-50%, 0) scale(1); filter: blur(0); }
-    93%, 100% { opacity: 0; transform: translate(-50%, 0) scale(.96); filter: blur(calc(4 * var(--demo-unit))); }
-  }
-  @keyframes draw-check { 0%, 74% { stroke-dashoffset: 1; } 77%, 100% { stroke-dashoffset: 0; } }
-  @keyframes show-copied-label {
-    0%, 74.3% { opacity: 0; transform: translateX(calc(-4 * var(--demo-unit))); }
-    77%, 100% { opacity: 1; transform: translateX(0); }
-  }
+@keyframes draw-frame {
+  0%, 6.67% { opacity: 0; transform: scale(0); }
+  6.73% { opacity: 1; transform: scale(0); }
+  15.33% { opacity: 1; transform: scale(1); }
+  16.33% { transform: scale(1.015); }
+  17.33%, 36.6% { opacity: 1; transform: scale(1); }
+  36.67%, 100% { opacity: 0; transform: scale(1); }
+}
+@keyframes show-comment {
+  0%, 16% { opacity: 0; transform: translateY(var(--demo-pop-shift)) scale(var(--motion-pop-scale)); filter: blur(var(--demo-pop-blur)); }
+  18% { opacity: 1; transform: translateY(0) scale(1.02); filter: blur(0); }
+  19.33%, 36.6% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+  36.67%, 100% { opacity: 0; transform: translateY(0); }
+}
+@keyframes type-comment {
+  0%, 18.67% { clip-path: inset(0 100% 0 0); animation-timing-function: steps(29, end); }
+  32.67%, 100% { clip-path: inset(0 0 0 0); }
+}
+@keyframes move-caret {
+  0%, 18.67% { left: 0; animation-timing-function: steps(29, end); }
+  32.67%, 100% { left: 100%; }
+}
+@keyframes blink-caret { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+@keyframes first-count { 0% { opacity: 1; } 36.67%, 100% { opacity: 0; } }
+@keyframes second-count { 0% { opacity: 0; } 36.67%, 100% { opacity: 1; } }
+@keyframes count-bounce { 0%, 36.6%, 39.33%, 100% { transform: scale(1); } 37.33% { transform: scale(1.25); } 38.33% { transform: scale(.94); } }
+@keyframes show-toolbar {
+  0% { opacity: 0; transform: translateX(-50%) translateY(var(--demo-pop-shift)) scale(var(--motion-pop-scale)); filter: blur(var(--demo-pop-blur)); }
+  4%, 48.6% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); filter: blur(0); }
+  48.67%, 100% { opacity: 0; transform: translateX(-50%); }
+}
+@keyframes show-guide {
+  0% { opacity: 0; transform: translate(-50%, calc(-1 * var(--demo-pop-shift))); }
+  4%, 36% { opacity: 1; transform: translate(-50%, 0); }
+  37.33%, 100% { opacity: 0; transform: translate(-50%, 0); }
+}
+@keyframes frame-ring { 0%, 15.33% { opacity: 0; } 18%, 100% { opacity: 1; } }
+@keyframes press-copy { 0%, 46.67%, 48.67%, 100% { transform: scale(1); } 47.67% { transform: scale(.95); } }
+@keyframes move-cursor {
+  0%, 6.67% { left: calc(910 * var(--demo-unit)); top: calc(468 * var(--demo-unit)); opacity: 1; animation-timing-function: linear; }
+  15.33%, 40% { left: calc(1114 * var(--demo-unit)); top: calc(524 * var(--demo-unit)); opacity: 1; }
+  46%, 63% { left: calc(750 * var(--demo-unit)); top: calc(760 * var(--demo-unit)); opacity: 1; }
+  68%, 71.9% { left: calc(560 * var(--demo-unit)); top: calc(648 * var(--demo-unit)); opacity: 1; }
+  72%, 100% { left: calc(560 * var(--demo-unit)); top: calc(648 * var(--demo-unit)); opacity: 0; }
+}
+@keyframes crosshair-visible { 0% { opacity: 1; } 40%, 100% { opacity: 0; } }
+@keyframes arrow-visible { 0% { opacity: 0; } 40%, 100% { opacity: 1; } }
+@keyframes click-cursor {
+  0%, 46.9%, 48.4%, 68.6%, 70.1%, 100% { scale: 1; }
+  47.5%, 69.2% { scale: .86; }
+}
+@keyframes show-copied {
+  0%, 48.67% { opacity: 0; transform: translate(-50%, calc(6 * var(--demo-unit))) scale(.9); filter: blur(calc(6 * var(--demo-unit))); }
+  50.67% { opacity: 1; transform: translate(-50%, 0) scale(1.03); filter: blur(0); }
+  52%, 60.67% { opacity: 1; transform: translate(-50%, 0) scale(1); filter: blur(0); }
+  62%, 100% { opacity: 0; transform: translate(-50%, 0) scale(.96); filter: blur(calc(4 * var(--demo-unit))); }
+}
+@keyframes draw-check { 0%, 49.33% { stroke-dashoffset: 1; } 51.33%, 100% { stroke-dashoffset: 0; } }
+@keyframes show-copied-label {
+  0%, 49.53% { opacity: 0; transform: translateX(calc(-4 * var(--demo-unit))); }
+  51.33%, 100% { opacity: 1; transform: translateX(0); }
+}
+@keyframes hide-at-switch { 0% { opacity: 1; } 64%, 100% { opacity: 0; } }
+@keyframes show-at-switch { 0% { opacity: 0; } 64%, 100% { opacity: 1; } }
+@keyframes show-chat {
+  0%, 63% { opacity: 0; transform: translateY(calc(28 * var(--demo-unit))) scale(.96); filter: blur(calc(8 * var(--demo-unit))); }
+  67% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+  100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+@keyframes focus-composer {
+  0%, 69% { box-shadow: var(--shadow-white), 0 0 0 0 transparent; }
+  70%, 100% { box-shadow: var(--shadow-white), 0 0 0 calc(3 * var(--demo-unit)) var(--color-red-halo); }
+}
+@keyframes grow-composer {
+  0%, 73% { height: var(--composer-closed); }
+  76%, 100% { height: var(--composer-open); }
+}
+@keyframes hide-placeholder { 0% { opacity: 1; } 73%, 100% { opacity: 0; } }
+@keyframes show-composer-caret { 0%, 69.2% { visibility: hidden; } 69.3% { visibility: visible; } 73%, 100% { visibility: hidden; } }
+@keyframes paste-text {
+  0%, 73% { opacity: 0; background-color: transparent; }
+  73.4% { opacity: 1; background-color: var(--color-paste-flash); }
+  80%, 100% { opacity: 1; background-color: transparent; }
+}
+@keyframes show-paste-hud {
+  0%, 70.5% { opacity: 0; transform: translate(-50%, var(--demo-pop-shift)) scale(var(--motion-pop-scale)); filter: blur(var(--demo-pop-blur)); }
+  72%, 77.5% { opacity: 1; transform: translate(-50%, 0) scale(1); filter: blur(0); }
+  79.5%, 100% { opacity: 0; transform: translate(-50%, 0) scale(.96); filter: blur(calc(4 * var(--demo-unit))); }
+}
+@keyframes press-paste { 0%, 72.4%, 73.6%, 100% { transform: scale(1); } 73% { transform: scale(.9); } }
+@keyframes enable-send {
+  0%, 73.4% { background: var(--color-clean-surface); color: var(--color-steel); box-shadow: none; transform: scale(1); }
+  75% { background: var(--surface-red); color: var(--color-clean-bg); box-shadow: var(--shadow-red); transform: scale(1.12); }
+  77%, 100% { background: var(--surface-red); color: var(--color-clean-bg); box-shadow: var(--shadow-red); transform: scale(1); }
 }
 
-.desktop { border-radius: var(--demo-radius); background: var(--surface-desktop); overflow: visible; box-shadow: var(--shadow-desktop); outline: var(--demo-border) solid var(--color-white-border); }
-.menubar { border-radius: var(--demo-radius) var(--demo-radius) 0 0; }
+/* 角丸・縁取り・影は LP の動画の枠（DemoVideo.svelte）が付ける。 */
+.desktop { border-radius: 0; background: var(--surface-desktop); box-shadow: none; }
 .guide-pill { position: absolute; left: 50%; top: var(--demo-guide-top); transform: translateX(-50%); display: flex; align-items: center; gap: var(--spacing-2); padding: var(--spacing-2) var(--spacing-4); border: var(--demo-fine-border) solid var(--color-white-border); border-radius: var(--radius-full); background: var(--surface-ink); box-shadow: var(--shadow-ink); color: var(--color-clean-bg); font-size: var(--demo-guide-font); white-space: nowrap; }
 .guide-dot { width: var(--demo-dot-size); height: var(--demo-dot-size); border-radius: var(--radius-full); background: var(--surface-red); box-shadow: 0 0 0 var(--demo-dot-ring) var(--color-red-halo); }
 .guide-cancel { color: var(--color-steel); font-size: var(--demo-hint-font); }
@@ -889,15 +978,81 @@
 .count-badge { outline: var(--demo-fine-border) solid var(--color-clean-bg); }
 .copied-pill { background: var(--surface-ink); box-shadow: var(--shadow-ink); }
 .copied-check { background: var(--color-success); }
-@supports (animation-timeline: view()) {
-  @media (prefers-reduced-motion: no-preference) {
-    .demo-section { view-timeline-name: --demo-flow; view-timeline-axis: block; }
-    .red-frame, .red-frame::after, .comment, .typed-text, .caret, .count-one, .count-two, .count-badge, .toolbar, .copy-button, .demo-cursor, .crosshair-cursor, .arrow-cursor, .copied-toast, .copied-check path, .copied-label, .guide-pill {
-      animation-timeline: --demo-flow;
-      animation-range: entry 30% exit 20%;
-      animation-iteration-count: 1;
-      animation-fill-mode: both;
-    }
-  }
+.menu-app { display: grid; }
+.menu-app > span { grid-area: 1 / 1; }
+.chat-window {
+  --composer-closed: calc(56 * var(--demo-unit));
+  --composer-open: calc(206 * var(--demo-unit));
+  position: absolute;
+  left: calc(250 * var(--demo-unit));
+  top: calc(92 * var(--demo-unit));
+  width: calc(780 * var(--demo-unit));
+  height: calc(612 * var(--demo-unit));
+  display: flex;
+  flex-direction: column;
+  overflow: clip;
+  border-radius: var(--radius-media);
+  background: var(--color-clean-bg);
+  box-shadow: #0000004D 0 0 0 calc(.5 * var(--demo-unit)), #00000059 0 calc(30 * var(--demo-unit)) calc(70 * var(--demo-unit));
+  transform-origin: 50% 100%;
 }
+.chat-body { position: relative; flex-grow: 1; background: var(--color-clean-surface); }
+.chat-message { display: flex; gap: var(--spacing-3); padding: calc(28 * var(--demo-unit)) calc(32 * var(--demo-unit)); }
+.chat-avatar { flex-shrink: 0; width: calc(28 * var(--demo-unit)); height: calc(28 * var(--demo-unit)); border-radius: var(--radius-full); background: var(--surface-ink); }
+.chat-lines { display: flex; flex-direction: column; gap: calc(10 * var(--demo-unit)); padding-top: calc(6 * var(--demo-unit)); }
+.chat-line-one, .chat-line-two, .chat-line-three { height: calc(8 * var(--demo-unit)); border-radius: calc(4 * var(--demo-unit)); background: #D1D1D6; }
+.chat-line-one { width: calc(420 * var(--demo-unit)); }
+.chat-line-two { width: calc(360 * var(--demo-unit)); }
+.chat-line-three { width: calc(240 * var(--demo-unit)); }
+.composer {
+  position: absolute;
+  left: calc(24 * var(--demo-unit));
+  right: calc(24 * var(--demo-unit));
+  bottom: calc(24 * var(--demo-unit));
+  height: var(--composer-closed);
+  overflow: clip;
+  border-radius: calc(18 * var(--demo-unit));
+  background: var(--color-clean-bg);
+  box-shadow: var(--shadow-white);
+  outline: calc(1 * var(--demo-unit)) solid var(--color-line);
+}
+.composer-placeholder {
+  position: absolute;
+  left: calc(20 * var(--demo-unit));
+  top: calc(18 * var(--demo-unit));
+  display: flex;
+  align-items: center;
+  color: var(--color-steel);
+  font-size: var(--text-sm);
+  line-height: calc(20 * var(--demo-unit));
+}
+.composer-caret { position: absolute; left: calc(-3 * var(--demo-unit)); width: calc(1.5 * var(--demo-unit)); height: calc(18 * var(--demo-unit)); background: var(--color-accent); }
+.composer-text {
+  position: absolute;
+  left: calc(14 * var(--demo-unit));
+  top: calc(12 * var(--demo-unit));
+  padding: calc(6 * var(--demo-unit));
+  border-radius: calc(6 * var(--demo-unit));
+  color: var(--color-ink);
+  font-size: calc(13 * var(--demo-unit));
+  line-height: calc(20 * var(--demo-unit));
+  white-space: nowrap;
+}
+.prompt-gap { height: calc(10 * var(--demo-unit)); }
+.prompt-path { color: var(--color-ink-2); font-family: var(--font-mono); font-size: calc(12 * var(--demo-unit)); }
+.send-button {
+  position: absolute;
+  right: calc(12 * var(--demo-unit));
+  bottom: calc(12 * var(--demo-unit));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(32 * var(--demo-unit));
+  height: calc(32 * var(--demo-unit));
+  border-radius: var(--radius-full);
+}
+.send-button svg { width: calc(14 * var(--demo-unit)); height: calc(14 * var(--demo-unit)); }
+.paste-hud { position: absolute; left: 50%; top: calc(724 * var(--demo-unit)); display: flex; align-items: center; gap: var(--spacing-3); padding: calc(10 * var(--demo-unit)) calc(18 * var(--demo-unit)) calc(10 * var(--demo-unit)) calc(12 * var(--demo-unit)); border: var(--demo-fine-border) solid var(--color-white-border); border-radius: var(--radius-full); background: var(--surface-ink); box-shadow: var(--shadow-ink); color: var(--color-clean-bg); font-size: calc(15 * var(--demo-unit)); font-weight: 500; white-space: nowrap; }
+.paste-keys { display: flex; gap: calc(3 * var(--demo-unit)); }
+.paste-keys :global(.key-chip) { height: calc(26 * var(--demo-unit)); min-width: calc(26 * var(--demo-unit)); font-size: calc(14 * var(--demo-unit)); border-radius: calc(7 * var(--demo-unit)); }
 </style>

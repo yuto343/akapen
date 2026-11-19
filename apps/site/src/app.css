@@ -34,7 +34,6 @@
   --author-caption-tracking: .04em;
   --author-name-size: 15px;
   --author-name-line-height: 18px;
-  --header-logo-height: 26px;
   --header-control-height: 36px;
   --hero-padding-top: 36px;
   --page-gutter: clamp(20px, calc(10vw - 64px), var(--spacing-shell));
@@ -44,7 +43,15 @@
   font-synthesis: none;
   -webkit-font-smoothing: antialiased;
 }
-:root:lang(ja) { --font-hand: "Yomogi", cursive; }
+:root:lang(ja) { --font-hand: "Kiwi Maru", cursive; }
+/* 日本語の手書き風の文に使う字だけを抜き出したサブセット。scripts/subset-hand-font.mjs が作る。 */
+@font-face {
+  font-family: "Kiwi Maru";
+  src: url("/fonts/kiwi-maru-hand.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
 * { box-sizing: border-box; }
 body { margin: 0; font-size: var(--text-label); line-height: 16px; }
 h1, p { margin: 0; }
@@ -63,6 +70,10 @@ a:focus-visible { outline: 2px solid var(--color-accent); outline-offset: var(--
   --color-accent-deep: #B81C1C;
   --color-marker: #F65A576B;
   --color-red-halo: #DC2B2B26;
+  --color-paste-flash: #0A64D224;
+  --color-poster-dim: #1C1C1F1F;
+  --shadow-play: 0 24px 48px -16px #1C1C2E80;
+  --shadow-play-hover: 0 30px 56px -14px #DC2B2B80;
   --color-success: #1F9D55;
   --color-white-border: #FFFFFFCC;
   --surface-ink: linear-gradient(180deg, #4A4A52, #1C1C1F);
@@ -90,13 +101,12 @@ a:focus-visible { outline: 2px solid var(--color-accent); outline-offset: var(--
   --hero-button-height: 68px;
   --hero-button-border: 4px;
   --hero-orb-size: 40px;
-  --header-button-border: 2px;
   --demo-bottom-space: 120px;
   --avatar-border: 12px;
   --avatar-size: 46px;
   --note-ja-size: 21px;
-  --note-ja-offset: 560px;
-  --note-ja-arrow-offset: 315px;
+  --note-ja-offset: 470px;
+  --note-ja-arrow-offset: 225px;
   --ease-out: cubic-bezier(.22, 1, .36, 1);
   --ease-spring: cubic-bezier(.22, 1, .36, 1);
   --motion-reveal: .7s;
@@ -107,13 +117,16 @@ a:focus-visible { outline: 2px solid var(--color-accent); outline-offset: var(--
   --motion-button-delay: 160ms;
   --motion-hover: .24s;
   --motion-caret: .7s;
-  --demo-cycle: 12s;
+  --demo-cycle: 18s;
   --motion-rise: 12px;
   --motion-blur: 6px;
   --motion-lift: -1px;
   --motion-arrow-shift: 2px;
   --motion-press-scale: .97;
   --motion-pop-scale: .92;
+  --motion-play-hover-scale: 1.08;
+  /* デモ動画の再生ボタンを、一度隠したら戻さないための遅れ（1 年）。 */
+  --play-overlay-return: 31536000s;
   background: #EEEFF1;
 }
 @supports (animation-timing-function: linear(0, 1)) {
@@ -124,7 +137,7 @@ body {
 }
 a { transition: transform var(--motion-hover) var(--ease-out), box-shadow var(--motion-hover) var(--ease-out); }
 a:hover { color: inherit; }
-.download-button:hover, .header-download:hover, .header-github:hover, .sponsors-link:hover, .kofi-link:hover, .x-link:hover, .github-link:hover { transform: translateY(var(--motion-lift)); box-shadow: var(--shadow-hover); }
+.download-button:hover, .header-github:hover, .sponsors-link:hover, .kofi-link:hover, .x-link:hover, .github-link:hover { transform: translateY(var(--motion-lift)); box-shadow: var(--shadow-hover); }
 a:active { transform: scale(var(--motion-press-scale)); }
 @keyframes hero-reveal {
   from { opacity: 0; transform: translateY(var(--motion-rise)); filter: blur(var(--motion-blur)); }
@@ -161,7 +174,7 @@ a:active { transform: scale(var(--motion-press-scale)); }
   --demo-pop-blur: calc(6 * var(--demo-unit));
 }
 
-.download-button:active, .header-download:active, .header-github:active, .sponsors-link:active, .kofi-link:active, .x-link:active, .github-link:active { transform: scale(var(--motion-press-scale)); }
+.download-button:active, .header-github:active, .sponsors-link:active, .kofi-link:active, .x-link:active, .github-link:active { transform: scale(var(--motion-press-scale)); }
 @media (prefers-reduced-motion: reduce) {
   a:hover, a:active, .download-button:hover .download-icon svg { transform: none !important; }
 }
