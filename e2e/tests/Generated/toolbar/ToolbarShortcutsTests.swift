@@ -1,5 +1,5 @@
 // spec: e2e/specs/toolbar/shortcuts.md
-// spec-sha256: da6974ac1c190bc744bf7781fdb97bc5e0fe22f877878040c1e40d327fd391b4
+// spec-sha256: 20e4e670c0b04cededb5821e1cc8e9ed1dd147523b67955e8ec0e518ecb2418e
 // このファイルは生成物。直接編集しない。md を直して e2e-generator で作り直す。
 
 import XCTest
@@ -32,10 +32,10 @@ final class ToolbarShortcutsTests: AkapenUITestCase {
         // 操作: ⌘C を押す。
         pressToolbarShortcut(.copyPrompt)
 
-        // 期待される結果: ボタン類が消え、コピーしたことと件数が分かる表示が出る。
+        // 期待される結果: ボタン類が消え、コピーしたことが分かる表示が出る。
         // （コピー完了の表示は一定時間で消えるので、押した直後に読む）
         let messageText = displayedText(AXID.Copied.message)
-        XCTAssertTrue(messageText.contains("2"), "コピーした件数が出ていない: \(messageText)")
+        XCTAssertFalse(messageText.isEmpty, "コピーしたことの表示に文言がない")
         waitForElementToDisappear(AXID.Toolbar.list)
 
         // 期待される結果: アプリの状態で、コピーを終えた状態になっており、注釈は 0 件、直前にコピーした件数は 2。

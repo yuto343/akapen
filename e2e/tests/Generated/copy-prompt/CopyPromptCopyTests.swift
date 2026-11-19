@@ -1,5 +1,5 @@
 // spec: e2e/specs/copy-prompt/copy.md
-// spec-sha256: 5fb3fb0767a396e53e199e76a5e930408ec706aee398bdc2722d5d71b36f90ef
+// spec-sha256: c4669f7d80b6d4b8aa811714c85bf2f5ac99be83416deb6c41f74b1f7ab101ea
 // このファイルは生成物。直接編集しない。md を直して e2e-generator で作り直す。
 
 import XCTest
@@ -73,9 +73,9 @@ final class CopyPromptCopyTests: AkapenUITestCase {
         // 操作: コピーする。
         tapCopyPrompt()
 
-        // 期待される結果: ボタン類が消え、コピーしたことと件数が分かる表示が出る。
+        // 期待される結果: ボタン類が消え、コピーしたことが分かる表示が出る。
         let message = displayedText(AXID.Copied.message)
-        XCTAssertTrue(message.contains("2"), "コピーした件数が表示にない: \(message)")
+        XCTAssertFalse(message.isEmpty, "コピーしたことの表示に文言がない")
         waitForElementToDisappear(AXID.Toolbar.list)
 
         // 期待される結果: アプリの状態で、コピーを終えた状態になっており、注釈は 0 件、直前にコピーした件数は 2、ボタン類は出ていない。
