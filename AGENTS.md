@@ -28,6 +28,13 @@
 
 ルートの make は `apps/mac/Makefile` への転送。Mac アプリのコマンド・相対パスは `apps/mac` を基準にする（同ディレクトリで直接実行もできる）。生成物は `apps/mac/build/` と `apps/mac/akapen.xcodeproj`。
 
+## リリースのコマンド（pnpm）
+
+| コマンド | 内容 |
+| --- | --- |
+| `pnpm release:mac <x.y.z> [--skip-notarize]` | 配布の成果物（Developer ID で署名・公証した zip、`appcast.xml`、Homebrew の cask）を `apps/mac/build/release/x.y.z/` に揃える。公開はしない。公証のプロファイル（環境変数 `AKAPEN_NOTARY_PROFILE`、既定 `akapen`）がなければ止まる。`--skip-notarize` で公証を飛ばせる（手元の確認用）。手順は `apps/mac/docs/RELEASE.md` |
+| `pnpm publish:mac <x.y.z>` | GitHub Release と Homebrew の tap に公開する。**ユーザーだけが走らせる。エージェントは走らせない** |
+
 ## site のコマンドと決まり
 
 - `pnpm install` — ルートで依存を入れる（pnpm 10）。
@@ -40,9 +47,9 @@
 
 ## コードの決まり（Mac アプリ）
 
-- Swift 6 の言語モード。警告を残さない。外部ライブラリは入れない。
+- Swift 6 の言語モード。警告を残さない。外部ライブラリは入れない。例外は Sparkle（アプリ内の更新。ユーザーが導入を頼んだ）だけで、依存は `AkapenPlatform` にだけ付け、`import Sparkle` は `AkapenPlatform/Update/` の中だけに置く。ほかのライブラリは引き続き入れない。
 - モジュールの依存は一方向（`apps/mac/ARCHITECTURE.md` の図）。`AkapenCore` はほかのモジュールに依存しない。
-- **OS に触るコードは `AkapenPlatform` にだけ置く。** 画面の撮影、クリップボード、ホットキー、ファイルの置き場、UserDefaults、時計、ログイン時の起動。使う側は `AkapenCore/Ports` のプロトコル越しに呼ぶ。
+- **OS に触るコードは `AkapenPlatform` にだけ置く。** 画面の撮影、クリップボード、ホットキー、ファイルの置き場、UserDefaults、時計、ログイン時の起動、更新の確認（Sparkle）。使う側は `AkapenCore/Ports` のプロトコル越しに呼ぶ。
 - **「テスト中かどうか」を見るのは `AkapenApp` の `LaunchConfiguration` と `AppEnvironment` だけ。** 画面やロジックの中で環境変数や起動引数を読まない。
 - **状態の遷移は `SessionModel` にだけ書く。** ウィンドウや画面は `phase` を映すだけで、次にどの状態へ行くかを判断しない。
 - **操作できる UI の要素には、必ず `AkapenAXID` の識別子を付ける。** 識別子の文字列をアプリ側やテスト側に直接書かない。

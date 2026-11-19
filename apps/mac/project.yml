@@ -24,8 +24,20 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.yuto343.akapen
+        # 版。pnpm release:mac <x.y.z> が両方を x.y.z で上書きする（Sparkle は CFBundleVersion で比べるので同じ値にそろえる）。
+        MARKETING_VERSION: 0.0.0
+        CURRENT_PROJECT_VERSION: 0.0.0
+        # 生成する Info.plist に、Sparkle の独自キー（SUFeedURL・SUPublicEDKey・SUEnableAutomaticChecks）を足す。
+        INFOPLIST_FILE: App/Info.plist
         INFOPLIST_KEY_LSUIElement: YES
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.productivity
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+      configs:
+        # 配布するビルド。Debug は Apple Development のまま（手元の画面収録の許可を保つため）。
+        Release:
+          CODE_SIGN_IDENTITY: Developer ID Application
+          ENABLE_HARDENED_RUNTIME: YES
+          OTHER_CODE_SIGN_FLAGS: --timestamp
     dependencies:
       - package: AkapenKit
         product: AkapenApp
@@ -57,7 +69,8 @@ schemes:
     build:
       targets:
         akapen: all
-        SampleTarget: all
+        # アーカイブ（pnpm release:mac）には入れない。
+        SampleTarget: [running, testing, profiling, analyzing]
         AkapenE2E: [test]
     test:
       targets: [AkapenE2E]

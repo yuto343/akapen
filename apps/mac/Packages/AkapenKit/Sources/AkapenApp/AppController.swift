@@ -109,6 +109,9 @@ import AkapenUI
         menuBar.onQuitRequested = {
             NSApp.terminate(nil)
         }
+        menuBar.onCheckForUpdates = { [weak self] in
+            self?.checkForUpdates()
+        }
         mainMenu.onOpenSettings = { [weak self] in
             self?.openSettings()
         }
@@ -198,6 +201,13 @@ import AkapenUI
     private func openSettings() {
         model.send(.dismissRequested)
         settingsWindow.show()
+        environment.writeState()
+    }
+
+    /// 更新を確かめる。設定を開くときと同じく、画面全体を覆う面が Sparkle の画面を隠さないように、先に浮く部品を下げる。
+    private func checkForUpdates() {
+        model.send(.dismissRequested)
+        environment.updater.checkForUpdates()
         environment.writeState()
     }
 

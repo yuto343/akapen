@@ -6,9 +6,10 @@ import AkapenPlatform
 ///
 /// どの実装を使うかは `LaunchConfiguration` だけで決める（`choose(_:)`）。
 /// - 本番: `UserDefaults.standard` の設定、`~/Library/Caches/akapen/` の画像、一般のクリップボード、ScreenCaptureKit の撮影、
-///   システムの時計、実際の画面収録の許可、実際のログイン時の起動。
+///   システムの時計、実際の画面収録の許可、実際のログイン時の起動、Sparkle による更新の確認。
 /// - E2E（`AKAPEN_E2E=1`）: 設定・画像・`state.json` はすべて `AKAPEN_STATE_DIR` の下。クリップボードは `AKAPEN_PASTEBOARD` の名前つき。
 ///   時計は `AKAPEN_NOW` があれば固定。ログイン時の起動は何もしない実装。撮影と許可は `AKAPEN_CAPTURE` で、`fixture`（既定）なら偽物、`live` なら本物。
+///   更新の確認は呼ばれた回数を数えるだけの実装（Sparkle を動かさず、ネットワークに出ない）。
 ///   ユーザーの設定・キャッシュ・一般のクリップボード・ログイン項目に触る実装は、E2E では 1 つも作らない。
 @MainActor public final class AppEnvironment {
     /// 選んだ実装。テストと診断のために、作った実装とは別に値で持つ。
@@ -53,6 +54,14 @@ import AkapenPlatform
             case noop
         }
 
+        /// 更新の確認。
+        public enum UpdaterKind: Equatable, Sendable {
+            /// `SparkleUpdateChecker`（作った時点で Sparkle が動き始め、定期的にネットワークへ確かめに出る）。
+            case sparkle
+            /// `CountingUpdateChecker`（呼ばれた回数を数えるだけ）。
+            case counting
+        }
+
         public var settings: SettingsStorage
         /// 画像の置き場の根。
         public var imagesDirectory: URL
@@ -60,6 +69,7 @@ import AkapenPlatform
         public var capture: Capture
         public var clock: ClockKind
         public var loginItem: LoginItemKind
+        public var updater: UpdaterKind
         /// `state.json` の書き出し先。nil なら書き出さない（本番）。
         public var stateFile: URL?
         /// 起動に失敗したときに理由を書く先。nil なら書かない（本番）。
@@ -93,6 +103,8 @@ import AkapenPlatform
     public let clock: any Clock
     public let permission: any ScreenRecordingPermission
     public let loginItem: any LoginItem
+    /// 更新の確認（メニューバーの「アップデートを確認…」）。
+    public let updater: any UpdateChecking
     /// グローバルなホットキー。押されたら `model` に `hotkeyPressed` を送る。登録は `apply(_:)` を呼んでから。
     public let hotkeys: HotkeyCoordinator
     /// 起動時の掃除（古い回のフォルダの削除）の失敗。起動は止めない。
@@ -122,6 +134,7 @@ import AkapenPlatform
         clock = dependencies.clock
         permission = dependencies.permission
         loginItem = dependencies.loginItem
+        updater = dependencies.updater
         stateWriter = choice.stateFile.map { AtomicStateWriter(url: $0) }
         hotkeys = HotkeyCoordinator(
             draw: CarbonHotkey(),
@@ -147,6 +160,7 @@ import AkapenPlatform
                 capture: .screenCaptureKit,
                 clock: .system,
                 loginItem: .system,
+                updater: .sparkle,
                 stateFile: nil,
                 startupErrorFile: nil
             )
@@ -163,6 +177,7 @@ import AkapenPlatform
             capture: configuration.capture == .live ? .screenCaptureKit : .fixture,
             clock: configuration.now.map(Choice.ClockKind.fixed) ?? .system,
             loginItem: .noop,
+            updater: .counting,
             stateFile: directory.appending(path: "state.json", directoryHint: .notDirectory),
             startupErrorFile: directory.appending(path: "startup-error.txt", directoryHint: .notDirectory)
         )
@@ -338,6 +353,7 @@ import AkapenPlatform
     let clock: any Clock
     let permission: any ScreenRecordingPermission
     let loginItem: any LoginItem
+    let updater: any UpdateChecking
 
     init(choice: AppEnvironment.Choice, seed: LaunchSeed) {
         switch choice.settings {
@@ -373,6 +389,12 @@ import AkapenPlatform
             loginItem = SystemLoginItem()
         case .noop:
             loginItem = NoopLoginItem()
+        }
+        switch choice.updater {
+        case .sparkle:
+            updater = SparkleUpdateChecker()
+        case .counting:
+            updater = CountingUpdateChecker()
         }
     }
 }

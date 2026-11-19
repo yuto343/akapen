@@ -118,6 +118,7 @@ struct StringsTests {
     func menuAndQuitConfirmMatchPaper() {
         #expect(english[.appName] == "akapen")
         #expect(english[.menuSettings] == "Settings…")
+        #expect(english[.menuCheckForUpdates] == "Check for Updates…")
         #expect(english[.menuQuit] == "Quit akapen")
         #expect(english[.menuNoAnnotations] == "No annotations")
         #expect(english[.quitTitle] == "Quit akapen?")
@@ -125,6 +126,7 @@ struct StringsTests {
         #expect(english[.quitCancel] == "Cancel")
         #expect(japanese[.appName] == "akapen")
         #expect(japanese[.menuSettings] == "設定…")
+        #expect(japanese[.menuCheckForUpdates] == "アップデートを確認…")
         #expect(japanese[.menuQuit] == "akapen を終了")
         #expect(japanese[.menuNoAnnotations] == "注釈はありません")
         #expect(japanese[.quitTitle] == "akapen を終了しますか？")

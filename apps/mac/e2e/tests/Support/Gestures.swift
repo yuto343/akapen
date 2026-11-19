@@ -462,7 +462,7 @@ enum MenuBarIconPress {
         guard AXIsProcessTrusted() else {
             return false
         }
-        guard let running = NSRunningApplication.runningApplications(withBundleIdentifier: bundleIdentifier).first else {
+        guard let running = applicationUnderTest(bundleIdentifier: bundleIdentifier) else {
             return false
         }
         let application = AXUIElementCreateApplication(running.processIdentifier)
@@ -478,6 +478,23 @@ enum MenuBarIconPress {
         let result = AXUIElementPerformAction(item, kAXPressAction as CFString)
         // メニューが開いて返りが遅れたとき（`cannotComplete`）も、押せたことにする（メニューが出たかは呼び出し側が待つ）。
         return result == .success || result == .cannotComplete
+    }
+
+    /// テストが起動した akapen。
+    ///
+    /// 同じバンドル ID の akapen がほかにも動いている（手元で普段使いの akapen を起動している、など）と、
+    /// そちらのアイコンを押してしまい、テストの akapen のメニューが開かない。
+    /// そこで、テストの実行役（AkapenE2E-Runner.app）と同じビルドの置き場にある akapen.app を選ぶ。見つからなければ、最後に起動したもの。
+    private static func applicationUnderTest(bundleIdentifier: String) -> NSRunningApplication? {
+        let candidates = NSRunningApplication.runningApplications(withBundleIdentifier: bundleIdentifier)
+        let products = Bundle.main.bundleURL.deletingLastPathComponent().resolvingSymlinksInPath()
+        let built = candidates.first { candidate in
+            candidate.bundleURL?.deletingLastPathComponent().resolvingSymlinksInPath() == products
+        }
+        if let built {
+            return built
+        }
+        return candidates.max { ($0.launchDate ?? .distantPast) < ($1.launchDate ?? .distantPast) }
     }
 
     private static func attribute(_ element: AXUIElement, _ name: String) -> CFTypeRef? {

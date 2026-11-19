@@ -19,10 +19,11 @@ public struct MenuBarStatus: Equatable, Sendable {
 
 /// メニューバーのアイコンとメニュー（App 05。標準の `NSStatusItem` と `NSMenu`。`DECISIONS.md` 9・14・16）。
 ///
-/// メニューの中身は、見出し（アイコン＋ `akapen` ＋注釈の件数）、区切り、`Settings…`（`⌘,`）、区切り、`Quit akapen`（`⌘Q`）。
+/// メニューの中身は、見出し（アイコン＋ `akapen` ＋注釈の件数）、区切り、`Settings…`（`⌘,`）、`Check for Updates…`、
+/// 区切り、`Quit akapen`（`⌘Q`）。
 /// 件数と言語はメニューを開くたびに読み直す。
-/// 項目が選ばれたら、コールバックで外に伝えるだけにする。自分では設定を開かず、アプリも終了しない
-/// （終了の確認を出すかどうかは組み立ての側が決める）。
+/// 項目が選ばれたら、コールバックで外に伝えるだけにする。自分では設定を開かず、更新も確かめず、アプリも終了しない
+/// （終了の確認を出すかどうか、更新を確かめる前に浮く部品を下げるかは組み立ての側が決める）。
 /// コールバックが入っていない項目は、使えない状態で出す。
 ///
 /// 持っている間はメニューバーにアイコンが出る。手放すとアイコンも消える。
@@ -41,10 +42,18 @@ public struct MenuBarStatus: Equatable, Sendable {
         }
     }
 
+    /// `Check for Updates…` が選ばれたとき。更新の確認（`UpdateChecking`）を呼ぶのは受け取った側。
+    public var onCheckForUpdates: (@MainActor () -> Void)? {
+        didSet {
+            updateItemStates()
+        }
+    }
+
     /// メニュー。
     let menu: NSMenu
     let headerView: NSHostingView<MenuHeaderView>
     let settingsItem: NSMenuItem
+    let checkForUpdatesItem: NSMenuItem
     let quitItem: NSMenuItem
     /// 最後に読んだ値。
     private(set) var status: MenuBarStatus
@@ -73,6 +82,7 @@ public struct MenuBarStatus: Equatable, Sendable {
         menu = NSMenu()
         headerView = NSHostingView(rootView: MenuHeaderView(annotationCount: initial.annotationCount, strings: strings))
         settingsItem = NSMenuItem(title: strings[.menuSettings], action: nil, keyEquivalent: ",")
+        checkForUpdatesItem = NSMenuItem(title: strings[.menuCheckForUpdates], action: nil, keyEquivalent: "")
         quitItem = NSMenuItem(title: strings[.menuQuit], action: nil, keyEquivalent: "q")
         super.init()
         buildMenu()
@@ -89,6 +99,7 @@ public struct MenuBarStatus: Equatable, Sendable {
         headerView.rootView = MenuHeaderView(annotationCount: status.annotationCount, strings: strings)
         headerView.frame = NSRect(origin: .zero, size: headerView.fittingSize)
         settingsItem.title = strings[.menuSettings]
+        checkForUpdatesItem.title = strings[.menuCheckForUpdates]
         quitItem.title = strings[.menuQuit]
         statusItem?.button?.setAccessibilityLabel(strings[.appName])
         updateItemStates()
@@ -117,6 +128,10 @@ public struct MenuBarStatus: Equatable, Sendable {
         settingsItem.action = #selector(openSettings(_:))
         settingsItem.setAccessibilityIdentifier(AXID.MenuBar.settings)
         menu.addItem(settingsItem)
+        checkForUpdatesItem.target = self
+        checkForUpdatesItem.action = #selector(checkForUpdates(_:))
+        checkForUpdatesItem.setAccessibilityIdentifier(AXID.MenuBar.checkForUpdates)
+        menu.addItem(checkForUpdatesItem)
         menu.addItem(.separator())
         quitItem.keyEquivalentModifierMask = .command
         quitItem.target = self
@@ -139,11 +154,16 @@ public struct MenuBarStatus: Equatable, Sendable {
 
     private func updateItemStates() {
         settingsItem.isEnabled = onOpenSettings != nil
+        checkForUpdatesItem.isEnabled = onCheckForUpdates != nil
         quitItem.isEnabled = onQuitRequested != nil
     }
 
     @objc private func openSettings(_ sender: Any?) {
         onOpenSettings?()
+    }
+
+    @objc private func checkForUpdates(_ sender: Any?) {
+        onCheckForUpdates?()
     }
 
     @objc private func requestQuit(_ sender: Any?) {

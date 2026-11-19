@@ -58,6 +58,8 @@ struct EnglishStrings: StringTable {
             "akapen"
         case .menuSettings:
             "Settings…"
+        case .menuCheckForUpdates:
+            "Check for Updates…"
         case .menuQuit:
             "Quit akapen"
         case .menuNoAnnotations:

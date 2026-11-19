@@ -58,6 +58,8 @@ struct JapaneseStrings: StringTable {
             "akapen"
         case .menuSettings:
             "設定…"
+        case .menuCheckForUpdates:
+            "アップデートを確認…"
         case .menuQuit:
             "akapen を終了"
         case .menuNoAnnotations:

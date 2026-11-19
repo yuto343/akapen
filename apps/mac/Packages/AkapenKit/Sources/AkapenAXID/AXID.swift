@@ -28,6 +28,8 @@ public enum AXID {
     /// MenuBar の操作対象。
     public enum MenuBar {
         public static let settings = "menuBar.settings"
+        /// `Check for Updates…`。
+        public static let checkForUpdates = "menuBar.checkForUpdates"
         public static let quit = "menuBar.quit"
         /// メニューバーのアイコン（`NSStatusItem` のボタン）。
         public static let icon = "menuBar.icon"

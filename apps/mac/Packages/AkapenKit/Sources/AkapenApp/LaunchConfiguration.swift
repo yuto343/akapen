@@ -5,6 +5,9 @@ import Foundation
 /// 読むのは `AKAPEN_E2E`・`AKAPEN_STATE_DIR`・`AKAPEN_PASTEBOARD`・`AKAPEN_CAPTURE`・`AKAPEN_SEED`・`AKAPEN_NOW` だけ。
 /// どの実装を使うかは `AppEnvironment` が決める。
 /// `AKAPEN_E2E=1` でないとき（本番）は、ほかの変数をすべて無視する。
+///
+/// 読むのは Debug の構成（`make run`・`make e2e`・`swift test`）だけ。Release の構成（配布するビルド）では
+/// 環境変数をひとつも見ず、`AKAPEN_E2E=1` を付けて起動しても本番として動く（`readsTestVariables`）。
 public struct LaunchConfiguration: Sendable, Equatable {
     /// 撮影の実装。
     public enum Capture: String, Sendable {
@@ -45,8 +48,33 @@ public struct LaunchConfiguration: Sendable, Equatable {
     /// 足りない・読めない値。E2E のときだけ数える（本番では空）。
     public let problems: [Problem]
 
+    /// このビルドが `AKAPEN_*` を読むか。Debug の構成では true、Release の構成では false。
+    public static let readsTestVariables: Bool = {
+        #if DEBUG
+        true
+        #else
+        false
+        #endif
+    }()
+
     /// 環境変数の辞書から作る。辞書のほかのプロセスの状態には触れない。
+    ///
+    /// Release の構成では辞書を読まず、本番の設定にする。
     public init(environment: [String: String]) {
+        self.init(environment: environment, readsTestVariables: Self.readsTestVariables)
+    }
+
+    /// `readsTestVariables` が false なら、辞書をひとつも読まずに本番の設定にする（Release の構成と同じ）。
+    init(environment: [String: String], readsTestVariables: Bool) {
+        guard readsTestVariables else {
+            self.init(testVariables: [:])
+            return
+        }
+        self.init(testVariables: environment)
+    }
+
+    /// 辞書の `AKAPEN_*` を読んで値にする。読んでよいかは呼び出す側（`init(environment:readsTestVariables:)`）が決める。
+    private init(testVariables environment: [String: String]) {
         var problems: [Problem] = []
         switch environment["AKAPEN_E2E"] {
         case nil, "0":

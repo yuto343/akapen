@@ -14,6 +14,15 @@ struct MenuBarTests {
         var status = MenuBarStatus(annotationCount: 2, language: .en)
     }
 
+    /// 呼ばれた回数を数える、偽の更新の確認。
+    private final class FakeUpdater: UpdateChecking {
+        var checkCount = 0
+
+        func checkForUpdates() {
+            checkCount += 1
+        }
+    }
+
     private func makeController(_ box: StatusBox) -> MenuBarController {
         MenuBarController(
             status: {
@@ -24,10 +33,10 @@ struct MenuBarTests {
     }
 
     @Test
-    func menuHasHeaderSettingsAndQuit() throws {
+    func menuHasHeaderSettingsUpdatesAndQuit() throws {
         let controller = makeController(StatusBox())
         let items = controller.menu.items
-        try #require(items.count == 5)
+        try #require(items.count == 6)
         #expect(items[0].view === controller.headerView)
         #expect(items[1].isSeparatorItem)
         #expect(items[2] === controller.settingsItem)
@@ -35,12 +44,37 @@ struct MenuBarTests {
         #expect(items[2].keyEquivalent == ",")
         #expect(items[2].keyEquivalentModifierMask == .command)
         #expect(items[2].accessibilityIdentifier() == AXID.MenuBar.settings)
-        #expect(items[3].isSeparatorItem)
-        #expect(items[4] === controller.quitItem)
-        #expect(items[4].title == "Quit akapen")
-        #expect(items[4].keyEquivalent == "q")
-        #expect(items[4].keyEquivalentModifierMask == .command)
-        #expect(items[4].accessibilityIdentifier() == AXID.MenuBar.quit)
+        #expect(items[3] === controller.checkForUpdatesItem)
+        #expect(items[3].title == "Check for Updates…")
+        #expect(items[3].keyEquivalent.isEmpty)
+        #expect(items[3].accessibilityIdentifier() == AXID.MenuBar.checkForUpdates)
+        #expect(items[4].isSeparatorItem)
+        #expect(items[5] === controller.quitItem)
+        #expect(items[5].title == "Quit akapen")
+        #expect(items[5].keyEquivalent == "q")
+        #expect(items[5].keyEquivalentModifierMask == .command)
+        #expect(items[5].accessibilityIdentifier() == AXID.MenuBar.quit)
+    }
+
+    @Test
+    func choosingCheckForUpdatesCallsTheUpdaterOnce() {
+        let controller = makeController(StatusBox())
+        let updater = FakeUpdater()
+        var otherCalls: [String] = []
+        controller.onOpenSettings = {
+            otherCalls.append("settings")
+        }
+        controller.onQuitRequested = {
+            otherCalls.append("quit")
+        }
+        controller.onCheckForUpdates = {
+            updater.checkForUpdates()
+        }
+        #expect(controller.checkForUpdatesItem.isEnabled)
+        controller.menu.performActionForItem(at: controller.menu.index(of: controller.checkForUpdatesItem))
+        #expect(updater.checkCount == 1)
+        // ほかの項目のコールバックは呼ばない。
+        #expect(otherCalls.isEmpty)
     }
 
     @Test
@@ -63,10 +97,13 @@ struct MenuBarTests {
     func itemsWithoutCallbacksAreDisabled() {
         let controller = makeController(StatusBox())
         #expect(!controller.settingsItem.isEnabled)
+        #expect(!controller.checkForUpdatesItem.isEnabled)
         #expect(!controller.quitItem.isEnabled)
         controller.onOpenSettings = {}
+        controller.onCheckForUpdates = {}
         controller.onQuitRequested = {}
         #expect(controller.settingsItem.isEnabled)
+        #expect(controller.checkForUpdatesItem.isEnabled)
         #expect(controller.quitItem.isEnabled)
     }
 
@@ -83,11 +120,13 @@ struct MenuBarTests {
         #expect(controller.headerView.rootView.annotationCount == 1)
         #expect(controller.headerView.rootView.strings.language == .ja)
         #expect(controller.settingsItem.title == "設定…")
+        #expect(controller.checkForUpdatesItem.title == "アップデートを確認…")
         #expect(controller.quitItem.title == "akapen を終了")
         box.status = MenuBarStatus(annotationCount: 0, language: .en)
         controller.menuNeedsUpdate(controller.menu)
         #expect(controller.headerView.rootView.annotationCount == 0)
         #expect(controller.settingsItem.title == "Settings…")
+        #expect(controller.checkForUpdatesItem.title == "Check for Updates…")
     }
 
     @Test

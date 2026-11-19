@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-import AkapenApp
+@testable import AkapenApp
 import AkapenCore
 import AkapenPlatform
 
@@ -28,6 +28,41 @@ struct ConfigurationTests {
         #expect(choice.capture == .screenCaptureKit)
         #expect(choice.clock == .system)
         #expect(choice.loginItem == .system)
+        #expect(choice.updater == .sparkle)
+        #expect(choice.stateFile == nil)
+        #expect(choice.startupErrorFile == nil)
+    }
+
+    @Test
+    func debugBuildReadsTestVariables() {
+        // swift test は Debug の構成なので、E2E の環境変数を読む（make run・make e2e と同じ）。
+        #expect(LaunchConfiguration.readsTestVariables)
+        var variables = e2e
+        variables["AKAPEN_NOW"] = "2026-11-18T05:32:10Z"
+        #expect(LaunchConfiguration(environment: variables) == LaunchConfiguration(environment: variables, readsTestVariables: true))
+    }
+
+    @Test
+    func releaseBuildIgnoresEveryTestVariable() throws {
+        // Release の構成と同じく読まないとき、AKAPEN_E2E=1 を付けても本番として動く。読めない値も問題にしない。
+        var variables = e2e
+        variables["AKAPEN_CAPTURE"] = "camera"
+        variables["AKAPEN_SEED"] = "{"
+        variables["AKAPEN_NOW"] = "yesterday"
+        let configuration = LaunchConfiguration(environment: variables, readsTestVariables: false)
+        #expect(configuration == LaunchConfiguration(environment: [:], readsTestVariables: true))
+        #expect(!configuration.isE2E)
+        #expect(configuration.problems.isEmpty)
+        #expect(configuration.stateDirectory == nil)
+        #expect(configuration.pasteboardName == nil)
+        #expect(configuration.seedJSON == nil)
+        #expect(configuration.now == nil)
+        let choice = try AppEnvironment.choose(configuration)
+        let production = try AppEnvironment.choose(LaunchConfiguration(environment: [:], readsTestVariables: true))
+        #expect(choice == production)
+        #expect(choice.settings == .userDefaults)
+        #expect(choice.pasteboard == .general)
+        #expect(choice.updater == .sparkle)
         #expect(choice.stateFile == nil)
         #expect(choice.startupErrorFile == nil)
     }
@@ -63,6 +98,7 @@ struct ConfigurationTests {
         #expect(choice.capture == .fixture)
         #expect(choice.clock == .fixed(Date(timeIntervalSince1970: 1_794_979_930)))
         #expect(choice.loginItem == .noop)
+        #expect(choice.updater == .counting)
         #expect(choice.stateFile == directory.appending(path: "state.json"))
         #expect(choice.startupErrorFile == directory.appending(path: "startup-error.txt"))
         // ユーザーの設定・キャッシュ・一般のクリップボード・ログイン項目を選ぶ経路がない。
@@ -70,6 +106,8 @@ struct ConfigurationTests {
         #expect(choice.imagesDirectory != FileImageStore.defaultRoot())
         #expect(choice.pasteboard != .general)
         #expect(choice.loginItem != .system)
+        // Sparkle を動かす経路がない（ネットワークに出ない）。
+        #expect(choice.updater != .sparkle)
     }
 
     @Test
@@ -121,6 +159,8 @@ struct ConfigurationTests {
         #expect(environment.permission is FixedScreenRecordingPermission)
         #expect(environment.permission.isGranted)
         #expect(environment.loginItem is NoopLoginItem)
+        #expect(environment.updater is CountingUpdateChecker)
+        #expect((environment.updater as? CountingUpdateChecker)?.checkCount == 0)
         #expect(environment.choice.pasteboard == .named(app.pasteboardName))
     }
 

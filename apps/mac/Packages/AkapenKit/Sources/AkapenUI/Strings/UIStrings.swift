@@ -59,6 +59,8 @@ public enum StringKey: String, CaseIterable, Sendable {
     case appName
     /// メニューの `Settings…`。
     case menuSettings
+    /// メニューの `Check for Updates…`（Sparkle の確認を走らせる）。
+    case menuCheckForUpdates
     /// メニューの `Quit akapen`。
     case menuQuit
     /// メニューの見出しの 2 行目（注釈が 0 件のとき。`DECISIONS.md` 20）。

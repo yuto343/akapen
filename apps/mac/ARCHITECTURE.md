@@ -25,10 +25,20 @@ akapen/
 │       ├── ARCHITECTURE.md
 │       ├── project.yml                     # XcodeGen の定義（.xcodeproj は生成物。コミットしない）
 │       ├── Makefile                        # gen / build / run / test / e2e / e2e-live / e2e-lint / clean
-│       ├── scripts/                        # e2e.py（E2E の実行と排他ロック）、xcode.sh（xcodebuild の呼び出し）
-│       ├── docs/FOUNDATION.md              # 公開 API、state.json v3、AKAPEN_SEED の形
+│       ├── scripts/
+│       │   ├── e2e.py                      # E2E の実行と排他ロック
+│       │   ├── xcode.sh                    # xcodebuild の呼び出し（Debug）
+│       │   ├── release.sh                  # pnpm release:mac：署名・公証した zip、appcast.xml、cask を build/release/<版>/ に揃える
+│       │   └── publish.sh                  # pnpm publish:mac：GitHub Release と tap に公開する（ユーザーだけが走らせる）
+│       ├── packaging/
+│       │   ├── ExportOptions.plist         # -exportArchive の設定（method: developer-id）
+│       │   └── homebrew/akapen.rb.template # Homebrew の cask の雛形（版と sha256 を pnpm release:mac が埋める）
+│       ├── docs/
+│       │   ├── FOUNDATION.md               # 公開 API、state.json v3、AKAPEN_SEED の形
+│       │   └── RELEASE.md                  # 配布の準備と、リリースのたびの手順、使う人向けのインストール
 │       ├── App/                            # アプリのターゲット（エントリだけ。ロジックを置かない）
 │       │   ├── main.swift                  # AkapenApp の AppDelegate を起こすだけ
+│       │   ├── Info.plist                  # 生成する Info.plist に足す Sparkle のキー（SUFeedURL・SUPublicEDKey・SUEnableAutomaticChecks）
 │       │   └── Assets.xcassets             # AppIcon（メニューバーのアイコンは AkapenUI/Resources）
 │       ├── Packages/AkapenKit/             # ローカルの Swift パッケージ
 │       │   ├── Package.swift
@@ -80,11 +90,15 @@ akapen/
 ### プロジェクトの定義
 
 - `.xcodeproj` は XcodeGen（`project.yml`）から生成し、コミットしない。ターゲットはディレクトリ単位でソースを拾うので、`Generated/` にファイルが増えても `make gen` を挟めばそのまま入る。`make e2e` は毎回 `make gen` を先に走らせる。
-- ターゲットは 3 つ。`akapen`（アプリ）、`SampleTarget`（撮影対象のアプリ）、`AkapenE2E`（UI テスト。`AkapenAXID` をリンクする）。
+- ターゲットは 3 つ。`akapen`（アプリ）、`SampleTarget`（撮影対象のアプリ）、`AkapenE2E`（UI テスト。`AkapenAXID` をリンクする）。アーカイブ（`pnpm release:mac`）に入るのは `akapen` だけ。
 - 単体テストは Xcode のターゲットにせず、パッケージの `swift test` で回す。
-- 署名は Apple Development 証明書で固定する（手元に有効な証明書が 2 つある）。アドホック署名だとビルドのたびに画面収録の許可が外れるため。
-- バンドル ID は仮に `com.yuto343.akapen`。
-- 対応 OS は仮に macOS 15 以降。
+- 署名は構成で分ける。
+  - Debug（`make build`・`make run`・`make e2e`）: Apple Development 証明書で固定する。アドホック署名だとビルドのたびに画面収録の許可が外れるため。
+  - Release（`pnpm release:mac`）: `Developer ID Application: <名前> (G5564YSC93)`、hardened runtime、`--timestamp`。`xcodebuild archive` のあと `-exportArchive`（`packaging/ExportOptions.plist`。`method: developer-id`）で書き出し、同梱の Sparkle.framework の中（`Autoupdate`・`Updater.app`・XPC サービス）まで同じ証明書で署名し直す。公証と staple もここで行う（`docs/RELEASE.md`）。
+- バンドル ID は `com.yuto343.akapen`（2026-11-20 に確定。配布を始めたので変えない）。
+- 対応 OS は macOS 15 以降（cask の `depends_on macos: ">= :sequoia"` と appcast の `sparkle:minimumSystemVersion` もこれに従う）。
+- 版は `project.yml` の `MARKETING_VERSION` と `CURRENT_PROJECT_VERSION`（手元のビルドは `0.0.0`）。`pnpm release:mac <x.y.z>` が両方を `x.y.z` で上書きする（Sparkle は `CFBundleVersion` で新旧を比べるので、同じ値にそろえる）。
+- Info.plist は生成する（`GENERATE_INFOPLIST_FILE`）。Sparkle の独自キーは `App/Info.plist` に書き、`INFOPLIST_FILE` で生成するものに足す。
 
 ## モジュール
 
@@ -94,6 +108,7 @@ akapen/
 App ──▶ AkapenApp ──▶ AkapenUI ──▶ AkapenCore
             │            └──────▶ AkapenAXID
             └───▶ AkapenPlatform ──▶ AkapenCore
+                         └──────▶ Sparkle（外部。更新の確認だけ）
 e2e/tests ──▶ AkapenAXID（だけ）
 ```
 
@@ -105,7 +120,7 @@ e2e/tests ──▶ AkapenAXID（だけ）
 | --- | --- |
 | `LaunchConfiguration.swift` | 起動引数・環境変数を読んで値にする。純粋な関数（`[String: String]` → 設定値）。E2E で足りない・読めない値を `problems` に集める |
 | `LaunchSeed.swift` | `AKAPEN_SEED`（E2E の起動時の前提の JSON）を読む。純粋な関数 |
-| `AppEnvironment.swift` | `LaunchConfiguration` から使う実装を選び（`choose`。OS に触らない）、依存一式（`SessionModel` と各プロトコルの実装、ホットキー）を組み立てる（`make`）。起動時の処理（seed の設定、古い回の掃除、seed の注釈）もここ。`state.json` を書き出す |
+| `AppEnvironment.swift` | `LaunchConfiguration` から使う実装を選び（`choose`。OS に触らない）、依存一式（`SessionModel` と各プロトコルの実装、ホットキー、更新の確認）を組み立てる（`make`）。起動時の処理（seed の設定、古い回の掃除、seed の注釈）もここ。`state.json` を書き出す |
 | `HotkeyCoordinator.swift` | グローバルなホットキー（ボタン類の表示のトグル）の登録を設定に合わせ続ける。記録欄が記録を待つ間は外す。記録欄に渡す「使えるか」の判定。ボタン類が出ているあいだの `⌘C` / `⌘L` / `⌘⌫` はグローバルには登録しない |
 | `AppController.swift` | 画面（メニューバー・メインメニュー・浮く部品・設定・セットアップ・終了の確認）を依存一式につなぐ。状態の遷移は判断しない |
 | `QuitPolicy.swift` | 終了の確認を出すか（確定済みの注釈か書きかけの注釈があるか）と、確認に出す件数 |
@@ -123,6 +138,7 @@ e2e/tests ──▶ AkapenAXID（だけ）
 - 設定とセットアップのキーの記録欄が記録を待つ間は、ホットキーの登録を外す。設定が変わるたびに、変わった役だけ登録し直す。
 - 画面収録の許可がないために撮影できなかったら、セットアップの 2 ページ目を開き、浮く部品を下げる入力（`dismissRequested`）を送る（画面全体を覆う面がセットアップのウィンドウを覆わないように）。
 - メニューバー・`⌘,` から設定を開くときも、先に `dismissRequested` を送る。ボタン類が出ているあいだは面が画面全体を覆うので、そのままでは設定のウィンドウを操作できない。
+- メニューバーの「アップデートを確認…」も、先に `dismissRequested` を送ってから `UpdateChecking.checkForUpdates()` を呼ぶ（Sparkle の画面が覆う面に隠れないように）。
 - 起動時に `BackgroundCursor.enable()`（`AkapenPlatform`）を呼び、アクティブでないままカーソルを変えられるようにする（下の「確かめた結果」12）。
 - 終了の確認を取りやめたら、キー入力を、いまの状態で受け取るべきパネル（覆う面・コメント欄・一覧）に戻す（`SessionWindows.restoreFocus()`）。
 - セットアップを終えたら、ログイン時の起動を有効にする（失敗しても続ける。E2E では何もしない実装）。
@@ -157,8 +173,9 @@ e2e/tests ──▶ AkapenAXID（だけ）
 | `ScreenRecordingPermission` | `CGPreflightScreenCaptureAccess` | 固定値（許可あり / なし）を返す |
 | `LoginItem` | `SMAppService` | 何もしない |
 | `Clock` | システムの時計 | 固定の時刻 |
+| `UpdateChecking`（更新の確認） | `SparkleUpdateChecker`（Sparkle の `SPUStandardUpdaterController`。作った時点で動き始め、裏で定期的に確かめる） | `CountingUpdateChecker`（呼ばれた回数を数えるだけ。ネットワークに出ない） |
 
-外部ライブラリは入れない。ホットキーの登録は Carbon の薄い包みで足り、記録用の入力欄は Paper のデザインに合わせて自前で作る。
+外部ライブラリは Sparkle（2.x、Swift Package）だけ。ユーザーがアプリ内の更新のために導入を頼んだ例外で、`AkapenKit/Package.swift` の `AkapenPlatform` にだけ依存を付け、`import Sparkle` は `AkapenPlatform/Update/` の中だけに置く。更新の画面は Sparkle の標準のまま（`Tokens` に合わせない）。ほかのライブラリは入れない。ホットキーの登録は Carbon の薄い包みで足り、記録用の入力欄は Paper のデザインに合わせて自前で作る。
 
 プロトコルの裏に置かないもの: `BackgroundCursor`（`AkapenPlatform`）。アクティブでないアプリのカーソルの変更を効かせるため、起動時に 1 回だけ、ウィンドウサーバーへの接続に `SetsCursorInBackground` を立てる（公開されていない関数を名前で探して呼び、見つからなければ何もしない）。`AppController.start()` が呼ぶ。
 
@@ -194,7 +211,7 @@ Paper の画面と 1 対 1 で対応させる。色・文字サイズ・角丸�
 
 | 制御役 | 作り方 | 主な API |
 | --- | --- | --- |
-| `MenuBarController` | `init(model:)` | `onOpenSettings`・`onQuitRequested`（コールバック。自分では設定を開かず、終了もしない）。件数と言語はメニューを開くたびに `model` から読み直す |
+| `MenuBarController` | `init(model:)` | `onOpenSettings`・`onCheckForUpdates`・`onQuitRequested`（コールバック。自分では設定を開かず、更新も確かめず、終了もしない）。件数と言語はメニューを開くたびに `model` から読み直す |
 | `QuitConfirmController` | `init(model:)`（言語だけを読む） | `show(annotationCount:)`、`hide()`、`isShown`、`onResult`（`.quit` / `.cancel`） |
 | `SettingsController` | `init(model:canUseHotkey:)` | `show()`、`close()`、`isShown`、`onRecordingChanged`、`onClosed`、`refresh()`（ほかの所で変わった設定を映す）。変更はその場で `model.send(.settingsChanged(_:))` |
 | `SetupController` | `init(model:permission:canUseHotkey:)` | `show()`、`showPermission()`（2 ページ目を開く）、`isShowingPermission`、`close()`、`isShown`、`refresh()`、`onCompleted`、`onDismissed`、`onRecordingChanged`。`Done` で `model.send(.setupCompleted)` |
@@ -352,7 +369,7 @@ ashvally の「保存されたデータ」に当たるものは 3 つ。各シ�
 
 E2E で必須の変数がない・値が読めない・seed が読めないときは、起動エラーにする（`AKAPEN_STATE_DIR/startup-error.txt` に理由を書いて終了する）。
 
-本番ビルドでもこの読み取りは残す（自分専用のあいだは問題にしない）。配布を始めるときに、デバッグビルド限定にするかを決める。
+この読み取りは Debug の構成（`make run`・`make e2e`・`swift test`）だけで行う（2026-11-20、配布を始めるときに決めた）。Release の構成（`pnpm release:mac` が作る配布のビルド）では、`LaunchConfiguration` が環境変数をひとつも見ずに本番の設定にする（`LaunchConfiguration.readsTestVariables` が `#if DEBUG` で決まる）。`AKAPEN_E2E=1` を付けて起動しても本番として動き、`state.json` も書かない。
 
 ### 起点と前提づくり
 
@@ -415,6 +432,8 @@ CI は当面置かない。置くときは `make test`・`make e2e-lint`・`make
 - 実際の画面収録（`ScreenCaptureKitCapturer`）。テストを走らせる側のプロセスに画面収録の許可が要るため
 - グローバルホットキーの登録が実際にキー入力を拾うか
 - ドラッグ・クリック・キー入力が、実物のウィンドウを通ってイベントになるか
+- Sparkle による実際の更新の確認（ネットワークに出るので、本物を相手にするテストは書かない。メニューの項目と、選ぶと `UpdateChecking` が呼ばれることを `AkapenUITests` で、E2E では偽物を選ぶことを `AkapenAppTests` で見る）
+- Release の構成（Developer ID の署名・公証・`AKAPEN_*` を読まないこと）。`pnpm release:mac` が確かめる（`docs/RELEASE.md`）
 
 ## 確かめた結果
 
@@ -436,6 +455,8 @@ CI は当面置かない。置くときは `make test`・`make e2e-lint`・`make
 
 13. **範囲の撮影（ScreenCaptureKit）: 実機で確認（2026-11-19、region-capture）。** 本番の `ScreenCaptureKitCapturer`・`CaptureRegion`・`FrameRenderer` をそのまま組み込んだ単独のプログラムで、外部ディスプレイ（5120×1440、倍率 1）と内蔵の Retina（1470×956、倍率 2）を撮った。画像の大きさはどちらも「範囲 × 倍率」ちょうど（例: 502×462pt → 502×462px / 1004×924px）で、縦横比は範囲と一致した。2 つのウィンドウの境目をまたぐ枠では両方を囲む範囲が撮れ、範囲に入ったほかのウィンドウとその影も画面のとおりに写った。`excludingDesktopWindows(true)` で取った `SCDisplay` の絞り込みでも、デスクトップの壁紙は写る（Dock と壁紙の持ち主以外を外して確かめた）。自分のアプリのウィンドウ（不透明のマゼンタ）は、自分のアプリを外した撮影で 0 画素、外さない撮影で 120000 画素だった。akapen が画面にウィンドウを出していないと `onScreenWindowsOnly: true` の一覧の `applications` に載らず、画面外も含めた一覧（約 100ms）には載る。1 回の撮影は 130〜300ms（範囲が広いほど長い）。
 
+14. **配布のビルド（Release）: 確認済み（2026-11-20、distribution）。** `pnpm release:mac 0.1.0 --skip-notarize` で、arm64 と x86_64 の `akapen.app` が `Developer ID Application`・hardened runtime・タイムスタンプ付きで署名され、`codesign --verify --deep --strict` が通った。Xcode のコピー時の署名は Sparkle.framework の外側だけを署名し、中の `Autoupdate`・`Updater.app`・XPC サービスはアドホックのまま残る。`-exportArchive`（developer-id）がそれらまで Developer ID で署名し直す。Sparkle 2.10.1 の `Autoupdate` は、Sparkle が付けた `com.apple.application-identifier` を持つが、プロファイルなしの Developer ID の署名でも AMFI に止められずに起動した。Release のアプリに `AKAPEN_E2E=1` と `AKAPEN_STATE_DIR` を付けて起動すると本番として動き、置き場に何も書かなかった（Debug のアプリは同じ環境変数で `state.json` を書いた）。本番として動いた Release のアプリは、起動してすぐに Sparkle が feed を確かめ、`SUHasLaunchedBefore`・`SULastCheckTime`（UserDefaults）と `~/Library/Caches/com.yuto343.akapen`・`~/Library/HTTPStorages/com.yuto343.akapen` を作った（cask の `zap` に入れた）。公証は、手元に notarytool のプロファイルがなく未確認。
+
 追加の検証: `make test` の `PanelTests` で NSApplication.shared を初期化し、AppKit の NSPanel を実際に生成して、状態ごとの表示・非表示、覆う面がマウスを受けるか・キーになれるか、隠したあとに中身が空に戻ること、nonactivatingPanel を確認している。テスト後はパネルを外す。画面のあるローカルセッションが必要で、ヘッドレス CI の保証はしていない。
 
 ## 実装の境界
@@ -443,7 +464,7 @@ CI は当面置かない。置くときは `make test`・`make e2e-lint`・`make
 - 公開 API と JSON の形（`state.json` v3、`AKAPEN_SEED`）は `docs/FOUNDATION.md` と各型の日本語ドキュメントコメントを参照。
 - 本番の設定は `UserDefaults.standard` のキー `settings`（JSON）。書き出しは `StateWriting` → `AtomicStateWriter`。App が JSON を組み立て、Platform がファイルに原子的に保存する。
 - 注釈はメモリにだけ持つ（起動し直すと 0 件。画像ファイルは日数による掃除まで残る）。
-- Apple Development 証明書で署名。チーム G5564YSC93。プロファイル要求・認証ダイアログはなく、アドホックへの切り替えなし。
+- Debug は Apple Development、Release は Developer ID Application の証明書で署名。チーム G5564YSC93。プロファイル要求・認証ダイアログはなく、アドホックへの切り替えなし。
 - E2E は Python 標準の fcntl.flock で同一リポジトリを排他制御し、Live 配下かどうかでクラスを選ぶ。全ログは build/logs、結果バンドルは build/e2e.xcresult。
 
 2026-11-19: `annotationsCleared` は drawing / listOpen で確定済みの注釈と画像を消し、phase は維持する。全削除の要求は `SessionWindows.onClearRequested` から `AppController` に渡し、確認の確定時だけモデルへ送る。確認はボタン類が隠れたとき・注釈が 0 件になったときに取り下げる。`SessionSnapshot.Windows.clearConfirm` に表示状態を出す。
