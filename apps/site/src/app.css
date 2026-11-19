@@ -1,0 +1,167 @@
+:root {
+  color-scheme: light;
+  --color-ink: #121214;
+  --color-ink-2: #4A4A50;
+  --color-steel: #62626A;
+  --color-line: #1212141F;
+  --color-accent: #FF3E3E;
+  --color-accent-deep: #C62828;
+  --color-clean-bg: #FFFFFF;
+  --color-clean-surface: #F5F5F7;
+  --text-label: 12px;
+  --text-sm: 14px;
+  --text-base: 17px;
+  --text-xl: 20px;
+  --tracking-label: .02em;
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 20px;
+  --spacing-6: 24px;
+  --spacing-10: 40px;
+  --spacing-16: 64px;
+  --spacing-shell: 80px;
+  --radius-field: 8px;
+  --radius-media: 12px;
+  --radius-full: 999px;
+  --font-sans: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --font-hand: "Caveat", cursive;
+  --author-name-gap: 2px;
+  --author-caption-size: 11px;
+  --author-caption-line-height: 14px;
+  --author-caption-tracking: .04em;
+  --author-name-size: 15px;
+  --author-name-line-height: 18px;
+  --header-logo-height: 26px;
+  --header-control-height: 36px;
+  --hero-padding-top: 36px;
+  --page-gutter: clamp(20px, calc(10vw - 64px), var(--spacing-shell));
+  font-family: var(--font-sans);
+  color: var(--color-ink);
+  background: var(--color-clean-bg);
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+}
+:root:lang(ja) { --font-hand: "Yomogi", cursive; }
+* { box-sizing: border-box; }
+body { margin: 0; font-size: var(--text-label); line-height: 16px; }
+h1, p { margin: 0; }
+a { color: inherit; text-decoration: none; }
+a:hover { color: var(--color-accent-deep); }
+a:focus-visible { outline: 2px solid var(--color-accent); outline-offset: var(--spacing-1); }
+[aria-current='page'] { text-decoration: underline; text-underline-offset: var(--spacing-1); }
+
+/* Soft Glass / Ink + Red の共通トークン。デモ内の寸法は縮尺単位で評価する。 */
+:root {
+  --color-heading: #121214;
+  --color-ink: #1C1C1F;
+  --color-ink-2: #5A5A60;
+  --color-steel: #8E8E94;
+  --color-accent: #DC2B2B;
+  --color-accent-deep: #B81C1C;
+  --color-marker: #F65A576B;
+  --color-red-halo: #DC2B2B26;
+  --color-success: #1F9D55;
+  --color-white-border: #FFFFFFCC;
+  --surface-ink: linear-gradient(180deg, #4A4A52, #1C1C1F);
+  --surface-red: linear-gradient(180deg, #F65A57, #DC2B2B);
+  --surface-glass: linear-gradient(180deg, #FFFFFFB8, #FFFFFF8C);
+  --surface-white: linear-gradient(180deg, #FFF, #FFFFFFD9);
+  --surface-desktop: linear-gradient(145deg, #EEF0F5, #DDE4EF 55%, #EBDFE6);
+  --shadow-ink: inset 0 1px 0 #FFFFFF47, inset 0 -12px 20px -12px #FFFFFF1F, 0 22px 44px -16px #1C1C2E80;
+  --shadow-red: inset 0 1px 0 #FFFFFF8C, 0 4px 12px -2px #DC2B2BA6;
+  --shadow-glass: inset 0 1px 0 #FFF, inset 0 0 0 1px #FFFFFFB3, 0 24px 48px -20px #1C1C2E4D, 0 2px 8px -2px #1C1C2E14;
+  --shadow-white: inset 0 -1px 0 #1C1C2E0A, 0 4px 10px -6px #1C1C2E33;
+  --shadow-hover: inset 0 1px 0 #FFFFFF47, 0 12px 28px -10px #1C1C2E4D;
+  --shadow-desktop: 0 48px 80px -32px #1C1C2E66;
+  --glass-blur: 24px;
+  --spacing-8: 32px;
+  --header-language-padding: 6px;
+  --hero-mobile-phrase-gap: 44px;
+  --note-mobile-ja-size: clamp(14px, 4vw, 21px);
+  --hero-logo-width: 820px;
+  --hero-title-size: clamp(36px, 5vw, 72px);
+  --hero-title-line: 1.06;
+  --hero-note-size: 18px;
+  --hero-note-space: 30px;
+  --hero-bottom-space: 72px;
+  --hero-button-height: 68px;
+  --hero-button-border: 4px;
+  --hero-orb-size: 40px;
+  --header-button-border: 2px;
+  --demo-bottom-space: 120px;
+  --avatar-border: 12px;
+  --avatar-size: 46px;
+  --note-ja-size: 21px;
+  --note-ja-offset: 560px;
+  --note-ja-arrow-offset: 315px;
+  --ease-out: cubic-bezier(.22, 1, .36, 1);
+  --ease-spring: cubic-bezier(.22, 1, .36, 1);
+  --motion-reveal: .7s;
+  --motion-stagger: 80ms;
+  --motion-marker: .45s;
+  --motion-marker-delay: .6s;
+  --motion-note-delay: 1.05s;
+  --motion-button-delay: 160ms;
+  --motion-hover: .24s;
+  --motion-caret: .7s;
+  --demo-cycle: 12s;
+  --motion-rise: 12px;
+  --motion-blur: 6px;
+  --motion-lift: -1px;
+  --motion-arrow-shift: 2px;
+  --motion-press-scale: .97;
+  --motion-pop-scale: .92;
+  background: #EEEFF1;
+}
+@supports (animation-timing-function: linear(0, 1)) {
+  :root { --ease-spring: linear(0, .35 12%, .8 26%, 1.04 42%, 1.02 62%, .998 82%, 1); }
+}
+body {
+  background: radial-gradient(ellipse at 90% 8%, #FCDCDB99, transparent 60%), radial-gradient(ellipse at 0% 28%, #FFFFFFF0, transparent 65%), radial-gradient(ellipse at 50% 58%, #E3E9F2CC, transparent 65%);
+}
+a { transition: transform var(--motion-hover) var(--ease-out), box-shadow var(--motion-hover) var(--ease-out); }
+a:hover { color: inherit; }
+.download-button:hover, .header-download:hover, .header-github:hover, .sponsors-link:hover, .kofi-link:hover, .x-link:hover, .github-link:hover { transform: translateY(var(--motion-lift)); box-shadow: var(--shadow-hover); }
+a:active { transform: scale(var(--motion-press-scale)); }
+@keyframes hero-reveal {
+  from { opacity: 0; transform: translateY(var(--motion-rise)); filter: blur(var(--motion-blur)); }
+  to { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+@keyframes marker-reveal {
+  from { clip-path: polygon(0 9%, 0 9%, 0 100%, 0 100%); }
+  to { clip-path: polygon(0 9%, 96% 0, 100% 92%, 3% 100%); }
+}
+@media (max-width: 767px) {
+  :root { --hero-note-size: 14px; --hero-title-size: clamp(32px, 6.7vw, 50px); --demo-bottom-space: 60px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+.demo-container > div {
+  --demo-radius: calc(32 * var(--demo-unit));
+  --demo-border: calc(8 * var(--demo-unit));
+  --demo-fine-border: calc(2 * var(--demo-unit));
+  --demo-guide-top: calc(44 * var(--demo-unit));
+  --demo-guide-font: calc(13 * var(--demo-unit));
+  --demo-hint-font: calc(11 * var(--demo-unit));
+  --demo-dot-size: calc(8 * var(--demo-unit));
+  --demo-dot-ring: calc(3 * var(--demo-unit));
+  --demo-frame-radius: calc(10 * var(--demo-unit));
+  --demo-frame-ring: calc(4 * var(--demo-unit));
+  --demo-comment-radius: calc(20 * var(--demo-unit));
+  --demo-toolbar-top: calc(736 * var(--demo-unit));
+  --demo-toolbar-padding: calc(7 * var(--demo-unit));
+  --demo-button-height: calc(38 * var(--demo-unit));
+  --demo-key-gap: calc(2 * var(--demo-unit));
+  --demo-icon-size: calc(14 * var(--demo-unit));
+  --demo-pop-shift: calc(12 * var(--demo-unit));
+  --demo-pop-blur: calc(6 * var(--demo-unit));
+}
+
+.download-button:active, .header-download:active, .header-github:active, .sponsors-link:active, .kofi-link:active, .x-link:active, .github-link:active { transform: scale(var(--motion-press-scale)); }
+@media (prefers-reduced-motion: reduce) {
+  a:hover, a:active, .download-button:hover .download-icon svg { transform: none !important; }
+}
