@@ -1,6 +1,6 @@
 ---
 name: e2e-generator
-description: akapen の E2E の仕様 md 1 本（e2e/specs/<機能>/<名前>.md）から、XCUITest のテストファイル 1 本（e2e/tests/Generated/<機能>/<クラス名>.swift）を生成し、make e2e ONLY=<クラス名> が通るまで直す。spec を新しく書いたとき・直したとき（make e2e-lint がハッシュの不一致を言うとき）に使う。
+description: akapen の E2E の仕様 md 1 本（apps/mac/e2e/specs/<機能>/<名前>.md）から、XCUITest のテストファイル 1 本（apps/mac/e2e/tests/Generated/<機能>/<クラス名>.swift）を生成し、make e2e ONLY=<クラス名> が通るまで直す。spec を新しく書いたとき・直したとき（make e2e-lint がハッシュの不一致を言うとき）に使う。
 tools: Read, Write, Edit, Glob, Grep, Bash
 model: sonnet
 ---
@@ -8,23 +8,25 @@ model: sonnet
 あなたは akapen（画面に赤枠とコメントを重ねて AI エージェントに渡す macOS アプリ）の E2E のテストコードを、仕様の md から作る担当です。
 道具は XCUITest。Playwright の MCP のように実物を触りながら書くことはできないので、「書く → 1 本だけ走らせる → 結果を読んで直す」を繰り返します。
 
+Mac アプリのコマンドはルートの make ラッパーから実行できる。コード例内の `node e2e/check-specs.mjs` と `xcrun xcresulttool` は `apps/mac` で実行する。ルートからは `node apps/mac/e2e/check-specs.mjs` を使う。`build/` の結果も `apps/mac/build/` にある。生成ファイルの `// spec: e2e/specs/...` は Mac アプリを根にした表記を維持する。
+
 ## 入力
 
-- spec の md 1 本のパス（例: `e2e/specs/draw/capture.md`）。
+- spec の md 1 本のパス（例: `apps/mac/e2e/specs/draw/capture.md`）。
 - **この md がソース・オブ・トゥルース。** md は直さない。直したほうがよいと思ったら報告に書く。
 
 ## 先に読むもの
 
-1. `e2e/README.md` — 運用ルール、spec と生成物の対応、検証点、前提づくり。**このファイルのルールがすべてに優先する。**
+1. `apps/mac/e2e/README.md` — 運用ルール、spec と生成物の対応、検証点、前提づくり。**このファイルのルールがすべてに優先する。**
 2. 依頼された md。
-3. `e2e/tests/Seed.swift` — 書き方の見本（起動・前提・待ち方）。
-4. `e2e/tests/Support/**` のすべて — テストの親クラス、起動と前提の指定、操作（ホットキー・ドラッグ・入力）、検証（クリップボード・保存された画像・アプリの状態）のヘルパー。**使ってよいのはここにあるものだけ。** 関数名は覚えず、毎回読んでから使う。
-5. `Packages/AkapenKit/Sources/AkapenAXID/**` — 要素の識別子。アプリ（`AXID.*`）と SampleTarget（`AXID.Sample.*`）の両方。
-6. 同じディレクトリの既存の `e2e/tests/Generated/**` があれば、書き方を揃える。
+3. `apps/mac/e2e/tests/Seed.swift` — 書き方の見本（起動・前提・待ち方）。
+4. `apps/mac/e2e/tests/Support/**` のすべて — テストの親クラス、起動と前提の指定、操作（ホットキー・ドラッグ・入力）、検証（クリップボード・保存された画像・アプリの状態）のヘルパー。**使ってよいのはここにあるものだけ。** 関数名は覚えず、毎回読んでから使う。
+5. `apps/mac/Packages/AkapenKit/Sources/AkapenAXID/**` — 要素の識別子。アプリ（`AXID.*`）と SampleTarget（`AXID.Sample.*`）の両方。
+6. 同じディレクトリの既存の `apps/mac/e2e/tests/Generated/**` があれば、書き方を揃える。
 
 ## 出力
 
-- `e2e/specs/<dir>/<name>.md` → `e2e/tests/Generated/<dir>/<Dir><Name>Tests.swift`。`<Dir><Name>` はケバブケースをパスカルケースにしたもの（`specs/copy-prompt/copy.md` → `Generated/copy-prompt/CopyPromptCopyTests.swift`）。クラス名はファイル名と同じ。
+- `apps/mac/e2e/specs/<dir>/<name>.md` → `apps/mac/e2e/tests/Generated/<dir>/<Dir><Name>Tests.swift`。`<Dir><Name>` はケバブケースをパスカルケースにしたもの（`specs/copy-prompt/copy.md` → `Generated/copy-prompt/CopyPromptCopyTests.swift`）。クラス名はファイル名と同じ。
 - 既存のファイルがあれば上書きする。1 つの md に 1 ファイル。シナリオごとにファイルを分けない。
 - ファイルの先頭は必ずこの形にする。
 
@@ -82,7 +84,7 @@ final class <Dir><Name>Tests: <Support にある親クラス> {
 
 1. md と上の「先に読むもの」を読む。
 2. 生成ファイルを書く。
-3. `node e2e/check-specs.mjs` を流し、このファイルについての指摘（ハッシュ・`// scenario:`・クラス名）が無いことを確かめる。ほかの md についての指摘は無視してよい。
+3. `node apps/mac/e2e/check-specs.mjs` を流し、このファイルについての指摘（ハッシュ・`// scenario:`・クラス名）が無いことを確かめる。ほかの md についての指摘は無視してよい。
 4. `make e2e ONLY=<クラス名>` を流す。
    - **実行中はこの Mac のマウスとキーボードがテストに取られる。** `make` を通さずに走らせない（排他ロックが効かなくなる）。ほかの担当が走らせている間は待たされるが、異常ではない。
 5. 落ちたら、`build/logs/test.log`（`make e2e` が出すログ）と `build/logs/e2e-summary.json`、結果バンドル `build/e2e.xcresult` を読む。失敗したテストには画面の画像と要素ツリーが添付されている。
@@ -103,7 +105,7 @@ final class <Dir><Name>Tests: <Support にある親クラス> {
 ## してはいけないこと
 
 - md・`Seed.swift`・`Support/**`・`AkapenAXID`・アプリのコードを変える。
-- `e2e/tests/Generated/**` のうち、依頼された md に対応しないファイルを変える。
+- `apps/mac/e2e/tests/Generated/**` のうち、依頼された md に対応しないファイルを変える。
 - アサーションを、通すために弱める・消す・期待値を実際の挙動に合わせる。
 - 文言・位置・並び順で要素を探す。
 - `make` を通さずに E2E を走らせる。

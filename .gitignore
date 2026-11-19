@@ -5,3 +5,6 @@
 build/
 xcuserdata/
 .swiftpm/
+node_modules/
+.svelte-kit/
+.wrangler/

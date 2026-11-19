@@ -4,9 +4,9 @@
 
 ## 先に読むもの
 
-- `DESIGN.md` — 何を作るか（操作の流れ、仕様、やらないこと）
-- `ARCHITECTURE.md` — どう組むか（ディレクトリ構成、モジュール、状態、E2E の仕組み、テストの分担）
-- `e2e/README.md` — E2E の運用（md の仕様からテストコードを生成する）
+- `apps/mac/DESIGN.md` — 何を作るか（操作の流れ、仕様、やらないこと）
+- `apps/mac/ARCHITECTURE.md` — どう組むか（ディレクトリ構成、モジュール、状態、E2E の仕組み、テストの分担）
+- `apps/mac/e2e/README.md` — E2E の運用（md の仕様からテストコードを生成する）
 
 この 3 つと食い違う実装をしない。食い違いに気づいたら、実装を合わせるか、報告に書く。
 
@@ -14,22 +14,34 @@
 
 | コマンド | 内容 |
 | --- | --- |
-| `make gen` | `project.yml` から `akapen.xcodeproj` を生成する（XcodeGen） |
+| `make gen` | `apps/mac/project.yml` から `akapen.xcodeproj` を生成する（XcodeGen） |
 | `make build` | アプリをビルドする |
 | `make run` | ビルドして起動する |
 | `make test` | 単体テストと結合テスト（`swift test`） |
 | `make e2e` | E2E（XCUITest。撮影は偽物） |
 | `make e2e ONLY=<クラス名>` | E2E を 1 クラスだけ走らせる |
 | `make e2e-live` | 実際の画面収録を通す E2E（手元だけ。画面収録の許可が要る） |
-| `make e2e-lint` | `e2e/specs/**/*.md` の書式と、生成物との対応を確かめる |
+| `make e2e-lint` | `apps/mac/e2e/specs/**/*.md` の書式と、生成物との対応を確かめる |
 
-- `xcodebuild` を直接呼ぶときは、必ず `-derivedDataPath build/DerivedData` を付ける（リポジトリの外に生成物を置かない）。
+- `xcodebuild` を直接呼ぶときは、必ず `-derivedDataPath build/DerivedData`（`apps/mac` で実行） を付ける（リポジトリの外に生成物を置かない）。
 - **E2E の実行中は、この Mac のマウスとキーボードがテストに取られる。** `make e2e` は排他ロックを取るので、ほかの担当が走らせている間は待たされる。待たされても異常ではない。E2E を `make` を通さずに走らせない。
 
-## コードの決まり
+ルートの make は `apps/mac/Makefile` への転送。Mac アプリのコマンド・相対パスは `apps/mac` を基準にする（同ディレクトリで直接実行もできる）。生成物は `apps/mac/build/` と `apps/mac/akapen.xcodeproj`。
+
+## site のコマンドと決まり
+
+- `pnpm install` — ルートで依存を入れる（pnpm 10）。
+- `pnpm dev:site` — LP の開発サーバー（127.0.0.1:5280）。
+- `pnpm build:site` — 静的 HTML を `apps/site/build/` に生成する。
+- `pnpm -C apps/site typecheck` — Svelte と TypeScript の型検査。
+- 文言は `apps/site/src/lib/i18n.ts`、色・余白は `apps/site/src/app.css` の CSS 変数に置く。
+- 外部の script や外部フォントを読まない。クライアント JS は出さない（`csr = false`）。
+- デプロイはしない。
+
+## コードの決まり（Mac アプリ）
 
 - Swift 6 の言語モード。警告を残さない。外部ライブラリは入れない。
-- モジュールの依存は一方向（`ARCHITECTURE.md` の図）。`AkapenCore` はほかのモジュールに依存しない。
+- モジュールの依存は一方向（`apps/mac/ARCHITECTURE.md` の図）。`AkapenCore` はほかのモジュールに依存しない。
 - **OS に触るコードは `AkapenPlatform` にだけ置く。** 画面の撮影、クリップボード、ホットキー、ファイルの置き場、UserDefaults、時計、ログイン時の起動。使う側は `AkapenCore/Ports` のプロトコル越しに呼ぶ。
 - **「テスト中かどうか」を見るのは `AkapenApp` の `LaunchConfiguration` と `AppEnvironment` だけ。** 画面やロジックの中で環境変数や起動引数を読まない。
 - **状態の遷移は `SessionModel` にだけ書く。** ウィンドウや画面は `phase` を映すだけで、次にどの状態へ行くかを判断しない。
@@ -42,10 +54,10 @@
 
 ## テストの決まり
 
-- パッケージのテスト（`Packages/AkapenKit/Tests`）は Swift Testing で書く。XCTest を使うのは `e2e/tests` だけ。
-- どの層に書くかは `ARCHITECTURE.md` の「テストの分担」に従う。流れの分岐の網羅は結合テストで行い、E2E は代表的な流れに絞る。
+- パッケージのテスト（`apps/mac/Packages/AkapenKit/Tests`）は Swift Testing で書く。XCTest を使うのは `e2e/tests` だけ。
+- どの層に書くかは `apps/mac/ARCHITECTURE.md` の「テストの分担」に従う。流れの分岐の網羅は結合テストで行い、E2E は代表的な流れに絞る。
 - テストは、流した時刻・画面の大きさ・ディスプレイの枚数・手元の設定に結果が左右されないように書く。実際のクリップボード、実際の `~/Library/Caches/akapen`、実際の UserDefaults に触らない。
-- **`e2e/tests/Generated/**` は直接編集しない。** `e2e/specs` の md を直して、generator / healer（`.claude/agents/e2e-*.md`）経由で作り直す。
+- **`apps/mac/e2e/tests/Generated/**` は直接編集しない。** `apps/mac/e2e/specs` の md を直して、generator / healer（`.claude/agents/e2e-*.md`）経由で作り直す。
 - テストを通すためにアサーションを弱めない・消さない。満たせないなら、不具合として報告する。
 
 ## ディレクターから依頼されたとき
