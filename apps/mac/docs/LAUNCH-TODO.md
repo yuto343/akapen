@@ -15,23 +15,13 @@
 - [ ] **Sparkle の秘密鍵をバックアップする**（`RELEASE.md`「Sparkle の鍵」）。なくすと、配ったアプリに更新を届けられなくなる
 - [x] **メニューバーの E2E を流し直す**。普段使いの akapen を終了してから `make e2e ONLY=MenuBarSettingsTests` と `make e2e ONLY=MenuBarQuitTests`（同じバンドル ID の akapen が動いていると落ちる）
 - [x] **公開してよい中身かを見直した**（2026-11-20）。秘密情報は履歴にもない。MIT の `LICENSE` を置き、手元のパスの例を `/Users/you/` にし、`site.ts` の仮の値を確定した
-- [ ] **コミットのメールアドレスを noreply にする（公開の直前）。** 今までのコミットは個人のメールアドレスで作られている。ほかのワークツリーの作業を `main` に入れて閉じてから、次の手順で全ブランチの履歴を書き換える。書き換えるとハッシュがすべて変わるので、公開した後にはやらない
-  ```sh
-  # main を取り出している、リポジトリの本体の作業ツリーで流す
-  git worktree list                       # main のほかに残っていないことを確かめる
-  git for-each-ref --format='%(refname)' refs/t3 | xargs -n1 git update-ref -d   # T3 のチェックポイントの ref を消す（古い履歴を持っている）
-  git log --all --format='%an <%ae> %cn <%ce>' | sort -u   # 書き換える前に、作者が自分だけであることを確かめる
-  git filter-repo --force \
-    --name-callback 'return b"yuto343"' \
-    --email-callback 'return b"43196286+yuto343@users.noreply.github.com"'
-  git log --all --format='%ae %ce' | sort -u   # noreply だけになったことを確かめる
-  ```
-  これからのコミットは、リポジトリの `user.email` を noreply にしてある（2026-11-20）。GitHub の Settings → Emails の「Block command line pushes that expose my email」も入れておく
+- [x] **コミットのメールアドレスを noreply にした**（2026-11-21）。`git filter-repo --commit-callback` で、個人のメールアドレスで作ったコミットの作者を `yuto343 <43196286+yuto343@users.noreply.github.com>` に書き換えた（全ブランチと T3 のチェックポイントの ref。中身のファイルは変わっていない）。これからのコミットは、リポジトリの `user.email` が noreply なのでそのまま出せる。公開した後は書き換えない
+- [ ] GitHub の Settings → Emails で「Keep my email addresses private」と「Block command line pushes that expose my email」を入れる
 - [ ] （任意）`make run` の開発ビルドにも Sparkle が入っている。版が `0.0.0` なので、0.1.0 を公開すると開発ビルドにも「アップデートがあります」が出る。気になるなら、Debug では Sparkle を止める
 
 ## GitHub の準備
 
-- [ ] 上の履歴の書き換えが済んでから、このファイル（`LAUNCH-TODO.md`）を消すかどうか決める（公開すると誰でも読める）
+- [ ] このファイル（`LAUNCH-TODO.md`）を消すかどうか決める（公開すると誰でも読める）
 - [ ] `yuto343/akapen` を**公開**で作り、remote に足して `main` を push する
   ```sh
   gh repo create yuto343/akapen --public --source . --push
