@@ -13,7 +13,7 @@ SvelteKit 2 / Svelte 5 の静的サイト。英語 `/`、日本語 `/ja/`。ブ�
 
 ヒーローの下のデモ動画とフッターの間に「Download」節（`#download`、ヘッダーのリンクの行き先）がある。ダウンロードのボタンと、Homebrew のコマンド（`site.ts` の `brewInstallCommand`）をコピーできるターミナル風の枠を並べる。`src/lib/site.ts` の `downloadUrl` が `null` のあいだは「Coming soon」の無効なボタンを出す。URL を設定するとダウンロードリンクになる。公開ドメインは未定なので `origin` も `null` にしてある。公開前に設定すると OGP 画像と hreflang を絶対 URL にできる。
 
-支援先 `yuto343` は仮の値。決まったら `src/lib/site.ts` のユーザー名と、ルートの `.github/FUNDING.yml` を差し替える。
+支援先（GitHub Sponsors と Ko-fi）のユーザー名は `yuto343`。`src/lib/site.ts` の `supportUsername` と、ルートの `.github/FUNDING.yml` に書いてある。変えるときは両方を合わせる。
 
 `wrangler.jsonc` は静的アセットのみの設定。アカウント・ドメインは指定していない。このタスクではデプロイしない。
 

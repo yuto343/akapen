@@ -1,4 +1,4 @@
-// 仮の値。決まったら差し替える（.github/FUNDING.yml も更新する）。
+// GitHub Sponsors と Ko-fi のユーザー名。変えるときは .github/FUNDING.yml も合わせる。
 const supportUsername = 'yuto343';
 
 export const site = {
