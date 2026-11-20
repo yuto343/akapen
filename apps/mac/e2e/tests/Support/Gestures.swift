@@ -254,10 +254,26 @@ extension AkapenUITestCase {
     func openMenuBarMenu() {
         let icon = app.statusItems.matching(identifier: AXID.MenuBar.icon).firstMatch
         XCTAssertTrue(icon.waitForExistence(timeout: 5), "メニューバーのアイコンがない")
-        if !MenuBarIconPress.press(bundleIdentifier: "com.yuto343.akapen", identifier: AXID.MenuBar.icon) {
+        if !MenuBarIconPress.press(bundleIdentifier: Self.akapenBundleIdentifier, identifier: AXID.MenuBar.icon) {
             icon.click()
         }
         waitForElement(AXID.MenuBar.settings)
+    }
+
+    /// メニューバーのメニューの項目を押す（メニューが開いていること）。
+    ///
+    /// `AXPress` で開いたメニューは、XCUITest が項目へ座標でマウスを動かすと閉じてしまい、項目の座標が取れずに落ちる
+    /// （`point.x != INFINITY`）。そこで、許可があれば項目にも `AXPress` を送る。許可がないときは、これまでどおりクリックする。
+    func pressMenuBarItem(_ identifier: String) {
+        let item = waitForElement(identifier)
+        if !MenuBarIconPress.pressMenuItem(bundleIdentifier: Self.akapenBundleIdentifier, iconIdentifier: AXID.MenuBar.icon, identifier: identifier) {
+            item.click()
+        }
+    }
+
+    /// テストする akapen のバンドル ID。
+    static var akapenBundleIdentifier: String {
+        "com.yuto343.akapen"
     }
 
     /// メニューバーのメニューの見出しの 2 行目（件数）。
@@ -269,14 +285,14 @@ extension AkapenUITestCase {
     /// メニューバーのメニューから設定を開き、設定のウィンドウが出るまで待つ。
     func openSettingsFromMenuBar() {
         openMenuBarMenu()
-        element(AXID.MenuBar.settings).click()
+        pressMenuBarItem(AXID.MenuBar.settings)
         waitForElement(AXID.Settings.window)
     }
 
     /// メニューバーのメニューから終了を選ぶ（確認が出るかどうかはアプリが決める）。
     func chooseQuitFromMenuBar() {
         openMenuBarMenu()
-        element(AXID.MenuBar.quit).click()
+        pressMenuBarItem(AXID.MenuBar.quit)
     }
 
     /// `⌘Q` を押す（akapen の設定かセットアップのウィンドウが前面にあるとき）。
@@ -465,12 +481,7 @@ enum MenuBarIconPress {
         guard let running = applicationUnderTest(bundleIdentifier: bundleIdentifier) else {
             return false
         }
-        let application = AXUIElementCreateApplication(running.processIdentifier)
-        guard let extras = attribute(application, "AXExtrasMenuBar") else {
-            return false
-        }
-        let items = children(of: extras as! AXUIElement)
-        guard let item = items.first(where: { matches($0, identifier: identifier) }) else {
+        guard let item = statusItem(of: running, identifier: identifier) else {
             return false
         }
         // メニューを開くとメニューの操作が終わるまで返らないことがあるので、待つのは短くする。
@@ -478,6 +489,50 @@ enum MenuBarIconPress {
         let result = AXUIElementPerformAction(item, kAXPressAction as CFString)
         // メニューが開いて返りが遅れたとき（`cannotComplete`）も、押せたことにする（メニューが出たかは呼び出し側が待つ）。
         return result == .success || result == .cannotComplete
+    }
+
+    /// 開いているメニューの項目 `identifier` を押す。押せたら true。許可がない、項目が見つからない、操作が送れないときは false。
+    static func pressMenuItem(bundleIdentifier: String, iconIdentifier: String, identifier: String) -> Bool {
+        guard AXIsProcessTrusted() else {
+            return false
+        }
+        guard let running = applicationUnderTest(bundleIdentifier: bundleIdentifier) else {
+            return false
+        }
+        guard let icon = statusItem(of: running, identifier: iconIdentifier) else {
+            return false
+        }
+        guard let item = descendant(of: icon, identifier: identifier, depth: 4) else {
+            return false
+        }
+        AXUIElementSetMessagingTimeout(item, 1)
+        let result = AXUIElementPerformAction(item, kAXPressAction as CFString)
+        return result == .success || result == .cannotComplete
+    }
+
+    /// テストする akapen のメニューバーのアイコン（`AXExtrasMenuBar` の項目）。
+    private static func statusItem(of running: NSRunningApplication, identifier: String) -> AXUIElement? {
+        let application = AXUIElementCreateApplication(running.processIdentifier)
+        guard let extras = attribute(application, "AXExtrasMenuBar") else {
+            return nil
+        }
+        return children(of: extras as! AXUIElement).first { matches($0, identifier: identifier) }
+    }
+
+    /// `element` の子孫（`depth` 段まで）から、識別子が `identifier` の要素を探す。
+    private static func descendant(of element: AXUIElement, identifier: String, depth: Int) -> AXUIElement? {
+        guard depth > 0 else {
+            return nil
+        }
+        for child in children(of: element) {
+            if (attribute(child, kAXIdentifierAttribute) as? String) == identifier {
+                return child
+            }
+            if let found = descendant(of: child, identifier: identifier, depth: depth - 1) {
+                return found
+            }
+        }
+        return nil
     }
 
     /// テストが起動した akapen。

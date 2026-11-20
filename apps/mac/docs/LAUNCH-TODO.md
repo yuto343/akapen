@@ -13,7 +13,7 @@
 ## 公開の前に
 
 - [ ] **Sparkle の秘密鍵をバックアップする**（`RELEASE.md`「Sparkle の鍵」）。なくすと、配ったアプリに更新を届けられなくなる
-- [ ] **メニューバーの E2E を流し直す**。普段使いの akapen を終了してから `make e2e ONLY=MenuBarSettingsTests` と `make e2e ONLY=MenuBarQuitTests`（同じバンドル ID の akapen が動いていると落ちる）
+- [x] **メニューバーの E2E を流し直す**。普段使いの akapen を終了してから `make e2e ONLY=MenuBarSettingsTests` と `make e2e ONLY=MenuBarQuitTests`（同じバンドル ID の akapen が動いていると落ちる）
 - [x] **公開してよい中身かを見直した**（2026-11-20）。秘密情報は履歴にもない。MIT の `LICENSE` を置き、手元のパスの例を `/Users/you/` にし、`site.ts` の仮の値を確定した
 - [ ] **コミットのメールアドレスを noreply にする（公開の直前）。** 今までのコミットは個人のメールアドレスで作られている。ほかのワークツリーの作業を `main` に入れて閉じてから、次の手順で全ブランチの履歴を書き換える。書き換えるとハッシュがすべて変わるので、公開した後にはやらない
   ```sh
