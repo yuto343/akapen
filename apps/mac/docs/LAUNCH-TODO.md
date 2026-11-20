@@ -52,4 +52,7 @@
 
 - [x] Download の節と、`brew install --cask yuto343/tap/akapen` をコピーできるターミナル風の枠（`apps/site`、4023f88）
 - [ ] **LP のダウンロードの URL を直す。** `apps/site/src/lib/site.ts` の `downloadUrl` は `releases/latest/download/akapen.zip` だが、`pnpm release:mac` が作る zip は `akapen-<版>.zip` なので、このままだと 404 になる。`https://github.com/yuto343/akapen/releases/latest`（Release のページ）にするか、`publish.sh` で版なしの `akapen.zip` も一緒に上げるか、どちらかに決める
+- [x] **トップのデモ動画の padding のずれを直す。** コメントでは「左右の余白がずれている」と指摘しているのに、囲んだボタンの余白はずれていなかった。Submit の文字を左に寄せ、動画を撮り直した
+- [x] **meta の title を直す。** 日本語版の `<title>` が古いままだった。英語版と同じ「akapen — Mark it up. Hand it right back.」にした
+- [x] **favicon を手と鉛筆だけの絵にする。** 枠のある古い絵だった。`brand/logo/akapen-hand.png` を正方形に余白を足して 128×128 にし、`apps/site/static/favicon.png` を差し替えた
 - [ ] LP のデプロイ（今の決まりでは、デプロイはしない。出すときに決める）

@@ -582,13 +582,15 @@
   line-height: calc(16 * var(--demo-unit));
 }
 
+/* コメントの「左右の余白がずれている」が絵で分かるように、文字をわざと左に寄せている。 */
 .submit-button {
   align-items: center;
   background-color: #0A64D2;
   border-radius: calc(6 * var(--demo-unit));
   display: flex;
   height: calc(30 * var(--demo-unit));
-  justify-content: center;
+  justify-content: flex-start;
+  padding-left: calc(8 * var(--demo-unit));
   width: calc(92 * var(--demo-unit));
 }
 

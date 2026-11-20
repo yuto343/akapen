@@ -59,7 +59,6 @@ const en = {
 
 const ja: Record<keyof typeof en, string> = {
   ...en,
-  title: 'akapen — 赤を入れて、そのまま返す。',
   description: '気になるところを囲んでひと言。そのまま AI に貼り戻せる Mac のアプリです。',
   headlineNoteStart: 'チェックして',
   headlineNoteReturn: 'すぐに出す！',
