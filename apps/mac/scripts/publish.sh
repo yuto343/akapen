@@ -6,7 +6,8 @@
 # 1. 公開する前に確かめる: 成果物が揃っているか、zip の中のアプリが公証済みか、gh にログインしているか、同じ版の Release がないか。
 # 2. tap（yuto343/homebrew-tap）を build/release/<版>/work/homebrew-tap に clone し、Casks/akapen.rb を差し替える。
 # 3. 何を公開するかを表示して、y の確認を取る。
-# 4. gh release create v<版> で zip と appcast.xml を yuto343/akapen に上げる。
+# 4. gh release create v<版> で zip と appcast.xml を yuto343/akapen に上げる。zip は、版の付かない akapen.zip という名前でも上げる
+#    （LP の Download ボタンが releases/latest/download/akapen.zip で最新を落とすため）。
 # 5. tap の Casks/akapen.rb を commit して push する。
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -42,6 +43,8 @@ readonly APPCAST="${OUT}/appcast.xml"
 readonly CASK="${OUT}/akapen.rb"
 readonly TAG="v${VERSION}"
 readonly TAP_DIR="${WORK}/homebrew-tap"
+# LP の Download ボタンが releases/latest/download/akapen.zip で落とす、版の付かない名前の写し。
+readonly LATEST_ZIP="${WORK}/latest/akapen.zip"
 
 step "成果物を確かめる（${OUT}）"
 for file in "$ZIP" "$APPCAST" "$CASK"; do
@@ -87,6 +90,7 @@ step "次を公開する"
 printf '  GitHub Release: https://github.com/%s/releases/tag/%s\n' "$REPOSITORY" "$TAG"
 printf '    タグ %s（まだなければ、%s の既定のブランチの先頭に作る）\n' "$TAG" "$REPOSITORY"
 printf '    添付: %s（sha256 %s）\n' "$(basename "$ZIP")" "$sha256"
+printf '    添付: akapen.zip（上と同じ zip。LP の Download ボタンが releases/latest/download/akapen.zip で落とす）\n'
 printf '    添付: appcast.xml（Sparkle の feed。releases/latest/download/appcast.xml で配られる）\n'
 if [[ "$tap_changed" == 1 ]]; then
   printf '  Homebrew tap: %s の Casks/akapen.rb を commit して push する\n\n' "$TAP_REPOSITORY"
@@ -101,11 +105,14 @@ if [[ "$answer" != y && "$answer" != Y ]]; then
 fi
 
 step "GitHub Release を作る"
+mkdir -p "$(dirname "$LATEST_ZIP")"
+cp "$ZIP" "$LATEST_ZIP"
 gh release create "$TAG" \
   --repo "$REPOSITORY" \
   --title "akapen ${VERSION}" \
   --generate-notes \
   "$ZIP" \
+  "$LATEST_ZIP" \
   "$APPCAST"
 
 if [[ "$tap_changed" == 1 ]]; then

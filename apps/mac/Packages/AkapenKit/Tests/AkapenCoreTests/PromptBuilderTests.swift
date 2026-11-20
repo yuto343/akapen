@@ -14,8 +14,8 @@ private func annotation(_ path: String, _ comment: String) -> Annotation {
 }
 
 private let designAnnotations = [
-    annotation("/Users/yuto/Library/Caches/akapen/20261117-1432/01.png", "ボタンの余白が左右で違う"),
-    annotation("/Users/yuto/Library/Caches/akapen/20261117-1432/02.png", "ここの文言を「保存する」に"),
+    annotation("/Users/you/Library/Caches/akapen/20261117-1432/01.png", "ボタンの余白が左右で違う"),
+    annotation("/Users/you/Library/Caches/akapen/20261117-1432/02.png", "ここの文言を「保存する」に"),
 ]
 
 @Test
@@ -25,10 +25,10 @@ func promptMatchesDesignExample() {
         I annotated the screen. Please address the comments below.
         Open every image and check the area marked with the red frame before you start.
 
-        /Users/yuto/Library/Caches/akapen/20261117-1432/01.png
+        /Users/you/Library/Caches/akapen/20261117-1432/01.png
         ボタンの余白が左右で違う
 
-        /Users/yuto/Library/Caches/akapen/20261117-1432/02.png
+        /Users/you/Library/Caches/akapen/20261117-1432/02.png
         ここの文言を「保存する」に
         """
     let prompt = PromptBuilder.build(settings: Settings(), annotations: designAnnotations)
@@ -45,7 +45,7 @@ func promptUsesJapaneseBoilerplate() {
         画面に注釈を付けました。以下のコメントに対応してください。
         作業前にすべての画像を開き、赤枠の箇所を確認してください。
 
-        /Users/yuto/Library/Caches/akapen/20261117-1432/01.png
+        /Users/you/Library/Caches/akapen/20261117-1432/01.png
         ボタンの余白が左右で違う
         """)
 }
@@ -59,7 +59,7 @@ func promptKeepsCustomBoilerplateAcrossLanguages() {
     #expect(english == """
         Look at these.
 
-        /Users/yuto/Library/Caches/akapen/20261117-1432/02.png
+        /Users/you/Library/Caches/akapen/20261117-1432/02.png
         ここの文言を「保存する」に
         """)
     settings.language = .ja

@@ -93,10 +93,10 @@
 I annotated the screen. Please address the comments below.
 Open every image and check the area marked with the red frame before you start.
 
-/Users/yuto/Library/Caches/akapen/20261117-1432/01.png
+/Users/you/Library/Caches/akapen/20261117-1432/01.png
 ボタンの余白が左右で違う
 
-/Users/yuto/Library/Caches/akapen/20261117-1432/02.png
+/Users/you/Library/Caches/akapen/20261117-1432/02.png
 ここの文言を「保存する」に
 ```
 

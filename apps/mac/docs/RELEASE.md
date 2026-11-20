@@ -7,6 +7,7 @@ akapen は Developer ID で署名・公証した zip を GitHub Releases（`yuto
 | 配るもの | 置き場 | 使う人 |
 | --- | --- | --- |
 | `akapen-<版>.zip`（`akapen.app` を `ditto -c -k --keepParent` で固めたもの） | GitHub Release `v<版>` の添付 | zip を落とす人、Homebrew、Sparkle |
+| `akapen.zip`（上と同じ zip の、版の付かない名前の写し） | GitHub Release `v<版>` の添付。`https://github.com/yuto343/akapen/releases/latest/download/akapen.zip` で最新が取れる | LP の Download ボタン |
 | `appcast.xml`（Sparkle の feed。EdDSA の署名つき） | GitHub Release `v<版>` の添付。`https://github.com/yuto343/akapen/releases/latest/download/appcast.xml` で最新が取れる | アプリ内の Sparkle（`SUFeedURL`）、Homebrew の `livecheck` |
 | `Casks/akapen.rb`（Homebrew の cask） | `yuto343/homebrew-tap` | `brew install --cask yuto343/tap/akapen` |
 
@@ -122,7 +123,7 @@ pnpm publish:mac 0.1.0
 1. 成果物が揃っているか、zip の中のアプリが公証済み（staple と Gatekeeper の判定）か、cask の sha256 が zip と合うか、`gh` にログインしているか、同じ版の Release がないかを確かめる。
 2. `yuto343/homebrew-tap` を `build/release/0.1.0/work/homebrew-tap` に clone し、`Casks/akapen.rb` を差し替える。
 3. 公開するもの（Release のタグと添付、tap の差分）を出して、`y` の確認を取る。`y` 以外なら何も公開せずに止まる。
-4. `gh release create v0.1.0 --repo yuto343/akapen --generate-notes` で zip と appcast.xml を上げる。
+4. `gh release create v0.1.0 --repo yuto343/akapen --generate-notes` で zip（`akapen-0.1.0.zip` と、同じ中身の `akapen.zip`）と appcast.xml を上げる。
 5. tap の `Casks/akapen.rb` を commit して push する。
 
 ### 5. 公開したあと
