@@ -15,8 +15,8 @@
 - [ ] **Sparkle の秘密鍵をバックアップする**（`RELEASE.md`「Sparkle の鍵」）。なくすと、配ったアプリに更新を届けられなくなる
 - [x] **メニューバーの E2E を流し直す**。普段使いの akapen を終了してから `make e2e ONLY=MenuBarSettingsTests` と `make e2e ONLY=MenuBarQuitTests`（同じバンドル ID の akapen が動いていると落ちる）
 - [x] **公開してよい中身かを見直した**（2026-11-20）。秘密情報は履歴にもない。MIT の `LICENSE` を置き、手元のパスの例を `/Users/you/` にし、`site.ts` の仮の値を確定した
-- [x] **コミットのメールアドレスを noreply にした**（2026-11-21）。`git filter-repo --commit-callback` で、個人のメールアドレスで作ったコミットの作者を `yuto343 <43196286+yuto343@users.noreply.github.com>` に書き換えた（全ブランチと T3 のチェックポイントの ref。中身のファイルは変わっていない）。これからのコミットは、リポジトリの `user.email` が noreply なのでそのまま出せる。公開した後は書き換えない
-- [ ] GitHub の Settings → Emails で「Keep my email addresses private」と「Block command line pushes that expose my email」を入れる
+- [x] **コミットのメールアドレスを akapen 用のものにした**（2026-11-21）。`git filter-repo --commit-callback` で、今までのコミットの作者を `yuto343 <yutopia898@gmail.com>` に書き換えた（全ブランチと T3 のチェックポイントの ref。中身のファイルは変わっていない）。これからのコミットも、リポジトリの `user.email`（`--local`）でこのアドレスになる。ほかのプロジェクトは全体の設定のまま。公開した後は書き換えない
+- [ ] （任意）GitHub の Settings → Emails に `yutopia898@gmail.com` を足して確認する。足すと、コミットが GitHub のアカウントにひも付く
 - [ ] （任意）`make run` の開発ビルドにも Sparkle が入っている。版が `0.0.0` なので、0.1.0 を公開すると開発ビルドにも「アップデートがあります」が出る。気になるなら、Debug では Sparkle を止める
 
 ## GitHub の準備
