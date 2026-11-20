@@ -94,7 +94,7 @@ akapen/
 - 単体テストは Xcode のターゲットにせず、パッケージの `swift test` で回す。
 - 署名は構成で分ける。
   - Debug（`make build`・`make run`・`make e2e`）: Apple Development 証明書で固定する。アドホック署名だとビルドのたびに画面収録の許可が外れるため。
-  - Release（`pnpm release:mac`）: `Developer ID Application: <名前> (G5564YSC93)`、hardened runtime、`--timestamp`。`xcodebuild archive` のあと `-exportArchive`（`packaging/ExportOptions.plist`。`method: developer-id`）で書き出し、同梱の Sparkle.framework の中（`Autoupdate`・`Updater.app`・XPC サービス）まで同じ証明書で署名し直す。公証と staple もここで行う（`docs/RELEASE.md`）。
+  - Release（`pnpm release:mac`）: `Developer ID Application`（チーム G5564YSC93）、hardened runtime、`--timestamp`。`xcodebuild archive` のあと `-exportArchive`（`packaging/ExportOptions.plist`。`method: developer-id`）で書き出し、同梱の Sparkle.framework の中（`Autoupdate`・`Updater.app`・XPC サービス）まで同じ証明書で署名し直す。公証と staple もここで行う（`docs/RELEASE.md`）。
 - バンドル ID は `com.yuto343.akapen`（2026-11-20 に確定。配布を始めたので変えない）。
 - 対応 OS は macOS 15 以降（cask の `depends_on macos: ">= :sequoia"` と appcast の `sparkle:minimumSystemVersion` もこれに従う）。
 - 版は `project.yml` の `MARKETING_VERSION` と `CURRENT_PROJECT_VERSION`（手元のビルドは `0.0.0`）。`pnpm release:mac <x.y.z>` が両方を `x.y.z` で上書きする（Sparkle は `CFBundleVersion` で新旧を比べるので、同じ値にそろえる）。

@@ -17,7 +17,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-readonly IDENTITY="Developer ID Application: <名前> (G5564YSC93)"
+# 署名の証明書は、キーチェーンの中から「Developer ID Application: <名前> (<チーム ID>)」をチーム ID で探して決める（名前は書かない）。
 readonly TEAM_ID="G5564YSC93"
 readonly REPOSITORY="yuto343/akapen"
 readonly FEED_URL="https://github.com/${REPOSITORY}/releases/latest/download/appcast.xml"
@@ -108,7 +108,9 @@ readonly DOWNLOAD_PREFIX="https://github.com/${REPOSITORY}/releases/download/v${
 step "akapen ${VERSION} のリリースの成果物を作る（${OUT}）"
 
 identities="$(security find-identity -v -p codesigning)"
-grep -qF "\"${IDENTITY}\"" <<<"$identities" || fail "キーチェーンに署名の証明書がない: ${IDENTITY}"
+IDENTITY="$(grep -oE "\"Developer ID Application: [^\"]* \(${TEAM_ID}\)\"" <<<"$identities" | head -n 1 | tr -d '"')" || true
+[[ -n "$IDENTITY" ]] || fail "キーチェーンに署名の証明書がない: Developer ID Application（チーム ${TEAM_ID}）"
+readonly IDENTITY
 
 if [[ "$SKIP_NOTARIZE" == 1 ]]; then
   printf '注意: --skip-notarize なので公証を飛ばす。手元の確認用で、この成果物は配布に使えない（pnpm publish:mac も断る）。\n'

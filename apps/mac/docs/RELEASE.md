@@ -15,7 +15,7 @@ akapen は Developer ID で署名・公証した zip を GitHub Releases（`yuto
 
 ### 署名の証明書
 
-ログインのキーチェーンに `Developer ID Application: <名前> (G5564YSC93)` がある（`security find-identity -v -p codesigning` で見える）。Debug のビルド（`make build`・`make run`・`make e2e`）は今まで通り `Apple Development` で署名し、Developer ID は Release のビルドだけが使う。
+ログインのキーチェーンに `Developer ID Application`（チーム G5564YSC93）の証明書がある（`security find-identity -v -p codesigning` で見える）。Debug のビルド（`make build`・`make run`・`make e2e`）は今まで通り `Apple Development` で署名し、Developer ID は Release のビルドだけが使う。
 
 ### 公証の資格情報
 
