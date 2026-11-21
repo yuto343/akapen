@@ -1,21 +1,22 @@
 # akapen の LP
 
-SvelteKit 2 / Svelte 5 の静的サイト。英語 `/`、日本語 `/ja/`。ブラウザの言語で自動転送しない。外部フォント・外部スクリプトは使わない。クライアント JS も出さない（`csr = false`、ハイドレーションなし）。例外は、Download 節のコマンドのコピーのボタンを動かす自前の小さなスクリプト `static/install-copy.js` だけで、JS が無い・クリップボードの API が使えないときはボタンを出さず、コマンドを選択してコピーできる表示だけにする。
+SvelteKit 2 / Svelte 5 のサイト。Cloudflare Workers（`@sveltejs/adapter-cloudflare`）で `https://akapen.yuto343.net` に出す。ページはすべて prerender した HTML。英語 `/`、日本語 `/ja/`。ブラウザの言語で自動転送しない。外部フォント・外部スクリプトは使わない。クライアント JS も出さない（`csr = false`、ハイドレーションなし）。例外は、Download 節のコマンドのコピーのボタンを動かす自前の小さなスクリプト `static/install-copy.js` だけで、JS が無い・クリップボードの API が使えないときはボタンを出さず、コマンドを選択してコピーできる表示だけにする。
 
 ルートで `pnpm install` 後、以下を実行する。
 
 - `pnpm dev:site` — 127.0.0.1:5280
-- `pnpm build:site` — `apps/site/build/` に HTML を書き出す
+- `pnpm build:site` — `apps/site/.svelte-kit/cloudflare/` に Worker と HTML を書き出す
+- `pnpm deploy:site` — ビルドして Cloudflare Workers にデプロイする（`wrangler deploy`。wrangler にログインしておく）
 - `pnpm -C apps/site typecheck` — 型とアクセシビリティの静的検査
 - `pnpm -C apps/site preview` — ビルド結果を 127.0.0.1:5290 で配信
 
 文言は `src/lib/i18n.ts`、色と余白は `src/app.css`。素材はルートの `brand/` から `static/` にコピーしてある。元素材を変更したらコピーも更新する。
 
-ヒーローの下のデモ動画とフッターの間に「Download」節（`#download`、ヘッダーのリンクの行き先）がある。ダウンロードのボタンと、Homebrew のコマンド（`site.ts` の `brewInstallCommand`）をコピーできるターミナル風の枠を並べる。`src/lib/site.ts` の `downloadUrl` が `null` のあいだは「Coming soon」の無効なボタンを出す。URL を設定するとダウンロードリンクになる。公開ドメインは未定なので `origin` も `null` にしてある。公開前に設定すると OGP 画像と hreflang を絶対 URL にできる。
+ヒーローの下のデモ動画とフッターの間に「Download」節（`#download`、ヘッダーのリンクの行き先）がある。ダウンロードのボタンと、Homebrew のコマンド（`site.ts` の `brewInstallCommand`）をコピーできるターミナル風の枠を並べる。`src/lib/site.ts` の `downloadUrl` が `null` のあいだは「Coming soon」の無効なボタンを出す。URL を設定するとダウンロードリンクになる。`origin` は公開ドメイン（`https://akapen.yuto343.net`）で、OGP 画像と hreflang を絶対 URL にするのに使う。
 
 支援先（GitHub Sponsors と Ko-fi）のユーザー名は `yuto343`。`src/lib/site.ts` の `supportUsername` と、ルートの `.github/FUNDING.yml` に書いてある。変えるときは両方を合わせる。
 
-`wrangler.jsonc` は静的アセットのみの設定。アカウント・ドメインは指定していない。このタスクではデプロイしない。
+`wrangler.jsonc` は、SvelteKit が書き出す Worker（`.svelte-kit/cloudflare/_worker.js`）と、カスタムドメイン `akapen.yuto343.net` の設定。`workers.dev` の URL では出さない。
 
 ## デモ動画
 

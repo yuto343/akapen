@@ -98,4 +98,4 @@ akapen は、画面の気になるところを赤枠で囲んでひと言コメ�
 - ホットキー（既定 `⌘⇧6`）→ ドラッグで囲む → コメントを書いて `Return` → 何か所でも続けて囲める → `⌘C` でプロンプトをコピーして、Claude Code や Codex CLI、Cursor などに貼り付ける。
 - インストール: `brew install --cask yuto343/tap/akapen`、または [Releases](https://github.com/yuto343/akapen/releases/latest) から `akapen.zip` を落とす。macOS 15 以降。
 - 設定で表示とプロンプトの言語を日本語にできます。
-- 詳しくは [Web サイト](https://akapen.yuto343.net/ja) を見てください。
+- 詳しくは [Web サイト](https://akapen.yuto343.net/ja/) を見てください。

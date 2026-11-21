@@ -39,11 +39,11 @@
 
 - `pnpm install` — ルートで依存を入れる（pnpm 10）。
 - `pnpm dev:site` — LP の開発サーバー（127.0.0.1:5280）。
-- `pnpm build:site` — 静的 HTML を `apps/site/build/` に生成する。
+- `pnpm build:site` — Cloudflare Workers 向けに `apps/site/.svelte-kit/cloudflare/` へ書き出す（`@sveltejs/adapter-cloudflare`。ページは prerender した HTML）。
 - `pnpm -C apps/site typecheck` — Svelte と TypeScript の型検査。
 - 文言は `apps/site/src/lib/i18n.ts`、色・余白は `apps/site/src/app.css` の CSS 変数に置く。
 - 外部の script や外部フォントを読まない。クライアント JS は出さない（`csr = false`）。例外は、Download 節のコピーのボタンを動かす自前の小さなスクリプト `apps/site/static/install-copy.js` だけ（ハイドレーションはしない）。
-- デプロイはしない。
+- `pnpm deploy:site` — ビルドして Cloudflare Workers（`akapen-site`、`https://akapen.yuto343.net`）にデプロイする。**ユーザーに頼まれたときだけ走らせる。**
 
 ## コードの決まり（Mac アプリ）
 

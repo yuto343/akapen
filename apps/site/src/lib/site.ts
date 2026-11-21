@@ -12,8 +12,8 @@ export const site = {
   githubUrl: 'https://github.com/yuto343/akapen',
   authorGithubUrl: 'https://github.com/yuto343',
   ogImage: '/akapen-icon.png',
-  // 公開ドメインは未定。決まったら origin を入れ、OGP と代替言語 URL を絶対 URL にする。
-  origin: null as string | null
+  // 公開ドメイン。OGP と代替言語の URL を絶対 URL にするのに使う。
+  origin: 'https://akapen.yuto343.net' as string | null
 };
 
 export const siteUrl = (path: string): string => site.origin ? new URL(path, site.origin).href : path;
