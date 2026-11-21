@@ -3,10 +3,12 @@
 #
 #   pnpm publish:mac <x.y.z>
 #
-# 1. 公開する前に確かめる: 成果物が揃っているか、zip の中のアプリが公証済みか、gh にログインしているか、同じ版の Release がないか。
+# 1. 公開する前に確かめる: 成果物が揃っているか、zip の中のアプリが公証済みか、成果物を作ったコミットが origin/main に入っているか、
+#    gh にログインしているか、同じ版の Release がないか。
 # 2. tap（yuto343/homebrew-tap）を build/release/<版>/work/homebrew-tap に clone し、Casks/akapen.rb を差し替える。
 # 3. 何を公開するかを表示して、y の確認を取る。
-# 4. gh release create v<版> で zip と appcast.xml を yuto343/akapen に上げる。zip は、版の付かない akapen.zip という名前でも上げる
+# 4. 成果物を作ったコミット（pnpm release:mac が build/release/<版>/commit に記録したもの）に注釈付きのタグ v<版> を打って push し、
+#    gh release create v<版> で zip と appcast.xml を yuto343/akapen に上げる。zip は、版の付かない akapen.zip という名前でも上げる
 #    （LP の Download ボタンが releases/latest/download/akapen.zip で最新を落とすため）。
 # 5. tap の Casks/akapen.rb を commit して push する。
 set -euo pipefail
@@ -42,12 +44,13 @@ readonly ZIP="${OUT}/akapen-${VERSION}.zip"
 readonly APPCAST="${OUT}/appcast.xml"
 readonly CASK="${OUT}/akapen.rb"
 readonly TAG="v${VERSION}"
+readonly COMMIT_FILE="${OUT}/commit"
 readonly TAP_DIR="${WORK}/homebrew-tap"
 # LP の Download ボタンが releases/latest/download/akapen.zip で落とす、版の付かない名前の写し。
 readonly LATEST_ZIP="${WORK}/latest/akapen.zip"
 
 step "成果物を確かめる（${OUT}）"
-for file in "$ZIP" "$APPCAST" "$CASK"; do
+for file in "$ZIP" "$APPCAST" "$CASK" "$COMMIT_FILE"; do
   [[ -f "$file" ]] || fail "成果物がない: ${file}（先に pnpm release:mac ${VERSION}）"
 done
 grep -qF "/releases/download/${TAG}/akapen-${VERSION}.zip" "$APPCAST" \
@@ -66,6 +69,21 @@ assessment="$(spctl -a -vvv -t exec "${check_dir}/akapen.app" 2>&1 || true)"
 grep -q 'source=Notarized Developer ID' <<<"$assessment" \
   || fail "Gatekeeper が公証済みと判定しない: ${assessment}"
 printf '  ok  公証済み（%s）\n' "$ZIP"
+
+step "タグを打つコミットを確かめる"
+commit="$(tr -d '[:space:]' <"$COMMIT_FILE")"
+git cat-file -e "${commit}^{commit}" 2>/dev/null || fail "成果物を作ったコミット ${commit} が手元にない"
+git fetch --quiet origin main --tags
+git merge-base --is-ancestor "$commit" origin/main \
+  || fail "成果物を作ったコミット ${commit} が origin/main に入っていない（先に push する）"
+commit_title="$(git log -1 --format='%h %s' "$commit")"
+tag_exists=0
+if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+  [[ "$(git rev-parse "${TAG}^{commit}")" == "$commit" ]] \
+    || fail "タグ ${TAG} がすでにあり、成果物を作ったコミット（${commit_title}）とは別のコミットを指している"
+  tag_exists=1
+fi
+printf '  ok  %s\n' "$commit_title"
 
 step "GitHub を確かめる"
 gh auth status >/dev/null || fail "gh にログインしていない（gh auth login）"
@@ -88,7 +106,7 @@ fi
 
 step "次を公開する"
 printf '  GitHub Release: https://github.com/%s/releases/tag/%s\n' "$REPOSITORY" "$TAG"
-printf '    タグ %s（まだなければ、%s の既定のブランチの先頭に作る）\n' "$TAG" "$REPOSITORY"
+printf '    タグ %s → %s（成果物を作ったコミット）\n' "$TAG" "$commit_title"
 printf '    添付: %s（sha256 %s）\n' "$(basename "$ZIP")" "$sha256"
 printf '    添付: akapen.zip（上と同じ zip。LP の Download ボタンが releases/latest/download/akapen.zip で落とす）\n'
 printf '    添付: appcast.xml（Sparkle の feed。releases/latest/download/appcast.xml で配られる）\n'
@@ -104,12 +122,19 @@ if [[ "$answer" != y && "$answer" != Y ]]; then
   fail "取りやめた（何も公開していない）"
 fi
 
+if [[ "$tag_exists" == 0 ]]; then
+  step "タグ ${TAG} を打って push する"
+  git tag -a "$TAG" -m "akapen ${VERSION}" "$commit"
+fi
+git push --quiet origin "refs/tags/${TAG}"
+
 step "GitHub Release を作る"
 mkdir -p "$(dirname "$LATEST_ZIP")"
 cp "$ZIP" "$LATEST_ZIP"
 gh release create "$TAG" \
   --repo "$REPOSITORY" \
   --title "akapen ${VERSION}" \
+  --verify-tag \
   --generate-notes \
   "$ZIP" \
   "$LATEST_ZIP" \

@@ -10,6 +10,7 @@
 #   akapen-<版>.zip  ditto -c -k --keepParent で固めた akapen.app（Developer ID で署名・公証・staple 済み）
 #   appcast.xml      Sparkle の generate_appcast で作り、EdDSA の署名を付けたもの
 #   akapen.rb        Homebrew の cask（packaging/homebrew/akapen.rb.template に版と sha256 を埋めたもの）
+#   commit           成果物を作ったコミット（pnpm publish:mac がここにタグ v<版> を打つ）。コミットしていない変更があるときは作らない
 #   work/            途中の生成物（アーカイブ、書き出したアプリ、公証の結果）
 #
 # 作り方: xcodebuild archive（Release。Developer ID・hardened runtime・--timestamp）→ -exportArchive（method: developer-id）。
@@ -103,9 +104,21 @@ readonly APP="${EXPORT}/akapen.app"
 readonly ZIP="${OUT}/akapen-${VERSION}.zip"
 readonly APPCAST="${OUT}/appcast.xml"
 readonly CASK="${OUT}/akapen.rb"
+readonly COMMIT_FILE="${OUT}/commit"
 readonly DOWNLOAD_PREFIX="https://github.com/${REPOSITORY}/releases/download/v${VERSION}/"
 
 step "akapen ${VERSION} のリリースの成果物を作る（${OUT}）"
+
+# 配る成果物は、コミット済みの中身から作る（タグ v<版> がその中身を指すように）。
+commit="$(git rev-parse HEAD)"
+clean=1
+if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
+  clean=0
+  [[ "$SKIP_NOTARIZE" == 1 ]] \
+    || fail "コミットしていない変更がある（git status）。コミットしてから作る（--skip-notarize の確認用なら作れる）"
+  printf '  コミットしていない変更がある。確認用なので作るが、公開はできない（commit を書かない）\n'
+fi
+printf '  コミット %s\n' "$(git log -1 --format='%h %s' "$commit")"
 
 identities="$(security find-identity -v -p codesigning)"
 IDENTITY="$(grep -oE "\"Developer ID Application: [^\"]* \(${TEAM_ID}\)\"" <<<"$identities" | head -n 1 | tr -d '"')" || true
@@ -263,9 +276,15 @@ if command -v ruby >/dev/null 2>&1; then
 fi
 printf '  ok  %s\n' "$CASK"
 
+rm -f "$COMMIT_FILE"
+if [[ "$clean" == 1 ]]; then
+  printf '%s\n' "$commit" >"$COMMIT_FILE"
+fi
+
 step "できあがり"
 if [[ "$SKIP_NOTARIZE" == 1 ]]; then
   printf '公証していない（--skip-notarize）。配布するときは --skip-notarize なしで作り直す。\n'
 fi
 printf '%s\n' "$ZIP" "$APPCAST" "$CASK"
+[[ -f "$COMMIT_FILE" ]] && printf '%s（%s）\n' "$COMMIT_FILE" "$(git log -1 --format='%h %s' "$commit")"
 printf '\n公開は pnpm publish:mac %s（docs/RELEASE.md）。\n' "$VERSION"

@@ -68,7 +68,7 @@ rm ~/Desktop/akapen-sparkle-private-key
 
 ### 2. 成果物を作る
 
-`main` を push してから流す（`gh release create` は、タグがまだなければ GitHub 上の既定のブランチの先頭にタグを作る）。
+`main` を最新にし、変更をすべてコミットして push してから流す。コミットしていない変更があると止まる（`--skip-notarize` の確認用は作れるが、公開はできない）。作ったコミットは `commit` に記録し、公開のときにそこへタグ `v<版>` を打つ。
 
 ```sh
 pnpm release:mac 0.1.0
@@ -81,6 +81,7 @@ pnpm release:mac 0.1.0
 | `akapen-0.1.0.zip` | 署名・公証・staple 済みの `akapen.app` |
 | `appcast.xml` | 1 項目だけの feed。enclosure は `https://github.com/yuto343/akapen/releases/download/v0.1.0/akapen-0.1.0.zip`、`sparkle:edSignature` つき |
 | `akapen.rb` | `packaging/homebrew/akapen.rb.template` に版と zip の sha256 を埋めた cask |
+| `commit` | 成果物を作ったコミットのハッシュ。`pnpm publish:mac` がここにタグ `v<版>` を打つ |
 | `work/` | 途中の生成物（`akapen.xcarchive`、`export/akapen.app`、公証の結果 `notarize.json`、appcast を作った作業場所） |
 
 `scripts/release.sh` がすること（どこかで食い違えば、そこで止まる）:
@@ -120,10 +121,10 @@ pnpm publish:mac 0.1.0
 
 `scripts/publish.sh` がすること:
 
-1. 成果物が揃っているか、zip の中のアプリが公証済み（staple と Gatekeeper の判定）か、cask の sha256 が zip と合うか、`gh` にログインしているか、同じ版の Release がないかを確かめる。
+1. 成果物が揃っているか、zip の中のアプリが公証済み（staple と Gatekeeper の判定）か、cask の sha256 が zip と合うか、`commit` のコミットが `origin/main` に入っているか、`gh` にログインしているか、同じ版の Release がないかを確かめる。タグ `v<版>` がすでにあれば、`commit` と同じコミットを指していることを確かめる。
 2. `yuto343/homebrew-tap` を `build/release/0.1.0/work/homebrew-tap` に clone し、`Casks/akapen.rb` を差し替える。
 3. 公開するもの（Release のタグと添付、tap の差分）を出して、`y` の確認を取る。`y` 以外なら何も公開せずに止まる。
-4. `gh release create v0.1.0 --repo yuto343/akapen --generate-notes` で zip（`akapen-0.1.0.zip` と、同じ中身の `akapen.zip`）と appcast.xml を上げる。
+4. `commit` のコミットに注釈付きのタグ `v0.1.0` を打って push し、`gh release create v0.1.0 --repo yuto343/akapen --verify-tag --generate-notes` で zip（`akapen-0.1.0.zip` と、同じ中身の `akapen.zip`）と appcast.xml を上げる。
 5. tap の `Casks/akapen.rb` を commit して push する。
 
 ### 5. 公開したあと
@@ -151,6 +152,7 @@ brew install --cask yuto343/tap/akapen
 
 ## 決めたこと・仕組みのメモ
 
+- 版ごとに、注釈付きのタグ `v<版>` が、その版を作ったコミットを指す（`git tag -l`、`git show v0.1.1`）。タグは公開のときに打つので、公開していない版にはタグがない。`v0.1.0` だけは、`gh release create` が打った注釈なしのタグ（0.1.0 を作ったコミット `84f8375` を指す）。
 - 配布物は zip だけ（dmg は作らない）。Mac App Store と本家の homebrew-cask には出さない。
 - Release のビルドは `AKAPEN_*` の環境変数を読まない（`LaunchConfiguration.readsTestVariables` が false）。`AKAPEN_E2E=1` を付けて起動しても本番として動く。Debug（`make run`・`make e2e`・`swift test`）は今まで通り読む。
 - Sparkle は 2.10.1（Swift Package。`Packages/AkapenKit/Package.swift` で版を固定）。`SUEnableAutomaticChecks = YES` なので「自動で確認しますか？」の初回のダイアログは出さない。更新の画面は Sparkle の標準のまま。
