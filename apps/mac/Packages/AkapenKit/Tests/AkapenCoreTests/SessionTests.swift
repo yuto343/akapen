@@ -835,6 +835,21 @@ func setupCompletedSaveFailure() async throws {
     #expect(!harness.settingsStore.stored.setupCompleted)
 }
 
+@Test
+@MainActor
+func setupCompletedClearsAwaitingPermission() async throws {
+    let harness = try Harness()
+    var settings = Settings()
+    settings.setupAwaitingPermission = true
+    await harness.send(.settingsChanged(settings))
+    #expect(harness.settingsStore.stored.setupAwaitingPermission)
+    await harness.send(.setupCompleted)
+    #expect(harness.model.settings.setupCompleted)
+    #expect(!harness.model.settings.setupAwaitingPermission)
+    #expect(harness.settingsStore.stored.setupCompleted)
+    #expect(!harness.settingsStore.stored.setupAwaitingPermission)
+}
+
 // MARK: - 失敗の扱い
 
 @Test

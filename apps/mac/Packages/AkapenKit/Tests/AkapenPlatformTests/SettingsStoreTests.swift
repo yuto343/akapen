@@ -13,6 +13,7 @@ struct SettingsStoreTests {
         settings.setBoilerplate("書き換えた定型文", for: .ja)
         settings.imageRetentionDays = 3
         settings.setupCompleted = true
+        settings.setupAwaitingPermission = true
         return settings
     }
 

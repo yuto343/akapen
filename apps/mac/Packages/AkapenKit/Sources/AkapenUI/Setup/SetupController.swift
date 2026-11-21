@@ -9,6 +9,8 @@ import AkapenAXID
 /// - 2 ページ目が出ているあいだ、`pollInterval`（既定 1 秒）おきに `permission.isGranted` を確かめ、
 ///   取れたら状態の表示を `Granted` に、主ボタンを `Done` に変える（`DECISIONS.md` 25・A5）。
 ///   `Open System Settings` は `permission.request()` を呼んでから `permission.openSystemSettings()` を呼ぶ。
+///   押したことを設定（`setupAwaitingPermission`）に残す。許可をオンにすると macOS がアプリを開き直すので、
+///   次の起動の `showOnLaunch()` は 2 ページ目から出す（開き直したあとは、許可が取れていて `Done` を押せる）。
 /// - `Done` で `model.send(.setupCompleted)` を送り、ウィンドウを閉じ、`onCompleted` を呼ぶ。
 /// - 閉じるボタンで閉じたときは `setupCompleted` を送らず、`onDismissed` を呼ぶ（次の起動でもう一度出す）。
 @MainActor public final class SetupController {
@@ -114,6 +116,17 @@ import AkapenAXID
         host.show(center: true)
     }
 
+    /// 起動したときに出す。許可を求めてシステム設定を開いたあと（`setupAwaitingPermission`）なら 2 ページ目から、そうでなければ 1 ページ目から。
+    ///
+    /// 許可をオンにすると macOS がアプリを終了して開き直すので、開き直したときに案内の続き（`Granted` と `Done`）を出す。
+    public func showOnLaunch() {
+        if settings().setupAwaitingPermission {
+            showPermission()
+        } else {
+            show()
+        }
+    }
+
     /// 2 ページ目（画面収録の許可の案内）を開く。閉じていれば開いてから、開いていればそのまま 2 ページ目へ移る。
     ///
     /// 許可がないために撮影できなかったときに、組み立ての側が呼ぶ。
@@ -187,6 +200,11 @@ import AkapenAXID
     }
 
     private func openSystemSettings() {
+        var next = settings()
+        if !next.setupAwaitingPermission {
+            next.setupAwaitingPermission = true
+            send(.settingsChanged(next))
+        }
         _ = permission.request()
         permission.openSystemSettings()
         refreshPermission()

@@ -930,12 +930,6 @@ extension Tokens {
         public static let stepNumber = Palette.steel
         public static let stepText = Palette.ink
         public static let waiting = Palette.steel
-        public static let switchWidth: CGFloat = 32
-        public static let switchHeight: CGFloat = 20
-        public static let switchPadding: CGFloat = 2
-        public static let switchOff = ExtraColor.ink18
-        public static let switchKnobSize: CGFloat = 16
-        public static let switchKnob = Palette.cleanBackground
         /// 許可が取れたときの表示（`Granted`）。`Waiting…` と同じ色。
         public static let granted = Palette.steel
         /// キーの名前が長いとき（`Space` など）の、キーの左右の余白。1 文字のキーは幅 56 に収まる。

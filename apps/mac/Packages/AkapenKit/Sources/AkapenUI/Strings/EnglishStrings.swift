@@ -117,7 +117,7 @@ struct EnglishStrings: StringTable {
         case .setupStepTurnOn:
             "Turn on akapen under Screen Recording"
         case .setupStepComeBack:
-            "Come back here"
+            "When macOS asks, choose “Quit & Reopen”"
         case .setupWaiting:
             "Waiting…"
         case .setupGranted:

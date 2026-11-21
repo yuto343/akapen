@@ -104,7 +104,39 @@ struct SetupTests {
         controller.flow.goNext()
         controller.flow.openSystemSettings()
         #expect(permission.calls == ["request", "openSystemSettings"])
-        #expect(sink.log.events.isEmpty)
+        // 許可をオンにすると macOS がアプリを開き直すので、開き直したときに 2 ページ目から出せるように残す。
+        #expect(sink.log.names == ["settingsChanged"])
+        #expect(sink.settings.setupAwaitingPermission)
+        controller.flow.openSystemSettings()
+        #expect(sink.log.names == ["settingsChanged"])
+    }
+
+    @Test
+    func showOnLaunchStartsOnTheHotkeyPageBeforeAskingForPermission() {
+        let sink = SettingsSink()
+        let controller = makeController(sink, permission: FakePermission(isGranted: true))
+        defer { controller.close() }
+        controller.showOnLaunch()
+        #expect(controller.isShown)
+        #expect(controller.flow.page == .hotkey)
+        #expect(controller.flow.primaryAction == .next)
+    }
+
+    @Test
+    func showOnLaunchResumesOnThePermissionPageAfterAskingForPermission() {
+        var settings = Settings()
+        settings.setupAwaitingPermission = true
+        let sink = SettingsSink(settings)
+        let controller = makeController(sink, permission: FakePermission(isGranted: true))
+        controller.showOnLaunch()
+        #expect(controller.isShowingPermission)
+        #expect(UIStrings(language: .en)[controller.flow.permissionStatus] == "Granted")
+        #expect(controller.flow.primaryAction == .done)
+        controller.flow.done()
+        #expect(sink.log.names == ["setupCompleted"])
+        #expect(sink.settings.setupCompleted)
+        #expect(!sink.settings.setupAwaitingPermission)
+        #expect(!controller.isShown)
     }
 
     @Test

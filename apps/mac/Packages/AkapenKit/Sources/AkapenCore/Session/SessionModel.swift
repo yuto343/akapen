@@ -608,6 +608,7 @@ extension SessionModel {
 
     private func setupCompleted() -> Outcome {
         settings.setupCompleted = true
+        settings.setupAwaitingPermission = false
         return saveSettings()
     }
 }

@@ -109,6 +109,7 @@ public struct LaunchSeed: Equatable, Sendable {
         private var hasCustomBoilerplate = false
         public var imageRetentionDays: Int?
         public var setupCompleted: Bool?
+        public var setupAwaitingPermission: Bool?
 
         /// 何も変えない。
         public init() {}
@@ -121,6 +122,7 @@ public struct LaunchSeed: Equatable, Sendable {
             case customBoilerplate
             case imageRetentionDays
             case setupCompleted
+            case setupAwaitingPermission
         }
 
         public init(from decoder: any Decoder) throws {
@@ -144,6 +146,7 @@ public struct LaunchSeed: Equatable, Sendable {
             }
             imageRetentionDays = try container.decodeIfPresent(Int.self, forKey: .imageRetentionDays)
             setupCompleted = try container.decodeIfPresent(Bool.self, forKey: .setupCompleted)
+            setupAwaitingPermission = try container.decodeIfPresent(Bool.self, forKey: .setupAwaitingPermission)
         }
 
         public func encode(to encoder: any Encoder) throws {
@@ -157,6 +160,7 @@ public struct LaunchSeed: Equatable, Sendable {
             }
             try container.encodeIfPresent(imageRetentionDays, forKey: .imageRetentionDays)
             try container.encodeIfPresent(setupCompleted, forKey: .setupCompleted)
+            try container.encodeIfPresent(setupAwaitingPermission, forKey: .setupAwaitingPermission)
         }
 
         /// `settings` に、書いた項目だけを重ねた設定。
@@ -181,6 +185,9 @@ public struct LaunchSeed: Equatable, Sendable {
             }
             if let setupCompleted {
                 result.setupCompleted = setupCompleted
+            }
+            if let setupAwaitingPermission {
+                result.setupAwaitingPermission = setupAwaitingPermission
             }
             return result
         }

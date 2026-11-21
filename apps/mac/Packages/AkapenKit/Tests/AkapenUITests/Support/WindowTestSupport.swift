@@ -39,6 +39,7 @@ import AkapenCore
                 settings = newSettings
             case .setupCompleted:
                 settings.setupCompleted = true
+                settings.setupAwaitingPermission = false
             default:
                 break
             }

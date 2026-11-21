@@ -117,7 +117,7 @@ struct JapaneseStrings: StringTable {
         case .setupStepTurnOn:
             "「画面収録」で akapen をオンにする"
         case .setupStepComeBack:
-            "ここに戻る"
+            "macOS に聞かれたら「終了して再度開く」を選ぶ"
         case .setupWaiting:
             "待っています…"
         case .setupGranted:

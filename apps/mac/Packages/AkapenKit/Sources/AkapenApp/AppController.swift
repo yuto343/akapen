@@ -61,7 +61,7 @@ import AkapenUI
         previousFailure = model.lastFailure
         windows.render()
         if !model.settings.setupCompleted {
-            setupWindow.show()
+            setupWindow.showOnLaunch()
         }
         environment.windowStatus = { [weak self] in
             self?.windowStatus ?? .none

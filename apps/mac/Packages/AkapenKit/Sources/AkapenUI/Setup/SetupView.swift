@@ -85,7 +85,7 @@ struct SetupView: View {
                 EmptyView()
             }
             SetupStepRow(number: 2, text: strings[.setupStepTurnOn], showsDivider: true) {
-                SetupSwitchPicture()
+                EmptyView()
             }
             SetupStepRow(number: 3, text: strings[.setupStepComeBack], showsDivider: false) {
                 Text(strings[flow.permissionStatus])

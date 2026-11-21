@@ -8,6 +8,11 @@ public struct Settings: Codable, Equatable, Sendable {
     public var imageRetentionDays: Int = 7
     /// 初回のセットアップを終えたか。
     public var setupCompleted: Bool = false
+    /// 初回のセットアップで、画面収録の許可を求めてシステム設定を開いたか。
+    ///
+    /// 許可をオンにすると macOS がアプリを終了して開き直すので、次の起動ではセットアップを許可のページから出す。
+    /// セットアップを終えると false に戻る。
+    public var setupAwaitingPermission: Bool = false
 
     /// DESIGN.md に定めた既定値で初期化する。
     public init() {}
@@ -20,6 +25,7 @@ public struct Settings: Codable, Equatable, Sendable {
         case customBoilerplate
         case imageRetentionDays
         case setupCompleted
+        case setupAwaitingPermission
     }
 
     /// 欠けているキーは既定値で補い、知らないキー（古い版の `toolbarShortcut` など）は無視する。古い保存内容でも読める。
@@ -37,6 +43,8 @@ public struct Settings: Codable, Equatable, Sendable {
         }
         imageRetentionDays = try container.decodeIfPresent(Int.self, forKey: .imageRetentionDays) ?? defaults.imageRetentionDays
         setupCompleted = try container.decodeIfPresent(Bool.self, forKey: .setupCompleted) ?? defaults.setupCompleted
+        setupAwaitingPermission = try container.decodeIfPresent(Bool.self, forKey: .setupAwaitingPermission)
+            ?? defaults.setupAwaitingPermission
     }
 
     /// 現行の設定形式で保存する。
@@ -48,6 +56,7 @@ public struct Settings: Codable, Equatable, Sendable {
         try container.encode(customBoilerplate, forKey: .customBoilerplate)
         try container.encode(imageRetentionDays, forKey: .imageRetentionDays)
         try container.encode(setupCompleted, forKey: .setupCompleted)
+        try container.encode(setupAwaitingPermission, forKey: .setupAwaitingPermission)
     }
 
     /// 現在の言語で実際に使う定型文。

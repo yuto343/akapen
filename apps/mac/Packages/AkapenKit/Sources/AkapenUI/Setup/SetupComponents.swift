@@ -263,19 +263,3 @@ struct SetupStepRow<Trailing: View>: View {
         }
     }
 }
-
-/// システム設定のスイッチの絵（オフ）。押しても何も起きない。
-struct SetupSwitchPicture: View {
-    var body: some View {
-        Capsule()
-            .fill(Tokens.Setup.switchOff.color)
-            .frame(width: Tokens.Setup.switchWidth, height: Tokens.Setup.switchHeight)
-            .overlay(alignment: .leading) {
-                Circle()
-                    .fill(Tokens.Setup.switchKnob.color)
-                    .frame(width: Tokens.Setup.switchKnobSize, height: Tokens.Setup.switchKnobSize)
-                    .padding(.leading, Tokens.Setup.switchPadding)
-            }
-            .accessibilityHidden(true)
-    }
-}
