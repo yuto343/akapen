@@ -9,7 +9,7 @@
   "scripts": {
     "dev:site": "pnpm --filter @akapen/site dev",
     "build:site": "pnpm --filter @akapen/site build",
-    "deploy:site": "pnpm --filter @akapen/site deploy",
+    "deploy:site": "pnpm --filter @akapen/site run deploy",
     "release:mac": "bash apps/mac/scripts/release.sh",
     "publish:mac": "bash apps/mac/scripts/publish.sh"
   }
