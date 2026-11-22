@@ -18,6 +18,7 @@
   <meta property="og:image" content={siteUrl(site.ogImage)} />
   <meta property="og:type" content="website" />
   <meta property="og:locale" content={language === 'ja' ? 'ja_JP' : 'en_US'} />
+  <meta name="twitter:card" content="summary" />
   <link rel="alternate" hreflang="en" href={siteUrl('/')} />
   <link rel="alternate" hreflang="ja" href={siteUrl('/ja/')} />
   <link rel="alternate" hreflang="x-default" href={siteUrl('/')} />
