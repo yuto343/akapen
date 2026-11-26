@@ -4,9 +4,11 @@
   "license": "MIT",
   "packageManager": "pnpm@10.33.0",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "scripts": {
+    "kit": "node .kit/cli/kit.mjs",
+    "verify": "node .kit/cli/kit.mjs verify",
     "dev:site": "pnpm --filter @akapen/site dev",
     "build:site": "pnpm --filter @akapen/site build",
     "deploy:site": "pnpm --filter @akapen/site run deploy",

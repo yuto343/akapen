@@ -1,0 +1,20 @@
+# kit が置くファイル。手で編集しない（kit check が落ちる）。
+# swift 用。今は kit check だけなので Linux で流す。macOS とパスの絞り込みは verify を入れるときに足す（ADR-009）。
+name: kit-ci
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: kit check
+        run: node .kit/cli/kit.mjs check

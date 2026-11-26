@@ -1,0 +1,26 @@
+{
+  "title": "verify.config.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["checks"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "setup": { "type": "array", "items": { "type": "string", "pattern": "\\S" } },
+    "ignore": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "\\S" } },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "run", "paths"],
+        "properties": {
+          "name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+          "run": { "type": "string", "pattern": "\\S" },
+          "paths": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "\\S" } },
+          "fast": { "type": "boolean" },
+          "ci": { "type": "boolean" }
+        }
+      }
+    }
+  }
+}

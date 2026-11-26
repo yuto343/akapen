@@ -1,0 +1,27 @@
+{
+  "classes": [
+    {
+      "name": "release",
+      "paths": [
+        "apps/mac/scripts/release.sh",
+        "apps/mac/scripts/publish.sh",
+        "apps/mac/packaging/**",
+        "apps/mac/project.yml",
+        "apps/mac/App/Info.plist",
+        "apps/mac/Packages/AkapenKit/Package.resolved",
+        "apps/mac/Packages/AkapenKit/Sources/AkapenPlatform/Update/**",
+        "apps/site/wrangler.jsonc"
+      ]
+    },
+    {
+      "name": "gate",
+      "paths": [
+        "Makefile",
+        "apps/mac/Makefile",
+        "apps/mac/scripts/**",
+        "apps/mac/e2e/check-specs.mjs",
+        "apps/mac/e2e/tests/Support/**"
+      ]
+    }
+  ]
+}

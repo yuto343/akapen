@@ -1,0 +1,29 @@
+{
+  "scripts": {
+    "blockVerbs": ["deploy", "publish", "release", "push"],
+    "allowAlways": ["push:convex:local"]
+  },
+  "git": {
+    "protectedBranches": ["main", "develop"],
+    "tagPattern": "^(v\\d|[a-z]+-v\\d|prod/)"
+  },
+  "convex": {
+    "localDeployments": ["local:", "anonymous:"]
+  },
+  "make": {
+    "targetPattern": "^(release|publish|deploy)(-(dev|prod|production|staging|all))?$"
+  },
+  "why": {
+    "git-tag": "タグはオーナーが pnpm release で作ります",
+    "git-push-tag": "タグの push はオーナーが行います",
+    "kit-release": "リリースはオーナーが自分のターミナルで流します（pnpm release / pnpm release:dev）",
+    "convex-write": "Convex への deploy はオーナーだけが流します",
+    "convex-dev-remote": "convex dev は向き先の deployment に関数を上げ続けます。local 以外を向いているので止めます",
+    "convex-remote-write": "local 以外の Convex を書き換えます",
+    "wrangler-remote": "Cloudflare に出します",
+    "eas-remote": "EAS に出します",
+    "gh-release": "GitHub の release と workflow はオーナーが流します",
+    "gh-pr-merge": "merge は kit merge かオーナーが行います",
+    "make-release": "リリースの make ターゲットです"
+  }
+}

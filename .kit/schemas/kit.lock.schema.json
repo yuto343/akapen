@@ -1,0 +1,12 @@
+{
+  "title": "kit.lock",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "commit", "files", "links"],
+  "properties": {
+    "version": { "type": "string", "pattern": "^v\\d+\\.\\d+\\.\\d+$" },
+    "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "files": { "type": "object", "additionalProperties": { "type": "string", "pattern": "^[0-9a-f]{64}$" } },
+    "links": { "type": "object", "additionalProperties": { "type": "string", "pattern": "^\\.\\./\\.\\./\\.kit/skills/[a-z0-9][a-z0-9-]*$" } }
+  }
+}

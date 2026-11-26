@@ -1,3 +1,10 @@
+<!-- kit:begin v1.3.1 -->
+## kit（このブロックは kit が置く。手で編集しない）
+
+- `.kit/`、`kit.lock`、このブロック、kit が置いた symlink と `.github/workflows/kit-ci.yml` は手で編集しない。`node .kit/cli/kit.mjs check` が落ちる。
+- 直したいときは kit のリポジトリを直し、新しい版を `node .kit/cli/kit.mjs sync` で取り込む。
+<!-- kit:end -->
+
 # akapen — エージェント向けの決まり
 
 画面の上に赤枠とコメントを重ねていき、最後にまとめて AI へ渡すための macOS 向けツール。Swift のネイティブアプリ。
@@ -22,17 +29,24 @@
 | `make e2e ONLY=<クラス名>` | E2E を 1 クラスだけ走らせる |
 | `make e2e-live` | 実際の画面収録を通す E2E（手元だけ。画面収録の許可が要る） |
 | `make e2e-lint` | `apps/mac/e2e/specs/**/*.md` の書式と、生成物との対応を確かめる |
+| `make verify` | `verify.config.json` の検査（単体・結合テスト、ビルド、`e2e-lint`、site の型検査とビルド）をまとめて流し、結果を `.verify/` に書く。E2E は含まない |
 
 - `xcodebuild` を直接呼ぶときは、必ず `-derivedDataPath build/DerivedData`（`apps/mac` で実行） を付ける（リポジトリの外に生成物を置かない）。
 - **E2E の実行中は、この Mac のマウスとキーボードがテストに取られる。** `make e2e` は排他ロックを取るので、ほかの担当が走らせている間は待たされる。待たされても異常ではない。E2E を `make` を通さずに走らせない。
 
 ルートの make は `apps/mac/Makefile` への転送。Mac アプリのコマンド・相対パスは `apps/mac` を基準にする（同ディレクトリで直接実行もできる）。生成物は `apps/mac/build/` と `apps/mac/akapen.xcodeproj`。
 
+## kit の関門
+
+- `.claude/settings.json` のフック（`kit guard`）が、エージェントの Bash から `release:*`・`publish:*`・`deploy:*`、タグ、`main` への push、GitHub Release などを止める。**止まったら回り込まず、コマンドをユーザーに渡す。** 例外は `kit.config.json` の `guard` に書く。
+- 変更は PR で `main` に入れる。`pnpm verify --changed origin/main` は差分に当たる検査だけを流す。`pnpm kit risk origin/main` が `auto` の PR は `pnpm kit merge <PR>` で入れてよい。`review` の PR はユーザーが merge する。
+- review にするパスは `risk.config.json`、検査は `verify.config.json` に書く。
+
 ## リリースのコマンド（pnpm）
 
 | コマンド | 内容 |
 | --- | --- |
-| `pnpm release:mac <x.y.z> [--skip-notarize]` | 配布の成果物（Developer ID で署名・公証した zip、`appcast.xml`、Homebrew の cask）を `apps/mac/build/release/x.y.z/` に揃える。公開はしない。公証のプロファイル（環境変数 `AKAPEN_NOTARY_PROFILE`、既定 `akapen`）がなければ止まる。`--skip-notarize` で公証を飛ばせる（手元の確認用）。手順は `apps/mac/docs/RELEASE.md` |
+| `pnpm release:mac <x.y.z> [--skip-notarize]` | 配布の成果物（Developer ID で署名・公証した zip、`appcast.xml`、Homebrew の cask）を `apps/mac/build/release/x.y.z/` に揃える。公開はしない。公証のプロファイル（環境変数 `AKAPEN_NOTARY_PROFILE`、既定 `akapen`）がなければ止まる。`--skip-notarize` で公証を飛ばせる（手元の確認用）。手順は `apps/mac/docs/RELEASE.md`。**ユーザーだけが走らせる（guard が止める）** |
 | `pnpm publish:mac <x.y.z>` | GitHub Release と Homebrew の tap に公開する。**ユーザーだけが走らせる。エージェントは走らせない** |
 
 ## site のコマンドと決まり
@@ -43,7 +57,7 @@
 - `pnpm -C apps/site typecheck` — Svelte と TypeScript の型検査。
 - 文言は `apps/site/src/lib/i18n.ts`、色・余白は `apps/site/src/app.css` の CSS 変数に置く。
 - 外部の script や外部フォントを読まない。クライアント JS は出さない（`csr = false`）。例外は、Download 節のコピーのボタンを動かす自前の小さなスクリプト `apps/site/static/install-copy.js` だけ（ハイドレーションはしない）。
-- `pnpm deploy:site` — ビルドして Cloudflare Workers（`akapen-site`、`https://akapen.yuto343.net`）にデプロイする。**ユーザーに頼まれたときだけ走らせる。**
+- `pnpm deploy:site` — ビルドして Cloudflare Workers（`akapen-site`、`https://akapen.yuto343.net`）にデプロイする。**ユーザーだけが走らせる（guard が止める）。**
 
 ## コードの決まり（Mac アプリ）
 
