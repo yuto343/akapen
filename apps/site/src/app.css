@@ -153,6 +153,55 @@ a:focus-visible { outline: 2px solid var(--color-accent); outline-offset: var(--
   --author-github-mark-size: 16px;
   --author-alias-gap: 14px;
   --footer-top-space: 120px;
+  /* How it works の節。手順の 3 枚のカードは、CSS だけで繰り返す短い動画のように動かす。 */
+  --how-gap: 56px;
+  --how-bottom-space: 140px;
+  --how-title-size: 34px;
+  --how-title-line: 38px;
+  --how-title-tracking: -.02em;
+  /* 見出しの上に置く日本語の小さな注記。en では注記がないので 0。 */
+  --how-title-space: 0px;
+  --how-note-size: 13px;
+  --how-note-gap: 8px;
+  --how-note-tracking: .04em;
+  --how-phrase-stack-gap: 0px;
+  --how-lead-size: var(--text-base);
+  --how-lead-line: 26px;
+  --how-lead-width: 560px;
+  --how-steps-width: 1280px;
+  --how-steps-gap: 24px;
+  --how-stack-width: 560px;
+  --how-stack-gap: 48px;
+  --how-step-gap: 24px;
+  --how-visual-radius: 24px;
+  --how-inner-gap: 10px;
+  --how-copy-padding: 8px;
+  --how-number-tracking: .04em;
+  --how-step-title-size: var(--text-xl);
+  --how-step-title-line: 26px;
+  --how-step-title-tracking: -.01em;
+  --how-step-body-size: 15px;
+  --how-step-body-line: 24px;
+  --how-track: #1C1C1F1A;
+  --how-progress-height: 3px;
+  /* カードの絵は、デスクトップの一部を 480×360 で切り出した場面。アプリの値（pt）をそのまま単位にして縮める。 */
+  --how-scene-width: 480;
+  --how-mock-menubar: #FFFFFFB8;
+  --how-mock-titlebar: #F6F6F8;
+  --how-mock-sidebar: #F4F4F6;
+  --how-mock-divider: #00000014;
+  --how-mock-selected: #00000012;
+  --how-mock-outline: #00000029;
+  --how-mock-skeleton-strong: #AEAEB2;
+  --how-mock-skeleton: #D1D1D6;
+  --how-mock-skeleton-soft: #E5E5EA;
+  --how-mock-heading: #C7C7CC;
+  --how-mock-submit: #0A64D2;
+  --how-mock-window-shadow: 0 0 0 .5px #0000004D, 0 16px 40px -8px #00000040;
+  --how-mock-float-shadow: 0 0 0 .5px #0000002E, 0 12px 32px -8px #00000040;
+  /* 3 枚のカードは同じ長さで繰り返す。各場面の時刻はカードの keyframes の % に書く。 */
+  --how-cycle: 8s;
+  --how-press-cycle: 4s;
   --ease-out: cubic-bezier(.22, 1, .36, 1);
   --ease-spring: cubic-bezier(.22, 1, .36, 1);
   --motion-reveal: .7s;
@@ -196,6 +245,12 @@ a:active { transform: scale(var(--motion-press-scale)); }
   --section-title-size: 32px;
   --section-title-line: 40px;
   --section-title-tracking: .01em;
+  /* 注記（13px）とその下のすき間（8px）に、見出しの上の余白 22px を足す。 */
+  --how-title-space: 43px;
+  --how-lead-size: 16px;
+  --how-step-title-size: 19px;
+  --how-step-title-tracking: .01em;
+  --how-step-body-size: var(--text-sm);
 }
 @media (max-width: 767px) {
   :root { --hero-note-size: 14px; --hero-title-size: clamp(32px, 6.7vw, 50px); --demo-bottom-space: 60px; }
@@ -218,6 +273,26 @@ a:active { transform: scale(var(--motion-press-scale)); }
     --copy-button-height: 32px;
   }
   :root:lang(ja) { --section-title-size: 24px; }
+  :root {
+    --how-gap: var(--spacing-10);
+    --how-bottom-space: var(--spacing-16);
+    --how-title-size: 30px;
+    --how-title-line: 34px;
+    --how-note-size: 12px;
+    --how-note-gap: 6px;
+    --how-lead-size: 16px;
+    --how-step-gap: var(--spacing-5);
+    --how-visual-radius: 20px;
+    --how-copy-padding: var(--spacing-1);
+    --how-step-title-size: 19px;
+    }
+  :root:lang(ja) {
+    /* 縦に積んだ句のあいだに、注記（12px + 6px）と 14px のすき間をとる。 */
+    --how-title-space: 18px;
+    --how-phrase-stack-gap: 32px;
+    --how-lead-size: 15px;
+    --how-step-title-size: 18px;
+    }
 }
 @media (prefers-reduced-motion: no-preference) {
   html { scroll-behavior: smooth; }
