@@ -1,0 +1,28 @@
+# kit が置くファイル。手で編集しない（kit check が落ちる）。
+name: kit-ci
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: kit check
+        run: node .kit/cli/kit.mjs check
+      - name: kit verify
+        if: hashFiles('verify.config.json') != ''
+        run: node .kit/cli/kit.mjs verify --ci
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && hashFiles('verify.config.json') != '' }}
+        with:
+          name: verify
+          path: .verify/
+          include-hidden-files: true

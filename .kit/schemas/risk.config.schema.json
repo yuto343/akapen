@@ -1,0 +1,23 @@
+{
+  "title": "risk.config.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["classes"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "maxFiles": { "type": "number" },
+    "maxLines": { "type": "number" },
+    "classes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "paths"],
+        "properties": {
+          "name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+          "paths": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^(?!\\.?/)[^{}?!]+$" } }
+        }
+      }
+    }
+  }
+}

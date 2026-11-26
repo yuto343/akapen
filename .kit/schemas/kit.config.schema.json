@@ -1,0 +1,70 @@
+{
+  "title": "kit.config.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["range"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "source": { "type": "string" },
+    "range": { "type": "string", "pattern": "^[\\^~]?\\d+\\.\\d+\\.\\d+$" },
+    "runtime": { "type": "string", "enum": ["node", "swift"] },
+    "receive": { "type": "array", "uniqueItems": true, "items": { "type": "string", "enum": ["agents", "skills", "ci", "guard"] } },
+    "skills": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" } },
+    "guard": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "warn": {
+          "type": "array", "uniqueItems": true,
+          "items": { "type": "string", "enum": ["script", "script-file", "git-tag", "git-push-tag", "git-push-main", "convex-write", "convex-dev-remote", "convex-remote-write", "wrangler-remote", "eas-remote", "gh-release", "gh-pr-merge", "make-release"] }
+        },
+        "allowScripts": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9:_-]*$" } },
+        "blockScripts": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9:_-]*$" } }
+      }
+    },
+    "release": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["surfaces", "tagPattern", "dev", "prod"],
+      "properties": {
+        "surfaces": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" } },
+        "tagPattern": { "type": "string", "pattern": "^[a-z0-9{}.-]+$" },
+        "records": { "type": "string", "pattern": "^(?!\\.\\.?(/|$))(?!.*/\\.\\.(/|$))[^/]" },
+        "dev": {
+          "type": "object", "additionalProperties": false, "required": ["steps"],
+          "properties": {
+            "confirm": { "type": "boolean" },
+            "steps": {
+              "type": "array",
+              "items": {
+                "type": "object", "additionalProperties": false, "required": ["name", "run"],
+                "properties": {
+                  "name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+                  "run": { "type": "string", "pattern": "\\S" },
+                  "surfaces": { "type": "array", "uniqueItems": true, "items": { "type": "string" } }
+                }
+              }
+            }
+          }
+        },
+        "prod": {
+          "type": "object", "additionalProperties": false, "required": ["steps"],
+          "properties": {
+            "confirm": { "type": "boolean" },
+            "steps": {
+              "type": "array",
+              "items": {
+                "type": "object", "additionalProperties": false, "required": ["name", "run"],
+                "properties": {
+                  "name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+                  "run": { "type": "string", "pattern": "\\S" },
+                  "surfaces": { "type": "array", "uniqueItems": true, "items": { "type": "string" } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

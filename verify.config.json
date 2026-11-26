@@ -1,0 +1,11 @@
+{
+  "setup": ["corepack enable", "pnpm install --frozen-lockfile"],
+  "ignore": ["**/*.md", "LICENSE", "brand/**", ".claude/agents/**", ".github/FUNDING.yml", ".gitignore"],
+  "checks": [
+    { "name": "e2e-lint", "run": "make e2e-lint", "paths": ["apps/mac/e2e/**"], "fast": true },
+    { "name": "mac-test", "run": "make test", "paths": ["apps/mac/Packages/**"], "ci": false },
+    { "name": "mac-build", "run": "make build", "paths": ["apps/mac/App/**", "apps/mac/Packages/**", "apps/mac/e2e/sample-target/**", "apps/mac/project.yml", "apps/mac/Makefile", "apps/mac/scripts/xcode.sh"], "ci": false },
+    { "name": "site-types", "run": "pnpm -C apps/site typecheck", "paths": ["apps/site/**"] },
+    { "name": "site-build", "run": "pnpm build:site", "paths": ["apps/site/**"] }
+  ]
+}
