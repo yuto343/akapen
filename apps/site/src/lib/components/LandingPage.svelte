@@ -4,6 +4,7 @@
   import Hero from './Hero.svelte';
   import SiteHeader from './SiteHeader.svelte';
   import DemoVideo from './DemoVideo.svelte';
+  import HowItWorks from './HowItWorks.svelte';
   import DownloadSection from './DownloadSection.svelte';
   import SiteFooter from './SiteFooter.svelte';
   let { language }: { language: Language } = $props();
@@ -28,6 +29,7 @@
 <main>
   <Hero {language} />
   <DemoVideo {language} />
+  <HowItWorks {language} />
   <DownloadSection {language} />
 </main>
 <SiteFooter {language} />
